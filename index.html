@@ -49,6 +49,9 @@ body.aim #game canvas{cursor:none;}
 #cross{position:absolute;left:-17px;top:-17px;width:34px;height:34px;border:3px solid #fff;box-shadow:0 0 0 2px rgba(0,0,0,.65),inset 0 0 0 2px rgba(0,0,0,.45);border-radius:50%;transition:transform .1s,border-color .1s;}
 #cross::after{content:"";position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;background:#fff;border-radius:50%;box-shadow:0 0 0 2px #000;}
 #cross.ok{border-color:var(--gas);transform:scale(.8);}
+#tutoP{position:fixed;left:50%;top:84px;transform:translateX(-50%);z-index:7;max-width:min(640px,92vw);padding:12px 18px;background:rgba(10,12,15,.86);border:1px solid rgba(240,212,138,.45);border-radius:10px;color:#eee;text-align:center;font-size:17px;line-height:1.45;pointer-events:none;box-shadow:0 6px 24px rgba(0,0,0,.4)}
+#tutoP b.k{display:inline-block;padding:1px 8px;margin:0 2px;border:1px solid rgba(255,255,255,.35);border-radius:5px;background:rgba(255,255,255,.08);font-weight:700}
+#tutoP .st{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#d8b86a;margin-bottom:4px}#tutoP .ok{color:#8fe39a}
 #cross.nape{border-color:var(--ember);transform:scale(1.2);}
 #hitM{position:absolute;left:-30px;top:-30px;width:60px;height:60px;pointer-events:none;opacity:0;}
 #hitM i{position:absolute;left:50%;top:50%;width:4px;height:15px;margin:-7.5px -2px;background:var(--hm,#fff);border-radius:2px;box-shadow:0 0 0 1.5px rgba(0,0,0,.7),0 0 8px var(--hm,#fff);}
@@ -226,6 +229,12 @@ button:disabled{opacity:.35;cursor:not-allowed;filter:none;}
   <div id="xpWrap"><div id="xpLbl"><span id="lvT">Niveau 1</span><span id="xpT">0 / 60 XP</span></div><div id="xpBar"><div id="xpB"></div></div></div>
 </div>
 
+<div id="loadScr" style="position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#0b0d10;color:#e8e2d4;font-family:inherit;transition:opacity .6s">
+  <div style="font-size:15px;letter-spacing:.3em;text-transform:uppercase;color:#9aa1a8">Chargement</div>
+  <div style="width:min(420px,80vw);height:6px;background:#22272d;border-radius:3px;overflow:hidden"><i id="loadBar" style="display:block;height:100%;width:2%;background:linear-gradient(90deg,#c9a24a,#f0d48a);transition:width .3s"></i></div>
+  <div id="loadTxt" style="font-size:14px;color:#9aa1a8">Préparation…</div>
+  <div id="loadTip" style="max-width:min(520px,86vw);text-align:center;font-size:15px;line-height:1.5;color:#c9c3b6;margin-top:10px"></div>
+</div>
 <div class="ov" id="start">
   <div class="card">
     
@@ -256,12 +265,14 @@ button:disabled{opacity:.35;cursor:not-allowed;filter:none;}
         <div class="row">
           <button id="rpgBtn" style="font-size:20px;padding:10px 24px">Jouer · Mode RPG</button>
           <button id="rpgCont" hidden style="font-size:20px;padding:10px 24px">Reprendre le RPG</button>
+          <button id="tutoBtn" class="ghost" title="Apprendre les commandes pas à pas, sans danger">Didacticiel</button>
         </div>
         <div class="row" style="margin-top:8px">
           <button id="playBtn" class="ghost">Mode classique</button>
           <button id="contBtn" class="ghost" hidden>Reprendre</button>
           <button id="rumbBtn" class="ghost">The Rumbling</button>
           <button id="bossBtn" class="ghost">Vague de boss</button>
+          <button id="trainBtn" class="ghost" title="Choisis les titans, les boss, le nombre de vagues et tes réglages">Entraînement contre les titans</button>
           <button id="pvpSoloBtn" class="ghost" title="Deux camps, toi et 0 à 8 IA : chaque élimination fait monter d'un niveau, chaque mort ramène au niveau 10">PvP contre des IA</button>
           <button id="finalBtn" class="ghost" title="Deux vagues : l'Assaillant, puis le Titan Originel. Toutes les capacités, niveau 100 et 100 points à répartir">Assaut final · Nv 100</button>
           <button id="v1Btn" class="ghost" title="La toute première version du jeu, telle quelle : sa carte, ses mécaniques, ses sons et ses graphismes">V1 · version d'origine</button>
@@ -311,6 +322,10 @@ button:disabled{opacity:.35;cursor:not-allowed;filter:none;}
     <div class="row"><button id="coopBack" class="ghost">Retour</button></div>
   </div>
 </div>
+<div class="ov" id="trainScr" hidden><div class="card" style="width:min(680px,100%)"><h2>Entraînement contre les titans</h2>
+  <p class="tag">Choisis les titans et les boss de chaque vague, leur nombre, leur force et tes réglages. Progression à part : ton profil n'est pas touché.</p>
+  <div id="trainEd"></div><div class="row" style="margin-top:14px"><button id="trainGo">Lancer l'entraînement</button><button id="trainBack" class="ghost">Retour</button></div></div></div>
+<div id="tutoP" hidden></div>
 <div class="ov" id="pvpSolo" hidden><div class="card" style="width:min(640px,100%)"><h2>PvP contre des IA</h2>
   <p class="tag">Deux camps. Tout le monde commence au niveau 10 avec 10 points (Tab) : chaque élimination fait gagner un niveau, chaque mort ramène au niveau 10. Les IA ont chacune une classe et dépensent leurs points à leur façon. Pas de ralenti en PvP. Lances foudroyantes : 2 au maximum, deux fois moins puissantes qu'en mode titans (ou désactivées).</p>
   <div id="pvpEdS"></div><div class="row" style="margin-top:14px"><button id="pvpGo">Lancer la partie</button><button id="pvpBack" class="ghost">Retour</button></div></div></div>
@@ -365,6 +380,7 @@ const STATDEFS=[
   {k:'blade',name:'Lames',desc:'Portée de coupe et puissance du tourbillon'}
 ];
 const STAT_MAX=20;
+const RESPEC=()=>typeof gameMode!=='undefined'&&(gameMode==='pvp'||gameMode==='train');   // PvP et entraînement : on peut reprendre un point (bouton −)
 const need=l=>Math.floor(60*Math.pow(l,1.45));
 /* ================= MODE RPG : progression séparée, techniques achetées avec les points de boss =================
    Le mode RPG a son propre profil (niveau, statistiques, spécialisation, techniques, points de technique, record de vague).
@@ -383,14 +399,14 @@ const ABIL=[   // uniquement ce qu'un soldat apprend par l'entraînement ou l'ex
   {k:'tourbillon',name:'Tourbillon',cost:4,req:'evasion',desc:'Technique d\'élite : F en l\'air, tourbillon de lames tout autour de toi (use une demi-paire de lames s\'il touche). Saisi par un titan, F tranche sa main d\'un coup.'},
   {k:'plongeon',name:'Frappe plongeante',cost:2,desc:'Attaque en piqué apprise au combat : +30 % de dégâts quand tu frappes en descendant vers la nuque.'},
   {k:'charge',name:'Coupe chargée',cost:3,desc:'Technique de vétéran : maintiens le clic gauche pour armer tes lames, relâche pour une coupe tournoyante avec élan vers la nuque, en l\'air. Use jusqu\'à une paire de lames selon la charge (moitié chargée : une demi-paire), seulement si le coup touche (jusqu\'à ×2,9 de dégâts une fois pleinement chargée).'},
-  {k:'acier',name:'Maîtrise des lames',cost:2,desc:'Coupes nettes et précises : tes lames s\'usent 40 % moins vite.'},
+  {k:'acier',name:'Maîtrise des lames',cost:2,desc:'Coupes nettes et précises : tes lames s\'usent 2 fois moins vite (−50 %), tourbillon et coupe chargée compris.'},
   {k:'lances1',name:'Lances foudroyantes I',cost:0,auto:true,desc:'Remises à toute l\'armée après la vague 10 : tu en portes 2 (B pour changer d\'arme).'},
   {k:'lances2',name:'Lances foudroyantes II',cost:6,req:'lances1',desc:'Entraînement avancé : tu en portes 4.'},
   {k:'lances3',name:'Lances foudroyantes III',cost:8,req:'lances2',desc:'Maîtrise complète : tu en portes 6, le maximum.'},
   {k:'evasion',name:'Évasion',cost:1,desc:'Expérience du corps à corps : saisi par un titan, tu te débats deux fois plus efficacement (sans le Tourbillon).'},
   {k:'souffle',name:'Second souffle',cost:4,desc:'Instinct de survie du vétéran : une fois par vague, un coup mortel te laisse à 1 PV, invulnérable un instant.'}];
 const BASE_KIT=['agilite','tourbillon','charge'],GEAR=['ruee','pivot'];   // équipement de base : grappin simple et ruée, toujours disponibles
-function HAS(k){if(GEAR.includes(k))return true;if(k==='lances1'&&gameMode==='rpg')return wave>10;   /* les deux premières lances sont offertes après la vague 10 */return gameMode==='rpg'?!!(save.abil&&save.abil[k]):BASE_KIT.includes(k);}
+function HAS(k){if(GEAR.includes(k))return true;if(gameMode==='pvp'&&window._pvTr)return !!window._pvTr[k];if(gameMode==='train'&&window._trAll)return true;   /* entraînements : techniques choisies */if(k==='lances1'&&gameMode==='rpg')return wave>10;   /* les deux premières lances sont offertes après la vague 10 */return gameMode==='rpg'?!!(save.abil&&save.abil[k]):BASE_KIT.includes(k);}
 function rpgTP(){const ri=RANKS.filter(r=>save.level>=r.lv).length-1,spent=ABIL.filter(a=>save.abil&&save.abil[a.k]).reduce((n,a)=>n+a.cost,0);return Math.max(0,ri*3-spent);}   // 3 points par grade
 function lockedMsg(k){if(k==='lances1'){toast('Lances foudroyantes : remises après la vague 10');return;}const a=ABIL.find(x=>x.k===k);toast((a?a.name:'Technique')+' : à acheter dans Tab · Techniques');}
 // classes avancées du niveau 60 : chacune fait évoluer la spécialisation choisie au niveau 5
@@ -1527,7 +1543,7 @@ const ringMat=arcMat.clone();const ring=new THREE.Mesh(ringGeo,ringMat);ring.pos
 const FPV={off:new V3(),has:false,was:false,hd:false};const _fpE=new V3();
 const FPG={ux:-1.0,pk:.85,uy:.18,uz:-.18,fx:-.95,fy:0,fz:0,cf:.03,cd:.14,cu:.06,s0:-1.75,s1:-1.2,z0:1.0,z1:-.45};   // garde en première personne (bras, avant-bras)
 const fpTrick=()=>{const p=player;return p.flipT>0||p.rollT>0||p.spinT>0||p.landRoll>0||!!grab;};
-const FP_DEF=()=>({trick:'fp',trickRot:0,spin:100,spinTurns:1,spinLines:true,pose:'same',slash:'arcs',shDist:.6,bob:50,land:50,fov:80});const FP_DEF0=FP_DEF();
+const FP_DEF=()=>({trick:'fp',trickRot:0,spin:0,spinTurns:1,spinLines:true,pose:'same',slash:'arcs',shDist:.6,bob:50,land:50,fov:80});const FP_DEF0=FP_DEF();
 const FPO=()=>(save.gfx&&save.gfx.fp)||FP_DEF0;
 // vue pendant une figure : 'fp' (yeux du soldat), 'sh' (par-dessus l'épaule), '3p' (derrière, comme avant)
 function fpTrickView(){if(!fpTrick())return 'fp';const O=FPO(),p=player;if(O.trick==='3p')return '3p';if(p.spinT>0&&!grab)return 'fp';if(O.trick==='epaule'||grab)return 'sh';return 'fp';}
@@ -1619,8 +1635,14 @@ function animPlayer(dt){
       else{pose('ua'+k,W.bx+b,sg*W.by,sg*W.bz);pose('fa'+k,W.bf,sg*W.bfy,0);}}
     if(!p.grounded)legsPose(-.9,-.5,1.3,.9,.1);else legsPose(-.35,-.15,.55,.35,.12);}
   if(p.chgA>0){p.chgA+=dt;const u=p.chgA/WR.d,sd=p.chgSd,W=WU;   // coupe tournoyante : le corps se détord d'un tour, les lames balaient tout autour
-    if(u>=1){p.chgA=0;pTrick.rotation.y=0;}
-    else{pTrick.rotation.y=WR.dir*sd*TAU*ease(Math.min(1,u/.85));const e=clamp(u/.35,0,1),s2=e*e*(3-2*e);pose('spine',W.sp,sd*lerp(W.st,-W.st*.4,s2));pose('head',W.hp,0);
+    if(u>=1){p.chgA=0;pTrick.rotation.y=0;pTrick.rotation.x=0;}
+    else if(p.chgV){   /* en piqué : salto avant, les deux lames levées au-dessus de la tête puis abattues ensemble, parallèles */
+      pTrick.rotation.y=0;pTrick.rotation.x=-TAU*ease(Math.min(1,u/.85));
+      const a=clamp(u/.22,0,1),b=clamp((u-.22)/.3,0,1),ea=a*a*(3-2*a),eb=b*b*(3-2*b);
+      pose('spine',lerp(lerp(W.sp,-.25,ea),.6,eb),0);pose('head',lerp(-.2,.25,eb),0);
+      for(const k of ['L','R']){const sg=k==='L'?-1:1;pose('ua'+k,lerp(lerp(-1.2,-2.9,ea),-.35,eb),0,sg*.14);pose('fa'+k,lerp(lerp(-.4,-1.25,ea),-.06,eb));}
+      legsPose(-1.2,-.9,1.6,1.3,.1);}
+    else{pTrick.rotation.y=WR.dir*sd*TAU*ease(Math.min(1,u/.85));pTrick.rotation.x=-(p.chgTilt||0)*Math.sin(Math.PI*Math.min(1,u/.9));   /* arrivée en biais : le tour de lames s'incline dans le sens de la descente */const e=clamp(u/.35,0,1),s2=e*e*(3-2*e);pose('spine',W.sp,sd*lerp(W.st,-W.st*.4,s2));pose('head',W.hp,0);
       for(const k of ['L','R']){const sg=k==='L'?-1:1;
         if(sg===sd){pose('ua'+k,lerp(W.ax,WR.ax,s2),sg*lerp(W.ay,0,s2),sg*lerp(W.az,WR.az,s2));pose('fa'+k,lerp(W.af,WR.af,s2));}
         else{pose('ua'+k,lerp(W.bx,WR.bx,s2),sg*lerp(W.by,0,s2),sg*lerp(W.bz,WR.bz,s2));pose('fa'+k,lerp(W.bf,WR.bf,s2));}}}}
@@ -2134,7 +2156,7 @@ const matEyeW=sMat(0xf3efe4,{roughness:.3}),matIris=sMat(0x4d3b2a),matPupil=new 
 /* ----- sculpture procédurale : tête et torse d'un seul tenant ----- */
 const gs=(d,s)=>Math.exp(-(d*d)/(s*s));
 function segD(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,t=clamp(((px-ax)*dx+(py-ay)*dy)/(dx*dx+dy*dy),0,1);return Math.hypot(px-ax-dx*t,py-ay-dy*t);}
-const effWave=()=>gameMode==='boss'?1+(wave-1)*4:gameMode==='final'?1+(wave+5)*4:wave;   // force des titans selon le mode
+const effWave=()=>gameMode==='train'?TRN.cfg.power:gameMode==='tuto'?1:gameMode==='boss'?1+(wave-1)*4:gameMode==='final'?1+(wave+5)*4:wave;   // force des titans selon le mode
 const mouthY=(x,g,c)=>-.47+(c===undefined?.12:c)*(x/g)*(x/g);
 function headDeform(v,P){
   const ox=v.x,oy=v.y,oz=v.z,fz=Math.max(0,oz),g=P.grin;let r=1;
@@ -2647,7 +2669,7 @@ const BODY_LIST=[[1,1,1.12,'gros'],[.62,.6,1.18,'maigre'],[.62,.6,1.12,'female']
 // chargement des corps haute définition ; s'ils manquent, ils sont sculptés sur place (définition normale)
 setTimeout(async()=>{for(const v of BODY_LIST){const k=bodyKey(...v);
     try{const r=await fetch(geoFile(k));if(!r.ok)throw 0;TBODY_CACHE[k]=refineSkin(geoFromBin(await r.arrayBuffer()),v[2]);}catch(e){if(!TBODY_CACHE[k])titanBodyGeo(...v);}
-    await new Promise(r=>setTimeout(r,20));}
+    if(typeof LOADS!=='undefined')LOADS.bodies++;await new Promise(r=>setTimeout(r,20));}
   setTimeout(()=>{helmetGeo();setTimeout(crocJawGeo,30);},30);},300);
 /* ================= VISAGES DE TITANS FAÇON ANIME =================
    Yeux dessinés (grands yeux ronds, iris clair cerclé de noir, reflets blancs, paupière supérieure épaisse, cils,
@@ -2953,7 +2975,7 @@ class Titan{
   constructor(type,x,z){
     const c=TT[type];this.type=type;this.cfg=c;const ab=type==='abnormal';
     this.H=c.fixedH||c.h*(.9+Math.random()*.25)*1.15;this.s=this.H/10.7;   // titans ordinaires un peu plus grands ; tailles fixes exactes (Colosse 60 m, colossaux du Rumbling 50 m)
-    const ew=effWave();this.maxHp=c.spearOnly?c.spearOnly*(1+.04*Math.max(0,ew-25)):c.hp*(1+.12*(ew-1))*(c.boss||type==='rumble'?1.7:1);this.hp=this.maxHp;this.firstHit=true;
+    const ew=effWave();this.maxHp=c.spearOnly?c.spearOnly*(1+.032*Math.max(0,ew-25)):c.hp*(1+.096*(ew-1))*(c.boss||type==='rumble'?1.7:1);this.hp=this.maxHp;this.firstHit=true;
     this.speed=c.spd*(1+.035*Math.min(ew-1,40))*(c.boss?1.15:1);
     const r=this.root=new THREE.Group();r.position.set(x,groundY(x,z),z);r.scale.setScalar(this.s);r.rotation.y=Math.random()*TAU;
     this.tilt=new THREE.Group();r.add(this.tilt);
@@ -3307,6 +3329,7 @@ class Titan{
   remove(){this.gone=true;scene.remove(this.root);for(const p of this.parts){const i=hookables.indexOf(p);if(i>=0)hookables.splice(i,1);}this.skin.dispose();this.hairM.dispose();this.hairLockM.dispose();if(this.hairGeo)this.hairGeo.dispose();if(this.headGeo){this.headGeo.dispose();this.headSkin.dispose();}this.root.traverse(o=>{if((o.isSkinnedMesh&&!o.userData.shared)||(o.userData&&o.userData.merged))o.geometry.dispose();});this.marker.remove();if(this.lbars)this.lbars.forEach(b=>b.remove());}
 }
 function pickType(){const r=Math.random(),w=wave;if(gameMode==='rumbling')return'rumble';
+  if(gameMode==='train'){const L=Object.keys(TRN.cfg.types).filter(k=>TRN.cfg.types[k]);return L.length?L[Math.floor(Math.random()*L.length)]:'small';}
   if(w>=3&&r<.07+w*.012)return'abnormal';if(w>=4&&r<.32)return'large';if(w>=2&&r<.62)return'medium';return'small';}
 function spawnTitan(type){
   for(let i=0;i<60;i++){const a=Math.random()*TAU,d=(gameMode==='rumbling'?140:85)+Math.random()*60;
@@ -3440,7 +3463,9 @@ function chargeRelease(){const p=player,l=CHG.lv,full=CHG.full;chgCancel();if(!c
   else p.vel.addScaledVector(aimDir(0,0,tB),5+8*l);
   if(p.gas>0)p.gas=Math.max(0,p.gas-(1+2*l)*ST.gasEff);
   const hit=bladeHit(ST.range*(1+.5*l),1+1.5*l+(full&&l>=1?.4:0),'charge');
-  if(hit&&cost>=.05){spendBlades(cost);if(cost>=.25){feed('Coupe chargée : '+fmtPairs(cost)+' de lames usée'+(cost>1?'s':'')+' · '+p.spareBlades+' en réserve','');sfx.burst(6200,.14,.3,'highpass',.8);}ensureBlades();}
+  const cw=cost*BWEAR();if(hit&&cw>=.025){spendBlades(cw);if(cw>=.2){feed('Coupe chargée : '+fmtPairs(cw)+' de lames usée'+(cw>1?'s':'')+' · '+p.spareBlades+' en réserve','');sfx.burst(6200,.14,.3,'highpass',.8);}ensureBlades();}
+  // forme de la coupe selon la direction du vol : en piqué (de haut, vers le bas), coup vertical des deux lames ; en biais, tour incliné
+  {const sp=p.vel.length(),dv=sp>3?-p.vel.y/sp:0,hg=p.pos.y-groundY(p.pos.x,p.pos.z);p.chgV=dv>.62&&hg>4?1:0;p.chgTilt=p.chgV?0:clamp((dv-.15)/.47,0,1)*.9;}
   shake=Math.max(shake,.25+.4*l);speedFX.kick=Math.max(speedFX.kick,.6+.4*l);
   for(let i=0;i<14+Math.round(10*l);i++)emit(p.center,rv(7+5*l).clone(),.45,.35,1.3,0xfff2d0,.65);
   if(hit){slowT=Math.max(slowT,.1+.12*l);sfx.slash();chgFlash(.5+.5*l);addStyle(full?'Coupe parfaite':'Coupe chargée',.35+.5*l);}else chgFlash(.25*l);}
@@ -3560,7 +3585,7 @@ const TUT=[
 ];
 let tutTimer=0;
 function tut(i){if(save.tut===i){save.tut++;tutTimer=0;persist();showTut();}}
-function showTut(){const h=$('hint');if(save.tut<TUT.length){h.innerHTML=TUT[save.tut];h.hidden=false;}else h.hidden=true;}
+function showTut(){const h=$('hint');if(gameMode==='tuto'||gameMode==='train'){h.hidden=true;return;}if(save.tut<TUT.length){h.innerHTML=TUT[save.tut];h.hidden=false;}else h.hidden=true;}
 
 /* ================= WAVES ================= */
 let wave=1,toSpawn=0,spawnT=0,waveBreak=0;var gameMode='normal';
@@ -3568,6 +3593,10 @@ let waveSnap=null;
 function startWave(n){wave=n;waveSnap={level:save.level,xp:save.xp,points:save.points,kills:save.kills,spec:save.spec,spec2:save.spec2,tp:save.tp||0,abil:JSON.parse(JSON.stringify(save.abil||{})),stats:JSON.parse(JSON.stringify(save.stats))};player.souffleUsed=false;   // progression au début de la manche
   if(ORIG&&ORIG.dead)clearOriginel();
   if(gameMode==='pvp'){toSpawn=0;waveBreak=0;if(!(NET.on&&!NET.host))PV.begin();return;}
+  if(gameMode==='tuto'){toSpawn=0;waveBreak=0;TUTO.begin();return;}
+  if(gameMode==='train'){const C=TRN.cfg,nt=Object.values(C.types).some(Boolean),bs=Object.keys(C.boss).filter(k=>C.boss[k]);toSpawn=nt?C.count:0;spawnT=1.2;waveBreak=0;
+    bigMsg('ENTRAÎNEMENT · VAGUE '+n+(C.waves?' / '+C.waves:''),(nt?C.count+' titan'+(C.count>1?'s':''):'')+(nt&&bs.length?' et ':'')+(bs.length?bs.length+' boss':'')+' · force de la vague '+C.power);
+    if(n===1){player.spears=spearMax();applyEquipVisual();}for(const k of bs)spawnBoss(Math.max(5,C.power),k);return;}
   if(gameMode==='final'){const k=n===1?'assaillant':'originel';toSpawn=n===1?6:4;spawnT=2;waveBreak=0;
     bigMsg('ASSAUT FINAL · '+(n===1?'L\'ASSAILLANT':'LE TITAN ORIGINEL'),n===1?'Niveau 100 et 100 points : Tab pour les répartir avant le combat':'Dernier combat');spawnBoss(n,k);return;}
   if(gameMode==='boss'){const k=BOSS_FINAL[(n-1)%BOSS_FINAL.length];toSpawn=k==='originel'?4:3+Math.floor(n*.8);if(NET&&NET.on)toSpawn=Math.round(toSpawn*(1+.6*NET.rem.size));spawnT=2;waveBreak=0;   // le boss arrive entouré de titans
@@ -3587,15 +3616,68 @@ function startWave(n){wave=n;waveSnap={level:save.level,xp:save.xp,points:save.p
     setTimeout(()=>bigMsg(n===11?'2 LANCES FOUDROYANTES':'+2 LANCES FOUDROYANTES',n===11?'B : alterner entre les lames et les lances. 2 de plus toutes les 10 vagues':n===31?'Tu portes maintenant 6 lances : le maximum':'Tu portes maintenant '+m+' lances'),2600);}}
 let finalWon=false;
 function finalWin(){finalWon=true;}   // plus de vague après le Titan Originel : la partie continue librement, sans message
-function updWave(dt){if(gameMode==='pvp')return;
+function updWave(dt){if(gameMode==='pvp')return;if(gameMode==='tuto'){TUTO.tick(dt);return;}if(gameMode==='train')TRN.tick();
   const alive=titans.filter(t=>t.state!=='dead').length+(ORIG&&!ORIG.dead?1:0);
   sfx.intense=alive>0?(titans.some(t=>t.cfg.boss&&t.state!=='dead')||(ORIG&&!ORIG.dead)?2:1):0;
   if(waveBreak>0){waveBreak-=dt;if(waveBreak<=0)startWave(wave+1);return;}
-  if(toSpawn>0){spawnT-=dt;if(spawnT<=0&&alive<(gameMode==='rumbling'?Math.min(6,2+Math.ceil(wave/2)):Math.min(14,3+Math.ceil(wave*.9))+(NET.on?2*NET.rem.size:0))){if(NET.on)NET.spawnT(pickType());else spawnTitan(pickType());toSpawn--;spawnT=Math.max(.8,2.2-wave*.05);}}
+  if(toSpawn>0){spawnT-=dt;if(spawnT<=0&&alive<(gameMode==='train'?60:gameMode==='rumbling'?Math.min(6,2+Math.ceil(wave/2)):Math.min(14,3+Math.ceil(wave*.9))+(NET.on?2*NET.rem.size:0))){if(NET.on)NET.spawnT(pickType());else spawnTitan(pickType());toSpawn--;spawnT=gameMode==='train'?.35:Math.max(.8,2.2-wave*.05);}}
+  else if(alive===0&&gameMode==='train'&&TRN.cfg.waves&&wave>=TRN.cfg.waves){if(!TRN.done){TRN.done=true;bigMsg('ENTRAÎNEMENT TERMINÉ','Bravo ! Tab · Menu principal pour revenir, ou continue à t\'exercer ici.');}}
   else if(alive===0&&gameMode==='final'&&wave>=2){if(!finalWon)finalWin();}
   else if(alive===0){waveBreak=5;bigMsg('VAGUE '+wave+' NETTOYÉE','Prochaine vague dans 5 s');}
 }
 
+/* ================= ENTRAÎNEMENT CONTRE LES TITANS ================= */
+const TRN_TYPES=[['small','Petit titan'],['medium','Titan moyen'],['large','Grand titan'],['abnormal','Déviant'],['rumble','Titan colossal (50 m)']];
+const TRN_BOSS=[['croc','Le Croc'],['bete','La Bête'],['agile','L\'Écorcheuse'],['forgeron','Le Forgeron'],['cuirasse','Le Cuirassé'],['colosse','Le Colosse'],['assaillant','L\'Assaillant'],['originel','Le Titan Originel']];
+const TRN={done:false,
+  cfg:Object.assign({types:{small:1,medium:1,large:1,abnormal:1},boss:{},count:6,waves:3,power:5,lv:30,inv:false,gas:true,blades:true,all:true,spears:true},(typeof save!=='undefined'&&save.train)||{}),
+  save(){save.train=JSON.parse(JSON.stringify(this.cfg));persist();},
+  html(){const C=this.cfg,on=(v,attr,t)=>`<button class="${v?'':'ghost'} pvS" ${attr}>${t}</button>`,st=(k,lab,v,steps)=>`<div class="row" style="align-items:center;gap:6px;margin-top:4px"><span style="min-width:190px">${lab}</span>${steps.map(d=>`<button class="ghost pvS" data-tr="n" data-k="${k}" data-d="${d}">${d>0?'+':'−'}${Math.abs(d)}</button>`).join('')}<b style="min-width:60px;text-align:center">${v}</b></div>`;
+    let h='<div class="eyebrow" style="margin:0 0 6px">Titans de chaque vague</div><div class="row">'+TRN_TYPES.map(([k,n])=>on(C.types[k],`data-tr="t" data-k="${k}"`,n)).join('')+'</div>';
+    h+='<div class="eyebrow" style="margin:10px 0 6px">Boss (un de chaque, à chaque vague)</div><div class="row">'+TRN_BOSS.map(([k,n])=>on(C.boss[k],`data-tr="b" data-k="${k}"`,n)).join('')+'</div>';
+    h+='<div class="eyebrow" style="margin:10px 0 6px">Partie</div>'+st('count','Titans par vague',C.count,[-5,-1,1,5])+st('waves','Nombre de vagues',C.waves?C.waves:'sans fin',[-1,1])+st('power','Force (comme la vague…)',C.power,[-10,-1,1,10])+st('lv','Ton niveau (points à répartir)',C.lv,[-10,-1,1,10]);
+    h+='<div class="eyebrow" style="margin:10px 0 6px">Options</div><div class="row">'+on(C.inv,'data-tr="o" data-k="inv"','Invincible')+on(C.gas,'data-tr="o" data-k="gas"','Gaz illimité')+on(C.blades,'data-tr="o" data-k="blades"','Lames illimitées')+on(C.spears,'data-tr="o" data-k="spears"','Lances foudroyantes')+on(C.all,'data-tr="o" data-k="all"','Toutes les techniques')+'</div>';
+    return h;},
+  click(e){const b=e.target.closest('[data-tr]');if(!b)return;const C=this.cfg,k=b.dataset.k,t=b.dataset.tr;
+    if(t==='t')C.types[k]=C.types[k]?0:1;else if(t==='b')C.boss[k]=C.boss[k]?0:1;else if(t==='o')C[k]=!C[k];
+    else if(t==='n'){const d=+b.dataset.d,lim={count:[1,40],waves:[0,30],power:[1,80],lv:[1,100]}[k];C[k]=clamp((C[k]|0)+d,lim[0],lim[1]);}
+    if(!Object.values(C.types).some(Boolean)&&!Object.values(C.boss).some(Boolean))C.types.small=1;   /* au moins un adversaire */
+    this.save();$('trainEd').innerHTML=this.html();},
+  tick(){const p=player,C=this.cfg;if(C.gas)p.gas=ST.gasMax;if(C.blades){p.blade=CFG.bladeDurability;p.spareBlades=Math.max(p.spareBlades,8);if(C.spears&&p.spears<1)p.spears=spearMax();}if(C.inv){p.inv=Math.max(p.inv,.25);p.hp=ST.hpMax;}}};
+$('trainBtn').onclick=()=>{$('start').hidden=true;$('trainScr').hidden=false;$('trainEd').innerHTML=TRN.html();};
+$('trainBack').onclick=()=>{$('trainScr').hidden=true;$('start').hidden=false;};
+$('trainEd').addEventListener('click',e=>TRN.click(e));
+$('trainGo').onclick=()=>{TRN.save();$('trainScr').hidden=true;startGame(1,'train');};
+/* ================= DIDACTICIEL ================= */
+const TUTO={on:false,i:0,okT:0,mv:0,d0:null,flip:false,roll:false,cam0:null,paused:false,titan:null,
+  steps:[
+    {t:'Bouge la souris : le cercle blanc est ton <b>viseur</b>. Il suffit de viser là où tu veux aller.',ok:T=>T.mv>500},
+    {t:'Déplace-toi au sol avec <b class="k">Z</b><b class="k">Q</b><b class="k">S</b><b class="k">D</b> (ou <b class="k">W</b><b class="k">A</b><b class="k">S</b><b class="k">D</b>).',ok:T=>T.d0&&Math.hypot(player.pos.x-T.d0.x,player.pos.z-T.d0.z)>8},
+    {t:'Vise un bâtiment ou un arbre et <b>maintiens le clic droit</b> : les deux grappins s\'accrochent et te tirent.',ok:()=>mouseR&&hooks.filter(h=>h.state==='att').length>=2},
+    {t:'En l\'air, appuie sur <b class="k">Espace</b> : un boost de gaz te propulse vers l\'avant.',ok:()=>player.boosting&&!player.grounded},
+    {t:'<b class="k">A</b> ou <b class="k">E</b> (Q ou E en QWERTY) : un seul grappin, à gauche ou à droite, pour tourner autour d\'un point.',ok:()=>!mouseR&&hooks.filter(h=>h.state==='att').length===1},
+    {t:'<b class="k">Shift</b> : un dash, une poussée brève dans la direction où tu vas.',ok:()=>keys.ShiftLeft||keys.ShiftRight},
+    {t:'En l\'air : <b class="k">C</b> pour un salto, <b class="k">X</b> pour une vrille. Fais les deux.',ok:T=>{if(player.flipT>0)T.flip=true;if(player.rollT>0)T.roll=true;return T.flip&&T.roll;}},
+    {t:'Un titan arrive. Approche-toi par derrière et frappe sa <b>nuque</b> avec le <b>clic gauche</b> : c\'est le seul coup qui l\'abat.',enter:T=>T.spawn(),ok:T=>T.titan&&T.titan.state==='dead'},
+    {t:'En l\'air, appuie sur <b class="k">F</b> : le tourbillon fait tournoyer tes lames tout autour de toi.',ok:()=>player.spinT>0},
+    {t:'En l\'air, <b>maintiens le clic gauche</b> pour armer tes lames, puis relâche : coupe chargée, avec élan vers la nuque la plus proche.',ok:()=>player.chgA>0},
+    {t:'<b class="k">V</b> (ou <b class="k">1</b> à <b class="k">4</b>) change de caméra : Auto, Verrouillage, Libre, 1re personne. Essaie-en une autre.',enter:T=>{T.cam0=save.camMode;},ok:T=>save.camMode!==T.cam0},
+    {t:'<b class="k">Tab</b> ouvre le menu : améliorations, graphismes, commandes. Ouvre-le, puis reviens au jeu.',ok:T=>{if(state==='pause')T.paused=true;return T.paused&&state==='play';}}],
+  begin(){this.on=true;this.i=0;this.okT=0;this.mv=0;this.flip=this.roll=this.paused=false;this.titan=null;this.d0=player.pos.clone();bigMsg('DIDACTICIEL','Suis les consignes en haut de l\'écran · Entrée pour passer une étape');this.show();},
+  stop(){this.on=false;const e=$('tutoP');if(e)e.hidden=true;},
+  spawn(){const p=player,a=yaw+Math.PI,x=clamp(p.pos.x-Math.sin(a)*45,-440,440),z=clamp(p.pos.z-Math.cos(a)*45,-440,440);let t=null;
+    for(let k=0;k<12&&!t;k++){const aa=a+k*.5,xx=clamp(p.pos.x-Math.sin(aa)*45,-440,440),zz=clamp(p.pos.z-Math.cos(aa)*45,-440,440);if(!pointBlocked(xx,groundY(xx,zz)+1,zz))t=new Titan('small',xx,zz);}
+    if(!t)t=new Titan('small',x,z);titans.push(t);t.speed*=.35;t.hp=t.maxHp=Math.min(t.maxHp,60);this.titan=t;},
+  show(){const e=$('tutoP'),S=this.steps[this.i];if(!e)return;if(!S){e.innerHTML='<div class="st">Didacticiel terminé</div><span class="ok">Bravo !</span> Tu connais l\'essentiel. Continue à t\'exercer ici, ou <b class="k">Tab</b> → Menu principal.';e.hidden=false;return;}
+    e.innerHTML=`<div class="st">Didacticiel · étape ${this.i+1} / ${this.steps.length}</div>${S.t}<div style="font-size:12px;color:#9aa1a8;margin-top:6px">Entrée : passer l'étape</div>`;e.hidden=false;if(S.enter)S.enter(this);},
+  next(){this.i++;this.okT=0;sfx.level();this.show();if(this.i>=this.steps.length)bigMsg('DIDACTICIEL TERMINÉ','Tu peux jouer au mode RPG ou au mode classique !');},
+  tick(dt){if(!this.on)return;const p=player;p.gas=ST.gasMax;p.inv=Math.max(p.inv,.25);p.hp=ST.hpMax;p.blade=CFG.bladeDurability;p.spareBlades=Math.max(p.spareBlades,8);
+    if(this.titan&&this.titan.state!=='dead'){this.titan.atkCd=Math.max(this.titan.atkCd,3);}
+    const S=this.steps[this.i];if(!S)return;if(this.okT>0){this.okT-=dt;if(this.okT<=0)this.next();return;}
+    if(S.ok(this)){this.okT=.9;const e=$('tutoP');if(e)e.innerHTML+='<div class="ok" style="margin-top:6px">Réussi !</div>';sfx.burst(2400,.12,.25,'bandpass',1.5);}}};
+addEventListener('mousemove',e=>{if(TUTO.on&&locked&&state==='play')TUTO.mv+=Math.abs(e.movementX)+Math.abs(e.movementY);});
+addEventListener('keydown',e=>{if(TUTO.on&&state==='play'&&(e.code==='Enter'||e.code==='NumpadEnter')&&TUTO.steps[TUTO.i]){TUTO.okT=0;TUTO.next();}});
+$('tutoBtn').onclick=()=>{startGame(1,'tuto');};
 /* ================= INPUT ================= */
 const keys={};let mouseR=false,locked=false,noLock=false,mouseX=innerWidth/2,mouseY=innerHeight/2;
 // touches physiques : ZQSD en AZERTY = WASD en QWERTY ; grappins = A/E en AZERTY, Q/E en QWERTY
@@ -3737,8 +3819,8 @@ function updCamControl(rdt){
 /* ================= GAME STATE ================= */
 let state='menu',slowT=0,timeScale=1,shake=0,roll=0,camDist=6.5;
 function resetPlayer(){endGrab();const p=player;p.pos.set(0,0,30);p.vel.set(0,0,0);p.hp=ST.hpMax;p.gas=ST.gasMax;p.inv=1.5;combo=1;resetBottles();resupply();clearSpears();p.wall=null;p.landRoll=0;p.flipT=p.rollT=p.spinT=0;pTrick.rotation.set(0,0,0);pTrick.position.y=0;camTgt.copy(p.pos);for(const h of hooks)h.state='none';yaw=0;pitch=-.05;}
-function freshProfile(){const D=PROF_DEF();for(const k of PROF_KEYS)save[k]=JSON.parse(JSON.stringify(D[k]));if(gameMode==='final'){save.level=100;save.points=100;}if(gameMode==='pvp'){save.level=10;save.points=10;}save.weapon='blade';persist();}
-function startGame(w,mode,cont){gameMode=mode||'normal';wave=w;useProfile(NET&&NET.on?'coop':gameMode==='rpg'?'rpg':gameMode==='final'?'final':gameMode==='pvp'?'pvp':'classic');if(NET&&NET.on)NET.zero();else if(!cont)freshProfile();if(gameMode==='rpg')save.tp=rpgTP();ST=calcStats();   // la vague est connue avant le réapprovisionnement (nombre de lances)
+function freshProfile(){const D=PROF_DEF();for(const k of PROF_KEYS)save[k]=JSON.parse(JSON.stringify(D[k]));if(gameMode==='final'){save.level=100;save.points=100;}if(gameMode==='pvp'){save.level=10;save.points=10;}if(gameMode==='train'){save.level=TRN.cfg.lv;save.points=TRN.cfg.lv;}save.weapon='blade';persist();}
+function startGame(w,mode,cont){gameMode=mode||'normal';wave=w;window._trAll=gameMode==='train'&&!!TRN.cfg.all;TRN.done=false;useProfile(NET&&NET.on?'coop':gameMode==='train'||gameMode==='tuto'?'train':gameMode==='rpg'?'rpg':gameMode==='final'?'final':gameMode==='pvp'?'pvp':'classic');if(NET&&NET.on)NET.zero();else if(!cont)freshProfile();if(gameMode==='rpg')save.tp=rpgTP();ST=calcStats();   // la vague est connue avant le réapprovisionnement (nombre de lances)
   sfx.init();$('start').hidden=true;$('hud').hidden=false;
   finalWon=false;clearTitans();resetPlayer();startWave(w);state='play';goFull();lockPointer();showTut();last=performance.now();
 }
@@ -3800,7 +3882,7 @@ function renderMenu(){
     else if(save.level>=5)h+='<div class="specs">'+Object.entries(SPECS).map(([k,v])=>`<button class="spec" data-spec="${k}"><b>${v.name}</b>${v.desc}</button>`).join('')+'</div>';
     else h+=`<p class="sub">Débloquée au niveau 5 (encore ${5-save.level} niveau${5-save.level>1?'x':''}).</p>`;
     h+='<div class="sect">Statistiques</div><div class="stats">';
-    for(const d of STATDEFS){const v=s[d.k];h+=`<div class="st"><div><h4>${d.name} <span style="color:var(--muted);font-size:16px">${v}/${STAT_MAX}</span></h4><p>${d.desc}</p><div class="pips">${Array.from({length:STAT_MAX},(_,i)=>`<i class="${i<v?'on':''}"></i>`).join('')}</div></div><button data-k="${d.k}" ${save.points<=0||v>=STAT_MAX?'disabled':''} aria-label="Augmenter ${d.name}">+</button></div>`;}
+    for(const d of STATDEFS){const v=s[d.k];h+=`<div class="st"><div><h4>${d.name} <span style="color:var(--muted);font-size:16px">${v}/${STAT_MAX}</span></h4><p>${d.desc}</p><div class="pips">${Array.from({length:STAT_MAX},(_,i)=>`<i class="${i<v?'on':''}"></i>`).join('')}</div></div>${RESPEC()?`<span style="display:flex;gap:6px"><button data-km="${d.k}" ${v<=0?'disabled':''} aria-label="Diminuer ${d.name}">−</button>`:''}<button data-k="${d.k}" ${save.points<=0||v>=STAT_MAX?'disabled':''} aria-label="Augmenter ${d.name}">+</button>${RESPEC()?'</span>':''}</div>`;}
     h+='</div>';
   }else if(menuTab==='tech'){
     h+=`<div class="mhead"><div><div class="eyebrow">Mode RPG</div><div class="rank">Techniques</div><div class="sub">Chaque nouveau grade rapporte 3 points de technique. Le prix dépend de la valeur de la technique : de 1 point (Évasion) à 6 pour les lances foudroyantes, l'arme la plus précieuse.</div></div><div class="pts"><b>${save.tp||0}</b><span>points de technique</span></div></div>`;
@@ -3850,6 +3932,7 @@ $('menuBody').addEventListener('click',e=>{
   const nd=e.target.closest('[data-node]');if(nd){techSel=nd.dataset.node;renderMenu();return;}
   const b=e.target.closest('button');if(!b)return;
   if(b.dataset.tab){menuTab=b.dataset.tab;renderMenu();return;}
+  if(b.dataset.km&&RESPEC()){const k=b.dataset.km;if(save.stats[k]>0){save.stats[k]--;save.points++;if(gameMode==='pvp'){const i=PV.buys.lastIndexOf(k);if(i>=0)PV.buys.splice(i,1);}ST=calcStats();player.hp=Math.min(player.hp,ST.hpMax);persist();}renderMenu();return;}
   if(b.dataset.k){const k=b.dataset.k;if(save.points>0&&save.stats[k]<STAT_MAX){save.stats[k]++;save.points--;if(gameMode==='pvp')PV.buys.push(k);persist();}resetArm=false;renderMenu();}
   else if(b.dataset.spec2){if(save.spec&&save.level>=60&&!save.spec2){save.spec2=true;persist();ST=calcStats();sfx.level();}renderMenu();}
   else if(b.dataset.ab){const a=ABIL.find(x=>x.k===b.dataset.ab);if(a&&!a.auto&&!save.abil[a.k]&&!(a.req&&!HAS(a.req))&&(save.tp||0)>=a.cost){save.abil[a.k]=true;save.tp-=a.cost;persist();ST=calcStats();if(a.k.startsWith('lances')){player.spears=spearMax();applyEquipVisual();}sfx.level();}renderMenu();}
@@ -3972,7 +4055,7 @@ function updPlayer(dt,rdt){
   if(p.rollT>0){p.rollT+=dt;const t=p.rollT/.5;pTrick.rotation.z=ease(Math.min(1,t))*TAU;if(t>=1){p.rollT=0;pTrick.rotation.z=0;}}
   if(p.landRoll>0){p.landRoll+=dt;const t=Math.min(1,p.landRoll/.5);pTrick.rotation.x=ease(t)*TAU;pTrick.position.y=-.4*Math.sin(Math.PI*t);if(t>=1){p.landRoll=0;pTrick.rotation.x=0;pTrick.position.y=0;}}
   if(p.spinT>0){p.spinT+=dt;p.spinTick-=dt;pTrick.rotation.y=p.spinT*TAU*3.2;ringMat.opacity=.55*(1-p.spinT/.8);ring.scale.setScalar(ST.range*1.5);ring.rotation.y=p.spinT*20;
-    if(p.spinTick<=0){p.spinTick=.15;if(bladeHit(ST.range*1.5,.5*ST.spinMult,'spin')&&!p.spinPaid){p.spinPaid=true;spendBlades(.5);ensureBlades();feed('Tourbillon : une demi-paire de lames usée · '+p.spareBlades+' en réserve','');}sfx.slash();}   // la paire n'est usée qu'au premier coup qui touche
+    if(p.spinTick<=0){p.spinTick=.15;if(bladeHit(ST.range*1.5,.5*ST.spinMult,'spin')&&!p.spinPaid){p.spinPaid=true;spendBlades(.5*BWEAR());ensureBlades();feed('Tourbillon : '+(BWEAR()<1?'un quart':'une demi-paire')+' de lames usé'+(BWEAR()<1?'':'e')+' · '+p.spareBlades+' en réserve','');}sfx.slash();}   // la paire n'est usée qu'au premier coup qui touche
     if(p.spinT>=.8){p.spinT=0;pTrick.rotation.y=0;ringMat.opacity=0;}}
   if(p.slashT>0){p.slashT+=dt;const t=p.slashT/.2;arcMat.opacity=.8*(1-t);arc.scale.setScalar(ST.range);arc.rotation.z=p.slashSide*.25;if(t>=1){p.slashT=0;arcMat.opacity=0;}}
   // style automatique
@@ -4396,12 +4479,13 @@ const CFG={
 };
 const EQUIP_NAMES={classic:'Équipement classique',modern:'Équipement modernisé'};
 // lances foudroyantes : débloquées après la vague 10 (toujours disponibles en mode Vague de boss), sur le même équipement que les lames
-function spearsOK(){if(gameMode==='pvp')return PV.cfg.spears!==false;return gameMode==='rpg'?HAS('lances1'):gameMode==='normal'?wave>10:(save.modern||gameMode==='boss'||gameMode==='final'||gameMode==='pvp');}
+function spearsOK(){if(gameMode==='pvp')return PV.cfg.spears!==false;if(gameMode==='train')return !!TRN.cfg.spears;if(gameMode==='tuto')return false;return gameMode==='rpg'?HAS('lances1'):gameMode==='normal'?wave>10:(save.modern||gameMode==='boss'||gameMode==='final'||gameMode==='pvp');}
 // jeu normal : 2 lances après la vague 10, 2 de plus toutes les 10 vagues, jusqu'à 6 ; les autres modes en ont toujours 6
-function spearMax(){return gameMode==='rpg'?(!HAS('lances1')?0:HAS('lances3')?6:HAS('lances2')?4:2):gameMode==='normal'?(wave>30?6:wave>20?4:wave>10?2:0):gameMode==='pvp'?2:CFG.spearCount;}
+function spearMax(){return gameMode==='train'?(TRN.cfg.spears?6:0):gameMode==='tuto'?0:gameMode==='rpg'?(!HAS('lances1')?0:HAS('lances3')?6:HAS('lances2')?4:2):gameMode==='normal'?(wave>30?6:wave>20?4:wave>10?2:0):gameMode==='pvp'?2:CFG.spearCount;}
 
 /* ----- usure et remplacement des lames ----- */
-function wearBlades(a){const p=player;if(HAS('acier'))a*=.6;p.blade=Math.max(0,p.blade-a);if(p.blade<=0)toast(p.spareBlades>0?'Lames brisées : elles seront changées au prochain coup':'Lames brisées ! Trouve une bouteille pour te réapprovisionner');}
+const BWEAR=()=>HAS('acier')?.5:1;   // Maîtrise des lames : moitié moins d'usure, pour tous les coups
+function wearBlades(a){const p=player;a*=BWEAR();p.blade=Math.max(0,p.blade-a);if(p.blade<=0)toast(p.spareBlades>0?'Lames brisées : elles seront changées au prochain coup':'Lames brisées ! Trouve une bouteille pour te réapprovisionner');}
 // réserve de lames en paires (la paire montée compte selon son usure) ; dépense : on use d'abord la paire montée, puis les paires de rechange
 const bladeStock=()=>{const p=player;return Math.max(0,p.blade)/CFG.bladeDurability+p.spareBlades;};
 function spendBlades(c){const p=player,D=CFG.bladeDurability;let need=c*D;while(need>1e-6){if(p.blade>=need){p.blade-=need;need=0;}else{need-=Math.max(0,p.blade);p.blade=0;if(p.spareBlades>0){p.spareBlades--;p.blade=D;}else break;}}}
@@ -4666,7 +4750,7 @@ sfx.launch=function(){this.burst(900,.12,.6,'lowpass',.8,.1);this.tone(180,60,.1
 sfx.aimIn=function(){this.burst(3200,.06,.2,'bandpass',3);this.burst(900,.1,.16,'lowpass',.8,0,0,.06);};
 sfx.stick=function(){this.burst(700,.12,.55,'lowpass',.8);this.burst(3400,.05,.3,'bandpass',3);this.burst(5200,.6,.12,'highpass',.6,0,1800,.05);};
 /* ----- retour à l'écran titre ----- */
-function toMainMenu(){try{PV.stop();}catch(e){}$('retryBtn').textContent='Améliorer et réessayer';$('retryBtn').hidden=false;if(NET&&(NET.on||NET.lobby))NET.leave();cancelAim();endGrab();clearTitans();state='menu';slowT=0;timeScale=1;{const e=$('mblur');e.style.backdropFilter=e.style.webkitBackdropFilter='none';blurPx=0;speedFX.sp=0;speedFX.kick=0;fxg.clearRect(0,0,fxc.width,fxc.height);}
+function toMainMenu(){try{PV.stop();}catch(e){}window._trAll=false;TUTO.stop();$('retryBtn').textContent='Améliorer et réessayer';$('retryBtn').hidden=false;if(NET&&(NET.on||NET.lobby))NET.leave();cancelAim();endGrab();clearTitans();state='menu';slowT=0;timeScale=1;{const e=$('mblur');e.style.backdropFilter=e.style.webkitBackdropFilter='none';blurPx=0;speedFX.sp=0;speedFX.kick=0;fxg.clearRect(0,0,fxc.width,fxc.height);}
   $('pause').hidden=true;$('over').hidden=true;$('hud').hidden=true;$('start').hidden=false;$('hint').hidden=true;
   if(document.pointerLockElement)document.exitPointerLock();sfx.set(sfx.gasG,0);sfx.set(sfx.windG,0);sfx.intense=0;
   resetPlayer();
@@ -5211,7 +5295,7 @@ function oBone(m,a,b,r){const d=_oT2.subVectors(b,a),L=d.length();m.position.cop
 const _oT2=new V3(),_oE=new V3(),_oP=new V3(),_oT3=new V3(),_oT4=new V3(),_oT5=new V3(),_oT6=new V3();
 function originelArrival(){if(ORIG)clearOriginel();const ew=effWave();
   const wz=MAP==='district'?DZ0:-SQW,top=WH+1.2,bz=wz-172;
-  ORIG={type:'originel',cfg:TT.originel,wz,top,bz,gy0:groundY(0,bz),hooks:[],maxHp:Math.round(45000*clamp(ew/40,.6,3)),hp:0,dead:false,deadT:0,t:0,introT:5,
+  ORIG={type:'originel',cfg:TT.originel,wz,top,bz,gy0:groundY(0,bz),hooks:[],maxHp:Math.round(45000*clamp(ew/40<=.6?.6:.6+.8*(ew/40-.6),.6,3)),hp:0,dead:false,deadT:0,t:0,introT:5,
     phase:1,screamCd:11,screamT:-1,slamCd:9,spikeCd:6,callCd:4,colCd:3,exposeT:0,staggerT:0,queue:ORIG_CTRL.filter(k=>k!=='cuirasse'||spearsOK()).sort(()=>Math.random()-.5),freed:0,need:0,spikes:[],lances:[],rage:false,rageT:0,volleyCd:9,steamCd:14,steamT:-1,steamHit:0,slam2:0,plateHP:Math.round(700*clamp(ew/40,.6,3))};
   if(NET&&NET.on&&NET.host)ORIG.maxHp=Math.round(ORIG.maxHp*(1+.5*NET.rem.size));   /* plus résistant quand l'escouade est nombreuse */
   ORIG.hp=ORIG.maxHp;ORIG.need=ORIG.queue.length;origBuild();OM.eye.color.setHex(0x58ff7c);OM.bone.emissive.setRGB(0,0,0);for(const p of ORIG.plates)p.hp=ORIG.plateHP;
@@ -6157,7 +6241,7 @@ var NET={mode:'normal',on:false,host:false,lobby:false,started:false,welcomed:fa
     else if(m.k==='ohit'||m.k==='opl'||m.k==='oplb'||m.k==='ostag')this.origMsg(m);
     else if(m.k==='rel'){if(R.grab)this.withP(R,()=>endGrab());}
     else if(m.k==='php'&&gameMode==='pvp'){const to=m.to|0,d=clamp(+m.d||0,0,600),by=R.id;if(to===0)PV.hurtMe(d,by,R.center);else{const b=PV.bots.find(x=>x.id===to);if(b)pvBotHurt(b,d,by,R.center);else{const T=this.rem.get(to);if(T)this.toP(T,{k:'php',d,by});}}}
-    else if(m.k==='pk'&&gameMode==='pvp'){PV.kill(R.id,m.by===null||m.by===undefined?null:+m.by);}
+    else if(m.k==='pk'&&gameMode==='pvp'){PV.kill(R.id,m.by===null||m.by===undefined?null:+m.by,+m.g||0);}
     else if(m.k==='stag'){const t=this.tmap.get(m.id);if(t&&t.state!=='dead')t.stagger=Math.max(t.stagger,Math.min(2,+m.st||0));}},
   cliData(m){if(!m||typeof m!=='object')return;switch(m.k){
     case'welcome':this.id=m.id;this.welcomed=true;if(N_MODES[m.mode])this.mode=m.mode;
@@ -6169,7 +6253,7 @@ var NET={mode:'normal',on:false,host:false,lobby:false,started:false,welcomed:fa
     case'pcfg':PV.takeCfg(m.cfg);this.uiRoom();break;
     case'php':if(this.on&&gameMode==='pvp'){const A=this.rem.get(m.by|0);PV.hurtMe(clamp(+m.d||0,0,600),m.by|0,A?A.center:null);}break;
     case'psc':if(this.on&&gameMode==='pvp'){if(Array.isArray(m.s))PV.score=[m.s[0]|0,m.s[1]|0];if(Number.isFinite(+m.t))PV.t=+m.t;
-      if(m.v!==undefined){if(m.v===this.id){if(m.by>=0)feed(PV.name(m.by)+' t\'a éliminé','');}else PV.killFx(m.v,m.by,m.by>=0);}PV.hud(true);}break;
+      if(m.v!==undefined){if(m.v===this.id){if(m.by>=0)feed(PV.name(m.by)+' t\'a éliminé','');}else PV.killFx(m.v,m.by,m.by>=0,+m.g||0);}PV.hud(true);}break;
     case'pend':if(this.on&&gameMode==='pvp'){if(Array.isArray(m.s))PV.score=[m.s[0]|0,m.s[1]|0];const sc=PV.score;PV.showEnd(sc[0]===sc[1]?-1:sc[0]>sc[1]?0:1);}break;
     case'prs':if(this.on&&gameMode==='pvp')PV.restart();break;
     case's':if(this.on)this.onSnap(m);break;
@@ -6393,9 +6477,19 @@ function titanCull(t){t.root.traverse(o=>{if(!o.isSkinnedMesh||o.userData.cullOk
 // toutes ses pièces sont compilées par la carte graphique, puis il est retiré. Ses matériaux sont gardés : leurs shaders restent prêts,
 // même quand tous les titans de ce type ont disparu. Fait au menu, un type à la fois, pour ne rien bloquer.
 const PREWARM=[];
+// écran de chargement : il reste affiché tant que les textures, le soldat, les corps et les shaders se préparent (30 s au plus)
+const LOADS={t0:performance.now(),bodies:0,done:false,tipT:0,tips:['Maintiens le clic droit pour lancer les deux grappins vers le viseur.','Tranche la nuque par derrière : c\'est le seul coup qui abat un géant d\'un coup.','Plus tu vas vite, plus ton coup fait mal : prends de l\'élan avant de frapper.','Sans gaz, l\'équipement ne marche plus : ramasse les bouteilles.','Tab ouvre le menu : améliorations, techniques, graphismes et commandes.','Si le jeu rame, baisse les textures et les ombres dans Tab → Graphismes.']};
+function loadTick(){if(LOADS.done)return;const M=THREE.DefaultLoadingManager,el=$('loadScr');if(!el){LOADS.done=true;return;}
+  const it=LOADS.items||{l:0,t:0},a=it.t?it.l/it.t:0,b=LOADS.bodies/BODY_LIST.length,kit=!!(typeof KIT_CUR!=='undefined'&&KIT_CUR&&KITS[KIT_CUR]&&KITS[KIT_CUR].ready),pw=prewarmTitans.prog||0;
+  const k=a*.35+b*.25+(kit?.15:0)+pw*.25,el2=performance.now()-LOADS.t0;$('loadBar').style.width=Math.round(4+96*k)+'%';
+  $('loadTxt').textContent=kit?(pw<1?'Préparation des effets…':b<1?'Chargement des corps…':'Presque prêt…'):'Chargement des textures et du soldat…';
+  if(el2-LOADS.tipT>4500||!LOADS.tipT){LOADS.tipT=el2;$('loadTip').textContent=LOADS.tips[Math.floor(Math.random()*LOADS.tips.length)];}
+  if((k>=.999&&el2>1500)||el2>30000){LOADS.done=true;el.style.opacity=0;el.style.pointerEvents='none';setTimeout(()=>el.remove(),700);return;}
+  setTimeout(loadTick,200);}
+{const M=THREE.DefaultLoadingManager,o=M.onProgress;M.onProgress=(u,l,t)=>{LOADS.items={l,t};if(o)o(u,l,t);};}
 function prewarmTitans(){if(prewarmTitans.done)return;prewarmTitans.done=true;
   const jobs=Object.keys(TT).filter(k=>k!=='originel'&&k!=='fondateur').map(k=>[k,0]).concat(ORIG_CTRL.map(k=>[k,1]),[['colosse',2]]);let i=0;
-  const step=()=>{if(i>=jobs.length)return;if(state==='play'&&!(NET&&NET.on)){}const [k,m]=jobs[i++];
+  const step=()=>{prewarmTitans.prog=i/jobs.length;if(i>=jobs.length){prewarmTitans.prog=1;return;}if(state==='play'&&!(NET&&NET.on)){}const [k,m]=jobs[i++];
     try{const t=new Titan(k,0,-2600);if(m===1&&typeof palify==='function')palify(t);if(m===2&&typeof founderForm==='function')founderForm(t);
       const vis=[];t.root.traverse(o=>{vis.push([o,o.visible]);o.visible=true;});t.root.position.copy(sun.target.position);t.root.position.y-=2;t.root.updateMatrixWorld(true);
       renderer.compile(scene,camera);if(!prewarmTitans.rt)prewarmTitans.rt=new THREE.WebGLRenderTarget(16,16);renderer.setRenderTarget(prewarmTitans.rt);renderer.render(scene,camera);renderer.setRenderTarget(null);
@@ -6423,6 +6517,10 @@ Titan.prototype.hitLimb=function(m,dmg){if(!NET.on||NET.replay||this.nid===undef
    Tout le monde commence au niveau 10 avec 10 points ; chaque élimination fait gagner un niveau (et un point), chaque mort ramène au niveau 10
    (les derniers points dépensés sont repris). Les IA ont une classe et une répartition de points tirées au hasard, et se battent en conséquence.
    L'hôte (ou le joueur seul) fait vivre les IA ; en ligne, elles sont envoyées aux autres comme des joueurs. Pas de ralenti en PvP. */
+const RANK_T=[[0,'Bronze'],[900,'Argent'],[1050,'Or'],[1200,'Platine'],[1350,'Diamant'],[1500,'Maître'],[1700,'Grand maître'],[1900,'Légende']],RANK_BOT=[850,1050,1300];
+function rankOf(r){let t=RANK_T[0][1];for(const x of RANK_T)if(r>=x[0])t=x[1];return t;}
+function rankData(){if(!save.rank||typeof save.rank!=='object')save.rank={r:1000,w:0,l:0,d:0,hist:[]};if(!Array.isArray(save.rank.hist))save.rank.hist=[];return save.rank;}
+const PV_LADDER=[['Valéran',1980],['Ysolde',1860],['Corentin',1745],['Ombeline',1660],['Baptiste',1575],['Mahaut',1490],['Thibaut',1410],['Anselme',1330],['Roxane',1255],['Firmin',1180],['Iseult',1110],['Gautier',1040],['Perrine',975],['Lucien',910],['Agathe',850],['Martin',780]];
 const PV_TEAM=[{n:'Bleus',c:'#6fb4ff',cape:'bleu'},{n:'Rouges',c:'#ff6b5e',cape:'rouge'}];
 const PV_SKILL=[{n:'Recrue',react:.7,err:.13,agg:.36,dodge:.08,spd:.68,dmg:.5},{n:'Soldat',react:.4,err:.065,agg:.6,dodge:.3,spd:.84,dmg:.75},{n:'Vétéran',react:.2,err:.025,agg:.88,dodge:.7,spd:1,dmg:1}];
 const PV_NAMES=['Aubin','Céleste','Doran','Élise','Gaspard','Hélène','Isaac','Jolan','Klara','Léon','Maëlle','Noé','Odile','Pierrick','Rémi','Solène'];
@@ -6454,7 +6552,16 @@ const PV_LOOKS=[
 const PV_WEIGHTS={assaut:{power:5,blade:2,vit:2,speed:2,gas:1,hook:0},eclaireur:{speed:5,gas:3,power:1,vit:1,blade:1,hook:1},tempete:{blade:5,power:2,speed:2,vit:1,gas:1,hook:0}};
 const _PVUP=new V3(0,1,0),_pvA=new V3(),_pvB=new V3(),_pvC=new V3(),_pvD=new V3(),_pvQ=new THREE.Quaternion(),_pvM=new THREE.Matrix4();
 const PV={on:false,bots:[],teams:{},score:[0,0],t:0,over:false,sync:0,proj:[],buys:[],lastBy:null,hudT:0,nameOf:{},
-  cfg:Object.assign({me:0,limit:15,time:8,spears:true,bots:[{t:1,s:1},{t:1,s:1},{t:0,s:1}],pt:{}},(typeof save!=='undefined'&&save.pvp)||{}),
+  cfg:Object.assign({me:0,limit:15,time:8,spears:true,bots:[{t:1,s:1},{t:1,s:1},{t:0,s:1}],pt:{},train:false},(typeof save!=='undefined'&&save.pvp)||{}),
+  trainOn(){return !!(this.on&&!NET.on&&this.cfg.train&&this.cfg.tr);},
+  trDef(){const C=this.cfg,D={me:{lv:10,abil:{agilite:1,tourbillon:1,charge:1}},ai:{lv:10,spec:'rand',stats:null,abil:{tourbillon:1,charge:1,spear:1}},keep:true};
+    if(!C.tr||typeof C.tr!=='object')C.tr=D;for(const k of ['me','ai'])C.tr[k]=Object.assign({},D[k],C.tr[k]||{});if(C.tr.keep===undefined)C.tr.keep=true;return C.tr;},
+  // entraînement : niveau, statistiques, classe et techniques réglés pour le joueur et les IA
+  applyTrain(){window._pvTr=null;if(!this.trainOn())return;const T=this.trDef();window._pvTr=T.me.abil;
+    save.level=T.me.lv;save.points=T.me.lv;save.stats={speed:0,power:0,gas:0,vit:0,blade:0,hook:0};this.buys=[];if(save.level<60)save.spec2=false;ST=calcStats();player.hp=ST.hpMax;
+    for(const b of this.bots){b.level=T.ai.lv;if(T.ai.spec!=='rand')b.spec=T.ai.spec;b.spec2=b.level>=60;
+      if(T.ai.stats){b.stats=Object.assign({speed:0,power:0,gas:0,vit:0,blade:0,hook:0},T.ai.stats);b.buys=[];}else{b.stats={speed:0,power:0,gas:0,vit:0,blade:0,hook:0};b.buys=[];for(let i=0;i<b.level;i++)pvBotSpend(b);}
+      b.off={spin:!T.ai.abil.tourbillon,charge:!T.ai.abil.charge,spear:!T.ai.abil.spear};pvBotStats(b);b.hp=b.st.hpMax;if(b.off.spear)b.spears=0;}},
   myId(){return NET.on?NET.id:0;},
   myTeam(){return this.teamOf(this.myId());},
   teamOf(id){const t=this.teams[id];return t===1?1:0;},
@@ -6480,7 +6587,16 @@ const PV={on:false,bots:[],teams:{},score:[0,0],t:0,over:false,sync:0,proj:[],bu
     else if(k==='lim'){const L=[10,15,20,30,50];C.limit=L[(L.indexOf(C.limit)+1)%L.length];}
     else if(k==='spr')C.spears=C.spears===false;
     else if(k==='time'){const L=[5,8,12,20];C.time=L[(L.indexOf(C.time)+1)%L.length];}
-    this.saveCfg();if(where==='solo')$('pvpEdS').innerHTML=this.edHTML('solo');else{NET.bc({k:'pcfg',cfg:this.cfg});NET.uiRoom();}},
+    else if(k==='trn'){C.train=!C.train;this.trDef();}
+    else if(C.train&&C.tr){const T=C.tr;
+      if(k==='lv'){const o=b.dataset.w==='me'?T.me:T.ai;o.lv=clamp(o.lv+(+b.dataset.d),1,100);}
+      else if(k==='mab'){const a=b.dataset.a;T.me.abil[a]=T.me.abil[a]?0:1;}
+      else if(k==='aab'){const a=b.dataset.a;T.ai.abil[a]=T.ai.abil[a]?0:1;}
+      else if(k==='aisp'){const L=['rand','assaut','eclaireur','tempete'];T.ai.spec=L[(L.indexOf(T.ai.spec)+1)%L.length];}
+      else if(k==='aist')T.ai.stats=T.ai.stats?null:{speed:0,power:0,gas:0,vit:0,blade:0,hook:0};
+      else if(k==='ais'&&T.ai.stats){const st=b.dataset.s;T.ai.stats[st]=clamp((T.ai.stats[st]|0)+(+b.dataset.d),0,STAT_MAX);}
+      else if(k==='keep')T.keep=!T.keep;}
+    this.saveCfg();if(where==='solo')$('pvpEdS').innerHTML=this.edHTML('solo')+this.trainHTML()+this.rankHTML();else{NET.bc({k:'pcfg',cfg:this.cfg});NET.uiRoom();}},
   takeCfg(c){if(!c||typeof c!=='object')return;const C=this.cfg;C.limit=[10,15,20,30,50].includes(+c.limit)?+c.limit:15;C.spears=c.spears!==false;C.time=[5,8,12,20].includes(+c.time)?+c.time:8;
     C.bots=Array.isArray(c.bots)?c.bots.slice(0,8).map(b=>({t:b&&b.t?1:0,s:clamp(b&&b.s|0,0,2)})):[];C.pt={};if(c.pt&&typeof c.pt==='object')for(const k in c.pt)C.pt[k]=c.pt[k]?1:0;},
   // ----- début, fin -----
@@ -6489,27 +6605,51 @@ const PV={on:false,bots:[],teams:{},score:[0,0],t:0,over:false,sync:0,proj:[],bu
     else this.teams[0]=this.cfg.me|0;
     const used=new Set();this.cfg.bots.forEach((c,i)=>{let n;do{n=PV_NAMES[Math.floor(Math.random()*PV_NAMES.length)];}while(used.has(n)&&used.size<PV_NAMES.length);used.add(n);
       const b=pvNewBot(20+i,n,c.t|0,c.s|0);this.bots.push(b);this.teams[b.id]=b.team;this.nameOf[b.id]=b.name;});
+    this.myK=this.myD=0;this.rated=false;this.applyTrain();
     this.hud(true);$('pvpHud').hidden=false;NET.place();
-    bigMsg('PVP · '+PV_TEAM[this.myTeam()].n.toUpperCase(),'Tu es chez les '+PV_TEAM[this.myTeam()].n+'. Niveau 10 et 10 points (Tab) : chaque élimination te fait monter d\'un niveau, chaque mort te ramène au niveau 10.');},
+    if(this.trainOn()){bigMsg('ENTRAÎNEMENT PVP','Niveau '+save.level+' et '+save.points+' points (Tab, boutons + et −). Sans effet sur le classement.');}
+    else bigMsg('PVP · '+PV_TEAM[this.myTeam()].n.toUpperCase(),'Tu es chez les '+PV_TEAM[this.myTeam()].n+'. Niveau 10 et 10 points (Tab) : chaque élimination te fait monter d\'un niveau, chaque mort te ramène au niveau 10.');},
+  // ----- classement : points de classement (départ à 1000), selon le résultat, la force des adversaires et le bilan éliminations / morts -----
+  rate(w){if(this.rated||this.trainOn())return this.trainOn()?' Entraînement : sans effet sur le classement.':'';this.rated=true;const R=rankData(),me=this.myTeam(),S=w<0?.5:w===me?1:0;
+    const opp=this.cfg.bots.filter(b=>(b.t|0)!==me).map(b=>RANK_BOT[b.s|0]||1000);if(NET.on)for(const R2 of NET.rem.values())if(this.teamOf(R2.id)!==me)opp.push(1100);
+    const avg=opp.length?opp.reduce((a,b)=>a+b,0)/opp.length:1000,E=1/(1+Math.pow(10,(avg-R.r)/400)),d=Math.round(40*(S-E)+clamp(((this.myK||0)-(this.myD||0))*2,-10,10));
+    const t0=rankOf(R.r);R.r=Math.max(0,R.r+d);if(S===1)R.w++;else if(S===0)R.l++;else R.d++;R.hist.unshift({s:S,d,k:this.myK||0,m:this.myD||0});R.hist.length=Math.min(R.hist.length,8);persist();
+    const t1=rankOf(R.r);return ` Classement : ${t1} · ${R.r} points (${d>=0?'+':''}${d}).`+(t1!==t0?(R.r>=RANK_T.find(x=>x[1]===t1)[0]&&d>0?' Nouveau rang : '+t1+' !':' Rang : '+t1+'.'):'');},
+  // ----- interface de l'entraînement et du classement (écran PvP contre des IA) -----
+  trainHTML(){const C=this.cfg;let h=`<div class="row" style="margin-top:10px"><button class="${C.train?'':'ghost'} pvS" data-pv="trn">Mode entraînement : ${C.train?'activé':'désactivé'}</button></div>`;
+    if(!C.train)return h;const T=this.trDef(),onB=(on,attr,txt)=>`<button class="${on?'':'ghost'} pvS" ${attr}>${txt}</button>`,lv=(who,v)=>`<button class="ghost pvS" data-pv="lv" data-w="${who}" data-d="-10">−10</button><button class="ghost pvS" data-pv="lv" data-w="${who}" data-d="-1">−1</button><b style="min-width:70px;text-align:center;display:inline-block">Niveau ${v}</b><button class="ghost pvS" data-pv="lv" data-w="${who}" data-d="1">+1</button><button class="ghost pvS" data-pv="lv" data-w="${who}" data-d="10">+10</button>`;
+    h+=`<p class="note" style="margin:6px 0">Tout se règle ici ; sans effet sur le classement. Tes points se répartissent en jeu (Tab, boutons + et −).</p>`;
+    h+=`<div class="eyebrow" style="margin:8px 0 6px">Ton soldat</div><div class="row">${lv('me',T.me.lv)}</div><div class="row" style="margin-top:6px">`;
+    for(const a of ABIL.filter(a=>!/^lances/.test(a.k)))h+=onB(T.me.abil[a.k],`data-pv="mab" data-a="${a.k}"`,a.name);
+    h+=`</div><div class="eyebrow" style="margin:10px 0 6px">IA</div><div class="row">${lv('ai',T.ai.lv)}<button class="ghost pvS" data-pv="aisp">Classe : ${T.ai.spec==='rand'?'au hasard':SPECS[T.ai.spec].name}</button><button class="ghost pvS" data-pv="aist">Statistiques : ${T.ai.stats?'personnalisées':'selon la classe'}</button></div>`;
+    if(T.ai.stats){h+='<div class="row" style="margin-top:6px">';for(const d of STATDEFS)h+=`<span style="display:inline-flex;align-items:center;gap:4px;margin-right:10px">${d.name}<button class="ghost pvS" data-pv="ais" data-s="${d.k}" data-d="-1">−</button><b>${T.ai.stats[d.k]|0}</b><button class="ghost pvS" data-pv="ais" data-s="${d.k}" data-d="1">+</button></span>`;h+='</div>';}
+    h+='<div class="row" style="margin-top:6px">'+onB(T.ai.abil.tourbillon,'data-pv="aab" data-a="tourbillon"','Tourbillon')+onB(T.ai.abil.charge,'data-pv="aab" data-a="charge"','Coupe chargée')+onB(T.ai.abil.spear,'data-pv="aab" data-a="spear"','Lances foudroyantes')+'</div>';
+    h+=`<div class="row" style="margin-top:6px">${onB(T.keep,'data-pv="keep"','Niveaux gardés à la mort : '+(T.keep?'oui':'non'))}</div>`;return h;},
+  rankHTML(){const R=rankData(),me=Math.round(R.r),L=PV_LADDER.map(([n,r])=>({n,r,me:false})).concat([{n:'Toi',r:me,me:true}]).sort((a,b)=>b.r-a.r),i=L.findIndex(x=>x.me);
+    const from=Math.max(0,Math.min(i-4,L.length-9)),rows=L.slice(from,from+9).map((x,j)=>`<tr style="${x.me?'color:var(--gold);font-weight:700':''}"><td>${from+j+1}</td><td>${x.n}</td><td>${rankOf(x.r)}</td><td style="text-align:right">${x.r}</td></tr>`).join('');
+    const hs=R.hist.slice(0,5).map(x=>`<span style="color:${x.s===1?'#7fd38b':x.s===0?'#ff8a7a':'#c9c3b6'}">${x.s===1?'V':x.s===0?'D':'N'} ${x.d>=0?'+':''}${x.d}</span>`).join(' · ');
+    return `<div class="eyebrow" style="margin:14px 0 6px">Classement</div><div class="row" style="align-items:baseline;gap:14px"><b style="font-size:22px;color:var(--gold)">${rankOf(me)}</b><span>${me} points · ${R.w} victoire${R.w>1?'s':''}, ${R.l} défaite${R.l>1?'s':''}, ${R.d} nul${R.d>1?'s':''}</span></div>
+      ${hs?`<p class="note" style="margin:4px 0">Derniers matchs : ${hs}</p>`:''}<table style="width:100%;border-collapse:collapse;font-size:15px;margin-top:6px">${rows}</table>
+      <p class="note" style="margin:6px 0 0">Gagne des points en battant des adversaires plus forts (IA vétérans, joueurs en ligne) ; l'entraînement ne compte pas.</p>`;},
   // invité : la partie de l'hôte (camps, IA et leurs noms)
-  client(pv){this.stop();this.on=true;if(pv&&pv.cfg&&pv.cfg.spears===false)save.weapon='blade';this.over=false;this.score=[0,0];this.buys=[];this.teams={};this.nameOf={};if(!pv)return;this.takeCfg(pv.cfg);this.t=this.cfg.time*60;
+  client(pv){this.stop();this.on=true;this.myK=this.myD=0;this.rated=false;if(pv&&pv.cfg&&pv.cfg.spears===false)save.weapon='blade';this.over=false;this.score=[0,0];this.buys=[];this.teams={};this.nameOf={};if(!pv)return;this.takeCfg(pv.cfg);this.t=this.cfg.time*60;
     if(pv.teams)for(const k in pv.teams)this.teams[k]=pv.teams[k]?1:0;if(Array.isArray(pv.bots))for(const b of pv.bots){this.teams[b[0]]=b[2]?1:0;this.nameOf[b[0]]=String(b[1]||'').slice(0,14);}
     this.hud(true);$('pvpHud').hidden=false;},
   pack(){return{cfg:this.cfg,teams:this.teams,bots:this.bots.map(b=>[b.id,b.name,b.team])};},
   botPl(){return this.bots.map(b=>[b.id,b.name,b.look]);},
-  stop(){for(const b of this.bots)pvDropBot(b);this.bots=[];for(const s of this.proj)scene.remove(s.m);this.proj=[];this.on=false;$('pvpHud').hidden=true;},
+  stop(){window._pvTr=null;for(const b of this.bots)pvDropBot(b);this.bots=[];for(const s of this.proj)scene.remove(s.m);this.proj=[];this.on=false;$('pvpHud').hidden=true;},
   end(){if(this.over)return;this.over=true;const s=this.score,w=s[0]===s[1]?-1:s[0]>s[1]?0:1;if(NET.on&&NET.host)NET.bc({k:'pend',s});this.showEnd(w);},
   showEnd(w){this.over=true;state='over';cancelAim();chgCancel();if(document.pointerLockElement)document.exitPointerLock();$('coopDown').hidden=true;
     const s=this.score,me=this.myTeam();$('overH').textContent=w<0?'Égalité':w===me?'Victoire !':'Défaite';
-    $('overT').textContent=`PvP · ${PV_TEAM[0].n} ${s[0]} – ${s[1]} ${PV_TEAM[1].n}. `+(w<0?'Personne ne l\'emporte.':'Les '+PV_TEAM[w].n+' l\'emportent.');
+    $('overT').textContent=`PvP · ${PV_TEAM[0].n} ${s[0]} – ${s[1]} ${PV_TEAM[1].n}. `+(w<0?'Personne ne l\'emporte.':'Les '+PV_TEAM[w].n+' l\'emportent.')+this.rate(w);
     $('retryBtn').hidden=NET.on&&!NET.host;$('retryBtn').textContent='Rejouer';$('over').hidden=false;sfx.set(sfx.gasG,0);sfx.set(sfx.windG,0);},
   replay(){if(NET.on&&!NET.host)return;if(NET.on)NET.bc({k:'prs'});this.restart();},
   restart(){$('over').hidden=true;$('coopDown').hidden=true;NET.dead=false;freshProfile();this.lvReset0();
     resetPlayer();this.score=[0,0];this.t=this.cfg.time*60;this.over=false;this.proj.forEach(s=>scene.remove(s.m));this.proj=[];
-    for(const b of this.bots){pvBotReset(b,true);pvBotRespawn(b);}NET.place();state='play';goFull();lockPointer();last=performance.now();this.hud(true);},
+    for(const b of this.bots){pvBotReset(b,true);pvBotRespawn(b);}this.myK=this.myD=0;this.rated=false;this.applyTrain();NET.place();state='play';goFull();lockPointer();last=performance.now();this.hud(true);},
   lvReset0(){save.level=10;save.points=10;save.stats={speed:0,power:0,gas:0,vit:0,blade:0,hook:0};save.spec2=false;this.buys=[];ST=calcStats();player.hp=ST.hpMax;},
   // ----- progression du joueur local -----
-  levelUp(){save.level++;save.points++;ST=calcStats();player.hp=Math.min(ST.hpMax,player.hp+ST.hpMax*.25);sfx.level();bigMsg('NIVEAU '+save.level,'Élimination : +1 point (Tab pour améliorer)');persist();},
+  levelUp(n){n=Math.max(1,n|0);save.level+=n;save.points+=n;ST=calcStats();player.hp=Math.min(ST.hpMax,player.hp+ST.hpMax*.25);sfx.level();bigMsg('NIVEAU '+save.level,'Élimination : +'+n+' point'+(n>1?'s':'')+' (Tab pour améliorer)');persist();},
   levelDown(){const lost=save.level-10;save.level=10;while(this.buys.length>10){const k=this.buys.pop();if(save.stats[k]>0)save.stats[k]--;}save.points=Math.max(0,10-this.buys.length);if(save.level<60)save.spec2=false;ST=calcStats();persist();
     if(lost>0)feed('Tu redescends au niveau 10 (−'+lost+' niveau'+(lost>1?'x':'')+')','');},
   // ----- combattants -----
@@ -6532,15 +6672,16 @@ const PV={on:false,bots:[],teams:{},score:[0,0],t:0,over:false,sync:0,proj:[],bu
     shake=Math.max(shake,.7);$('flash').style.transition='none';$('flash').style.opacity=.35;requestAnimationFrame(()=>{$('flash').style.transition='opacity .5s';$('flash').style.opacity=0;});
     sfx.hurt();popNum(p.center,'-'+Math.round(d),'hurt');bloodBurst(p.center,8,.4);deathCheck();},
   // mort du joueur local (appelée par NET.goDown)
-  myDown(){const by=this.lastBy;this.lastBy=null;this.levelDown();
-    if(!NET.on||NET.host)this.kill(this.myId(),by);else NET.send('h',{k:'pk',v:this.myId(),by});},
+  myDown(){const by=this.lastBy,g=Math.max(0,save.level-10);this.lastBy=null;this.myD=(this.myD||0)+1;if(!(this.trainOn()&&this.cfg.tr.keep))this.levelDown();
+    if(!NET.on||NET.host)this.kill(this.myId(),by,g);else NET.send('h',{k:'pk',v:this.myId(),by,g});},
   // élimination comptée par l'hôte (ou le joueur seul)
-  kill(v,by){if(this.over)return;const tv=this.teamOf(v),ok=by!=null&&by!==v&&this.teamOf(by)!==tv;
-    if(ok)this.score[this.teamOf(by)]++;this.killFx(v,by,ok);
-    const b=this.bots.find(x=>x.id===by);if(b&&ok)pvBotLevelUp(b);
-    if(NET.on&&NET.host)NET.bc({k:'psc',s:this.score,t:this.t,v,by:ok?by:-1});
+  kill(v,by,g){if(this.over)return;g=clamp(g|0,0,90);const tv=this.teamOf(v),ok=by!=null&&by!==v&&this.teamOf(by)!==tv;   /* g : niveaux que la victime avait gagnés, récupérés par celui qui l'élimine */
+    if(ok)this.score[this.teamOf(by)]++;this.killFx(v,by,ok,g);
+    const b=this.bots.find(x=>x.id===by);if(b&&ok)for(let i=0;i<=g&&b.level<100;i++)pvBotLevelUp(b);
+    if(NET.on&&NET.host)NET.bc({k:'psc',s:this.score,t:this.t,v,by:ok?by:-1,g});
     this.hud(true);if(ok&&this.score[this.teamOf(by)]>=this.cfg.limit)this.end();},
-  killFx(v,by,ok){const vn=this.name(v);feed(ok?this.name(by)+' a éliminé '+vn:vn+' est tombé','');if(ok&&by===this.myId()){hitMark('kill');this.levelUp();addStyle('Élimination',.5,true);sfx.kill();}},
+  killFx(v,by,ok,g){g=g|0;const vn=this.name(v);feed(ok?this.name(by)+' a éliminé '+vn+(g>0?' (+'+g+' niveau'+(g>1?'x':'')+' récupéré'+(g>1?'s':'')+')':''):vn+' est tombé','');
+    if(ok&&by===this.myId()){this.myK=(this.myK||0)+1;hitMark('kill');{const n=Math.max(0,Math.min(1+g,100-save.level));if(n>0&&!(this.trainOn()&&this.cfg.tr.keep))this.levelUp(n);}addStyle('Élimination',.5,true);sfx.kill();}},
   // explosion d'une lance tirée par le joueur local
   blastMine(p){const me=this.myId(),R=CFG.spearRadius*1.3;for(const f of this.enemiesOf(this.myTeam())){const d=f.center.distanceTo(p);if(d<R)this.hit(f,42*(1-.6*d/R)*Math.sqrt(rank().m),me,p);}},
   segHit(a,b,r){const ab=_pvA.subVectors(b,a),L2=ab.lengthSq()||1e-6;for(const f of this.enemiesOf(this.myTeam())){if(f.kind==='me')continue;const u=clamp(_pvB.subVectors(f.center,a).dot(ab)/L2,0,1);if(_pvC.copy(a).addScaledVector(ab,u).distanceTo(f.center)<r)return f;}return null;},
@@ -6585,21 +6726,22 @@ function pvBotStats(b){const k={stats:save.stats,level:save.level,spec:save.spec
   const S=b.stats,c=b.spec,sk=b.skill;
   b.P={agg:clamp(sk.agg+(c==='assaut'?.15:c==='eclaireur'?-.12:0)+S.vit*.012,.2,1.2),spear:clamp((c==='eclaireur'?.42:c==='assaut'?.12:.2)+S.gas*.012,0,.8),
     spin:clamp((c==='tempete'?.5:.1)+S.blade*.018,0,.85),charge:clamp((c==='assaut'?.45:.18)+S.power*.015,0,.8),kite:c==='eclaireur'?1.3:c==='tempete'?.7:.5,
-    dodge:clamp(sk.dodge+S.speed*.02,0,1),tricks:c==='eclaireur'?1.4:1,boostK:1+S.gas*.03};}
+    dodge:clamp(sk.dodge+S.speed*.02,0,1),tricks:c==='eclaireur'?1.4:1,boostK:1+S.gas*.03};
+  if(b.off){if(b.off.spin)b.P.spin=0;if(b.off.charge)b.P.charge=0;if(b.off.spear)b.P.spear=0;}}
 function pvBotLevelUp(b){b.level++;pvBotSpend(b);pvBotStats(b);b.hp=Math.min(b.st.hpMax,b.hp+b.st.hpMax*.25);}
-function pvBotReset(b,full){b.level=10;if(full){b.stats={speed:0,power:0,gas:0,vit:0,blade:0,hook:0};b.buys=[];for(let i=0;i<10;i++)pvBotSpend(b);}
+function pvBotReset(b,full){if(!full&&PV.trainOn()&&PV.cfg.tr.keep)return;b.level=10;if(full){b.stats={speed:0,power:0,gas:0,vit:0,blade:0,hook:0};b.buys=[];for(let i=0;i<10;i++)pvBotSpend(b);}
   else while(b.buys.length>10){const k=b.buys.pop();if(b.stats[k]>0)b.stats[k]--;}b.spec2=false;pvBotStats(b);}
 // lieu d'apparition du camp : sur une rue dégagée, un peu au hasard
 function pvSpawn(team){const B=MAP==='district'?[[-100,120],[130,120]]:[[-70,10],[70,10]],[bx,bz]=B[team?1:0];
   for(let i=0;i<40;i++){const x=bx+(Math.random()-.5)*(i<20?24:60),z=bz+(Math.random()-.5)*(i<20?16:60),y=groundY(x,z);if(!pointBlocked(x,y+.6,z)&&!pointBlocked(x,y+1.6,z))return new V3(x,y,z);}
   return new V3(bx,groundY(bx,bz),bz);}
-function pvBotRespawn(b){const s=pvSpawn(b.team);b.pos.copy(s);b.vel.set(0,0,0);b.center.set(s.x,s.y+1,s.z);b.dead=false;b.hp=b.st.hpMax;b.gas=100;b.inv=2.5;b.spears=PV.cfg.spears!==false?2:0;b.spare=8;b.blade=CFG.bladeDurability;
+function pvBotRespawn(b){const s=pvSpawn(b.team);b.pos.copy(s);b.vel.set(0,0,0);b.center.set(s.x,s.y+1,s.z);b.dead=false;b.hp=b.st.hpMax;b.gas=100;b.inv=2.5;b.spears=PV.cfg.spears!==false&&!(b.off&&b.off.spear)?2:0;b.spare=8;b.blade=CFG.bladeDurability;
   b.weapon='blade';for(const h of b.hooks)h.st=0;b.trick.set(0,0,0);b.flipT=b.rollT=b.spinT=b.landRoll=b.chgT=b.chgA=b.aimT=b.slashA=0;b.mode='roam';b.tgt=null;b.thinkT=.3;b.lastBy=null;
   const a=Math.random()*TAU;b.q.setFromAxisAngle(_ay,a);}
 function pvBotHurt(b,d,by,from){if(b.dead||b.inv>0||PV.over)return;b.hp-=d;b.lastHit=0;b.lastBy=by;b.lastByT=4;b.inv=.25;bloodBurst(b.center,7,.4);
   if(from){_pvA.subVectors(b.center,from).setY(0);if(_pvA.lengthSq()>1e-4){_pvA.normalize();b.vel.addScaledVector(_pvA,7);b.vel.y+=3;}}
   if(b.thinkT>.12)b.thinkT=.12;   // il réagit vite à un coup
-  if(b.hp<=0){b.hp=0;b.dead=true;b.deadT=5;for(const h of b.hooks)h.st=0;b.chgT=b.chgA=b.aimT=0;bloodBurst(b.center,18,.8);pvBotReset(b,false);PV.kill(b.id,by);}}
+  if(b.hp<=0){const g=Math.max(0,b.level-10);b.hp=0;b.dead=true;b.deadT=5;for(const h of b.hooks)h.st=0;b.chgT=b.chgA=b.aimT=0;bloodBurst(b.center,18,.8);pvBotReset(b,false);PV.kill(b.id,by,g);}}
 // ----- IA : vues, ancres, tirs -----
 function pvRay(o,d,max){let best=max,hit=false;
   for(const c of colliders){if(c.small)continue;const y0=c.y0!==undefined?c.y0:-5;let t0=0,t1=best,a,bq;
@@ -6781,7 +6923,7 @@ function pvBotState(b){const a=new Float32Array(N_PSN),q=b.q;a[0]=b.pos.x;a[1]=b
   a[44]=(b.grounded?1:0)|(b.spinT>0?2:0)|(b.slashA>0?4:0)|(b.dead?8:0)|(b.mode==='aim'?16:0)|(b.boost?32:0)|(b.weapon==='spear'?64:0);a[45]=Math.max(0,b.hp);a[46]=b.st.hpMax;a[47]=b.inv;
   for(let i=0;i<2;i++){const h=b.hooks[i],v=h.st===1?h.pt:h.tip;a[48+i*4]=h.st===0||b.dead?0:h.st===1?1:2;a[49+i*4]=v.x;a[50+i*4]=v.y;a[51+i*4]=v.z;}a[56]=b.deadT;a[57]=b.level;a[58]=b.team;return a;}
 // ----- interface -----
-$('pvpSoloBtn').onclick=()=>{$('start').hidden=true;$('pvpSolo').hidden=false;$('pvpEdS').innerHTML=PV.edHTML('solo');};
+$('pvpSoloBtn').onclick=()=>{$('start').hidden=true;$('pvpSolo').hidden=false;$('pvpEdS').innerHTML=PV.edHTML('solo')+PV.trainHTML()+PV.rankHTML();};
 $('pvpBack').onclick=()=>{$('pvpSolo').hidden=true;$('start').hidden=false;};
 $('pvpGo').onclick=()=>{PV.saveCfg();$('pvpSolo').hidden=true;startGame(1,'pvp');};
 $('pvpEdS').addEventListener('click',e=>PV.edClick(e,'solo'));
@@ -6834,6 +6976,6 @@ function loop(now){
 for(let i=0;i<4;i++){const a=i*1.6+.5;const t=new Titan(['small','medium','large','abnormal'][i],Math.sin(a)*70,Math.cos(a)*70+20);titans.push(t);t.marker.style.display='none';}
 const origStart=startGame;
 startGame=function(w,m){for(const t of titans)t.marker.style.display='';origStart(w,m);};
-prewarmTitans();if(!save.camLibre){save.camLibre=1;if(save.camMode==='auto')save.camMode='libre';}if(!save.gfx||save.gfx._low){const lo=!!(save.gfx&&save.gfx._low);save.gfx=GFX_DEF();if(lo)Object.assign(save.gfx,LOW_GFX);}save.gfx.fp=Object.assign(FP_DEF(),save.gfx.fp||{});applyGfx();if(save.bestWave>10)save.modern=true;if(!(player.spears>=0))player.spears=CFG.spearCount;if(save.stats.hook){save.points+=save.stats.hook;save.stats.hook=0;persist();}rumbLabel();save.equip='classic';
+prewarmTitans();loadTick();if(!save.camLibre){save.camLibre=1;if(save.camMode==='auto')save.camMode='libre';}if(!save.gfx||save.gfx._low){const lo=!!(save.gfx&&save.gfx._low);save.gfx=GFX_DEF();if(lo)Object.assign(save.gfx,LOW_GFX);}save.gfx.fp=Object.assign(FP_DEF(),save.gfx.fp||{});applyGfx();if(save.bestWave>10)save.modern=true;if(!(player.spears>=0))player.spears=CFG.spearCount;if(save.stats.hook){save.points+=save.stats.hook;save.stats.hook=0;persist();}rumbLabel();save.equip='classic';
 requestAnimationFrame(loop);
 </script>

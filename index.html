@@ -3715,7 +3715,10 @@ const TUTO={on:false,i:0,okT:0,mv:0,d0:null,flip:false,roll:false,cam0:null,paus
     {tab:'gfx',t:'Clique sur l\'onglet <b>Graphismes</b> : qualité d\'image, ombres, réglages de la première personne et style de course. Si le jeu rame, baisse les ombres ou la distance de vue.',ok:T=>state==='pause'&&menuTab==='gfx'&&T.st>1},
     {tab:'ctl',t:'Clique sur l\'onglet <b>Commandes</b> : choix de la caméra, sensibilité de la souris et liste de toutes les touches.',ok:T=>state==='pause'&&menuTab==='ctl'&&T.st>1},
     {target:'#resumeBtn',t:'Reviens au jeu : <b class="k">Tab</b> ou le bouton <b>Reprendre</b>.',ok:()=>state==='play'},
-    {t:'Tu es en vue <b>Libre</b>. <b class="k">V</b> (ou <b class="k">1</b> à <b class="k">4</b>) change de vue : 1 Auto, 2 Verrouillage, 3 Libre, 4 Première personne. Essaie une autre vue ; tu pourras revenir à celle que tu préfères.',enter:T=>{T.cam0=save.camMode;},ok:T=>save.camMode!==T.cam0},
+    {cam:'auto',t:'Les vues : <b class="k">1</b> à <b class="k">4</b> (ou <b class="k">V</b> pour passer à la suivante). Appuie sur <b class="k">1</b> : vue <b>Auto</b>, la caméra suit tes mouvements toute seule.',ok:T=>T.camT>1.5},
+    {cam:'lock',t:'Appuie sur <b class="k">2</b> : vue <b>Verrouillage</b>, la caméra reste fixée sur un titan (<b class="k">T</b> ou clic molette pour en viser un autre).',ok:T=>T.camT>1.5},
+    {cam:'libre',t:'Appuie sur <b class="k">3</b> : vue <b>Libre</b>, tu tournes la caméra avec la souris, le viseur reste au centre.',ok:T=>T.camT>1.5},
+    {cam:'fps',t:'Appuie sur <b class="k">4</b> : vue <b>Première personne</b>, à travers les yeux du soldat. Garde ensuite la vue que tu préfères.',ok:T=>T.camT>1.5},
     {t:'Bouge la souris : le cercle blanc est ton <b>viseur</b>. Il suffit de viser là où tu veux aller.',enter:T=>{T.mv=0;},ok:T=>T.mv>500},
     {t:'Déplace-toi au sol avec <b class="k">Z</b><b class="k">Q</b><b class="k">S</b><b class="k">D</b> (ou <b class="k">W</b><b class="k">A</b><b class="k">S</b><b class="k">D</b>) : tu marches d\'un pas rapide.',enter:T=>{T.d0=player.pos.clone();},ok:T=>T.d0&&Math.hypot(player.pos.x-T.d0.x,player.pos.z-T.d0.z)>8},
     {t:'Au sol, <b>maintiens</b> <b class="k">Shift</b> en avançant : tu <b>cours</b>. Ça marche aussi quand tu n\'as plus de gaz.',enter:T=>{T.runT=0;},ok:T=>T.runT>1.2},
@@ -3751,10 +3754,10 @@ const TUTO={on:false,i:0,okT:0,mv:0,d0:null,flip:false,roll:false,cam0:null,paus
   spawn(){const p=player,a=yaw+Math.PI,x=clamp(p.pos.x-Math.sin(a)*45,-440,440),z=clamp(p.pos.z-Math.cos(a)*45,-440,440);let t=null;
     for(let k=0;k<12&&!t;k++){const aa=a+k*.5,xx=clamp(p.pos.x-Math.sin(aa)*45,-440,440),zz=clamp(p.pos.z-Math.cos(aa)*45,-440,440);if(!pointBlocked(xx,groundY(xx,zz)+1,zz))t=new Titan('small',xx,zz);}
     if(!t)t=new Titan('small',x,z);titans.push(t);t.speed*=.35;t.hp=t.maxHp=Math.min(t.maxHp,60);this.titan=t;},
-  show(){const e=$('tutoP'),S=this.steps[this.i];if(!e)return;this.st=0;if(!S){e.innerHTML='<div class="st">Didacticiel terminé</div><span class="ok">Bravo !</span> Tu connais l\'essentiel. Continue à t\'exercer ici, ou <b class="k">Tab</b> → Menu principal.';e.hidden=false;return;}
+  show(){const e=$('tutoP'),S=this.steps[this.i];if(!e)return;this.st=0;this.camT=0;if(!S){e.innerHTML='<div class="st">Didacticiel terminé</div><span class="ok">Bravo !</span> Tu connais l\'essentiel. Continue à t\'exercer ici, ou <b class="k">Tab</b> → Menu principal.';e.hidden=false;return;}
     e.innerHTML=`<div class="st">Didacticiel · étape ${this.i+1} / ${this.steps.length}</div>${S.t}${S.prog?'<div id="tutoPg" style="font-size:13px;color:#ffcf5a;margin-top:5px"></div>':''}<div style="font-size:12px;color:#9aa1a8;margin-top:6px">Entrée : passer l'étape</div>`;e.hidden=false;if(S.enter)S.enter(this);},
   next(){this.i++;this.okT=0;sfx.level();this.show();if(this.i>=this.steps.length)bigMsg('DIDACTICIEL TERMINÉ','Tu peux jouer au mode RPG ou au mode classique !');},
-  tick(dt){if(!this.on)return;this.st=(this.st||0)+dt;const p=player;p.gas=ST.gasMax;p.inv=Math.max(p.inv,.25);p.hp=ST.hpMax;p.blade=CFG.bladeDurability;p.spareBlades=Math.max(p.spareBlades,8);
+  tick(dt){if(!this.on)return;this.st=(this.st||0)+dt;{const S1=this.steps[this.i];if(S1&&S1.cam)this.camT=save.camMode===S1.cam&&state==='play'?(this.camT||0)+dt:0;}   /* chaque vue doit être essayée un moment */const p=player;p.gas=ST.gasMax;p.inv=Math.max(p.inv,.25);p.hp=ST.hpMax;p.blade=CFG.bladeDurability;p.spareBlades=Math.max(p.spareBlades,8);
     {const hs=Math.hypot(p.vel.x,p.vel.z);if(p.grounded&&p.sprint&&hs>6){this.runT+=dt;if(p.sheath&&!(p.shT>0))this.runS+=dt;}}{const S0=this.steps[this.i],pg=$('tutoPg');if(S0&&S0.prog&&pg)pg.textContent=S0.prog(this);}this.place();
     if(this.titan&&this.titan.state!=='dead'){this.titan.atkCd=Math.max(this.titan.atkCd,3);}
     const S=this.steps[this.i];if(!S)return;if(this.okT>0){this.okT-=dt;if(this.okT<=0)this.next();return;}
@@ -3991,7 +3994,7 @@ function renderMenu(){
     h+=chk('shadows','Ombres',save.shadows)+sel('g_sq','Ombres proches',[[2048,'Basses'],[4096,'Moyennes'],[8192,'Hautes']],g.shadowQ)+sel('g_sf','Ombres lointaines',[[0,'Désactivées'],[1024,'Basses'],[2048,'Moyennes'],[4096,'Hautes']],g.shadowFar===undefined?1024:g.shadowFar)+'</div>';
     h+='<div class="sect">Effets</div><div class="opts">';
     h+=sel('g_grass','Herbe',[['off','Désactivée'],['low','Légère'],['mid','Normale'],['high','Dense']],g.grass||'mid');
-    h+=sel('g_run','Course lames en main',[['auto','Automatique : réaliste, puis ninja avec la vitesse'],['real','Toujours réaliste'],['ninja','Toujours ninja']],g.runStyle||'auto');
+    h+=sel('g_run','Course lames en main',[['auto','Automatique : garde basse, puis ninja avec la vitesse'],['real','Garde basse : lames basses vers l\'avant'],['ninja','Ninja : lames tenues derrière']],g.runStyle||'auto');
     h+=chk('g_blur','Flou de mouvement',g.blur)+chk('g_lines','Traits de vitesse',g.lines)+chk('g_decals','Marques de sang au sol et sur les murs',g.decals)+chk('g_chgGlow','Halo d\'écran pendant la coupe chargée',g.chgGlow!==false)+'</div>';
     {const O=FPO(),rng=(id,label,mn,mx,st,val,un)=>`<label for="fp_${id}">${label} <input id="fp_${id}" type="range" min="${mn}" max="${mx}" step="${st}" value="${val}"> <b id="fpv_${id}">${val}${un}</b></label>`;
       h+='<div class="sect">Première personne</div><div class="opts">';

@@ -52,6 +52,10 @@ body.aim #game canvas{cursor:none;}
 #tutoP{position:fixed;left:50%;top:84px;transform:translateX(-50%);z-index:7;max-width:min(640px,92vw);padding:12px 18px;background:rgba(10,12,15,.86);border:1px solid rgba(240,212,138,.45);border-radius:10px;color:#eee;text-align:center;font-size:17px;line-height:1.45;pointer-events:none;box-shadow:0 6px 24px rgba(0,0,0,.4)}
 #tutoP b.k{display:inline-block;padding:1px 8px;margin:0 2px;border:1px solid rgba(255,255,255,.35);border-radius:5px;background:rgba(255,255,255,.08);font-weight:700}
 #tutoP .st{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#d8b86a;margin-bottom:4px}#tutoP .ok{color:#8fe39a}
+#tutoP.side{box-sizing:border-box;transform:none;text-align:left;font-size:15px;line-height:1.5;z-index:8;max-width:none;border-color:rgba(255,207,90,.7);box-shadow:0 8px 30px rgba(0,0,0,.55)}
+#tutoLine{position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:8;display:none}
+.tutoHi{outline:3px solid #ffcf5a!important;outline-offset:3px;border-radius:4px;animation:tutoPulse 1.1s ease-in-out infinite}
+@keyframes tutoPulse{50%{outline-color:rgba(255,207,90,.25)}}
 #cross.nape{border-color:var(--ember);transform:scale(1.2);}
 #hitM{position:absolute;left:-30px;top:-30px;width:60px;height:60px;pointer-events:none;opacity:0;}
 #hitM i{position:absolute;left:50%;top:50%;width:4px;height:15px;margin:-7.5px -2px;background:var(--hm,#fff);border-radius:2px;box-shadow:0 0 0 1.5px rgba(0,0,0,.7),0 0 8px var(--hm,#fff);}
@@ -326,7 +330,7 @@ button:disabled{opacity:.35;cursor:not-allowed;filter:none;}
 <div class="ov" id="trainScr" hidden><div class="card" style="width:min(680px,100%)"><h2>Entraînement contre les titans</h2>
   <p class="tag">Choisis les titans et les boss de chaque vague, leur nombre, leur force et tes réglages. Progression à part : ton profil n'est pas touché.</p>
   <div id="trainEd"></div><div class="row" style="margin-top:14px"><button id="trainGo">Lancer l'entraînement</button><button id="trainBack" class="ghost">Retour</button></div></div></div>
-<div id="tutoP" hidden></div>
+<div id="tutoP" hidden></div><svg id="tutoLine" xmlns="http://www.w3.org/2000/svg"></svg>
 <div class="ov" id="pvpSolo" hidden><div class="card" style="width:min(640px,100%)"><h2>PvP contre des IA</h2>
   <p class="tag">Deux camps. Tout le monde commence au niveau 10 avec 10 points (Tab) : chaque élimination fait gagner un niveau, chaque mort ramène au niveau 10. Les IA ont chacune une classe et dépensent leurs points à leur façon. Pas de ralenti en PvP. Lances foudroyantes : 2 au maximum, deux fois moins puissantes qu'en mode titans (ou désactivées).</p>
   <div id="pvpEdS"></div><div class="row" style="margin-top:14px"><button id="pvpGo">Lancer la partie</button><button id="pvpBack" class="ghost">Retour</button></div></div></div>
@@ -3692,7 +3696,12 @@ $('trainGo').onclick=()=>{TRN.save();$('trainScr').hidden=true;startGame(1,'trai
 /* ================= DIDACTICIEL ================= */
 const TUTO={on:false,i:0,okT:0,mv:0,d0:null,flip:false,roll:false,cam0:null,paused:false,titan:null,tabs:new Set(),runT:0,runS:0,dsh:false,
   steps:[
-    {id:'menu',t:'Commence par le <b>menu</b> : appuie sur <b class="k">Tab</b> et ouvre ses 4 onglets : <b>Améliorations</b>, <b>Techniques</b>, <b>Graphismes</b> et <b>Commandes</b>. Reviens ensuite au jeu avec <b class="k">Tab</b>.',enter:T=>{T.tabs.clear();},ok:T=>T.tabs.size>=4&&state==='play',prog:T=>'Onglets ouverts : '+T.tabs.size+' / 4'},
+    {t:'Commence par le <b>menu</b> : appuie sur <b class="k">Tab</b>. Le jeu se met en pause.',ok:()=>state==='pause'},
+    {tab:'up',t:'<b>Améliorations</b> : ton grade, ta spécialisation (débloquée au niveau 5) et tes statistiques. Chaque niveau gagné te donne un point à placer avec <b>+</b>.',ok:T=>state==='pause'&&menuTab==='up'&&T.st>3.5},
+    {tab:'tech',t:'Clique sur l\'onglet <b>Techniques</b> : l\'arbre des techniques (mobilité, combat, survie, lances). En mode RPG, chaque nouveau grade rapporte 3 points pour les acheter.',ok:T=>state==='pause'&&menuTab==='tech'&&T.st>1},
+    {tab:'gfx',t:'Clique sur l\'onglet <b>Graphismes</b> : qualité d\'image, ombres, réglages de la première personne et style de course. Si le jeu rame, baisse les ombres ou la distance de vue.',ok:T=>state==='pause'&&menuTab==='gfx'&&T.st>1},
+    {tab:'ctl',t:'Clique sur l\'onglet <b>Commandes</b> : choix de la caméra, sensibilité de la souris et liste de toutes les touches.',ok:T=>state==='pause'&&menuTab==='ctl'&&T.st>1},
+    {target:'#resumeBtn',t:'Reviens au jeu : <b class="k">Tab</b> ou le bouton <b>Reprendre</b>.',ok:()=>state==='play'},
     {t:'Tu es en vue <b>Libre</b>. <b class="k">V</b> (ou <b class="k">1</b> à <b class="k">4</b>) change de vue : 1 Auto, 2 Verrouillage, 3 Libre, 4 Première personne. Essaie une autre vue ; tu pourras revenir à celle que tu préfères.',enter:T=>{T.cam0=save.camMode;},ok:T=>save.camMode!==T.cam0},
     {t:'Bouge la souris : le cercle blanc est ton <b>viseur</b>. Il suffit de viser là où tu veux aller.',enter:T=>{T.mv=0;},ok:T=>T.mv>500},
     {t:'Déplace-toi au sol avec <b class="k">Z</b><b class="k">Q</b><b class="k">S</b><b class="k">D</b> (ou <b class="k">W</b><b class="k">A</b><b class="k">S</b><b class="k">D</b>) : tu marches d\'un pas rapide.',enter:T=>{T.d0=player.pos.clone();},ok:T=>T.d0&&Math.hypot(player.pos.x-T.d0.x,player.pos.z-T.d0.z)>8},
@@ -3708,23 +3717,37 @@ const TUTO={on:false,i:0,okT:0,mv:0,d0:null,flip:false,roll:false,cam0:null,paus
     {t:'En l\'air, appuie sur <b class="k">F</b> : le tourbillon fait tournoyer tes lames tout autour de toi.',ok:()=>player.spinT>0},
     {t:'En l\'air, <b>maintiens le clic gauche</b> pour armer tes lames, puis relâche : coupe chargée, avec élan vers la nuque la plus proche.',ok:()=>player.chgA>0}],
   cur(){return this.steps[this.i];},
+  // menu ouvert : la consigne se range sur le côté du menu, une ligne pointe ce qu'elle explique (rien n'est caché)
+  hi(el){if(this.hiEl&&this.hiEl!==el)this.hiEl.classList.remove('tutoHi');if(el&&!el.classList.contains('tutoHi'))el.classList.add('tutoHi');this.hiEl=el||null;},
+  place(){const e=$('tutoP'),ln=$('tutoLine'),S=this.steps[this.i],pz=$('pause'),menu=this.on&&!!S&&state==='pause'&&pz&&!pz.hidden&&!e.hidden;
+    if(!menu){if(e.classList.contains('side')){e.classList.remove('side');e.style.left=e.style.top=e.style.width='';}ln.style.display='none';this.hi(null);return;}
+    const card=pz.querySelector('.card').getBoundingClientRect(),W=innerWidth,H=innerHeight,rs=W-card.right,ls=card.left,right=rs>=ls,space=Math.max(rs,ls),w=Math.round(clamp(space-40,230,340));
+    const tg=S.tab?$('menuBody').querySelector('[data-tab="'+S.tab+'"]'):S.target?document.querySelector(S.target):null,tr=tg?tg.getBoundingClientRect():null;
+    e.classList.add('side');e.style.width=w+'px';let x=space>=w+30?(right?card.right+22:card.left-22-w):W-w-12;
+    const eh=e.offsetHeight,ax=right?x:x+w;let y=tr?tr.top+tr.height/2-eh/2:card.top+24,path=null,ay=0,bx=0,by=0;
+    if(tr&&tr.width){const up=tr.top+tr.height/2<card.top+card.height/2;let gy=up?card.top-13:card.bottom+13;if(up?gy<8:gy>H-8)gy=up?(card.top+tr.top)/2:(card.bottom+tr.bottom)/2;   /* menu collé au bord : la ligne passe dans la marge vide du menu */bx=tr.left+tr.width/2;   // la ligne contourne le menu par le haut ou par le bas : elle ne passe sur aucun texte
+      if(Math.abs(gy-(up?tr.top:tr.bottom))>=6){y=up?gy-20:gy-eh+20;y=clamp(y,10,H-eh-10);if(gy>=y+8&&gy<=y+eh-8){ay=gy;by=up?tr.top-5:tr.bottom+5;path=`M${ax} ${ay}H${bx}V${by}`;}}
+      if(!path){y=clamp(tr.top+tr.height/2-eh/2,10,H-eh-10);ay=clamp(tr.top+tr.height/2,y+16,y+eh-16);bx=right?tr.right+8:tr.left-8;by=tr.top+tr.height/2;path=`M${ax} ${ay}L${bx} ${by}`;}}
+    y=clamp(y,10,H-eh-10);e.style.left=x+'px';e.style.top=y+'px';
+    if(path){ln.style.display='block';ln.innerHTML=`<path d="${path}" fill="none" stroke="#ffcf5a" stroke-width="2.5" stroke-dasharray="8 6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${ax}" cy="${ay}" r="4" fill="#ffcf5a"/><circle cx="${bx}" cy="${by}" r="6" fill="#ffcf5a"/>`;this.hi(tg);}
+    else{ln.style.display='none';this.hi(null);}},
   begin(){this.on=true;this.i=0;this.okT=0;this.mv=0;this.flip=this.roll=this.paused=false;this.titan=null;this.tabs=new Set();this.runT=this.runS=0;this.dsh=false;this.d0=player.pos.clone();sheathNow(false);
     if(save.camMode!=='libre')setCamMode('libre');   // le didacticiel commence toujours en vue libre
     bigMsg('DIDACTICIEL','Suis les consignes en haut de l\'écran · Entrée pour passer une étape');this.show();},
-  stop(){this.on=false;const e=$('tutoP');if(e)e.hidden=true;},
+  stop(){this.on=false;const e=$('tutoP');if(e)e.hidden=true;this.place();},
   spawn(){const p=player,a=yaw+Math.PI,x=clamp(p.pos.x-Math.sin(a)*45,-440,440),z=clamp(p.pos.z-Math.cos(a)*45,-440,440);let t=null;
     for(let k=0;k<12&&!t;k++){const aa=a+k*.5,xx=clamp(p.pos.x-Math.sin(aa)*45,-440,440),zz=clamp(p.pos.z-Math.cos(aa)*45,-440,440);if(!pointBlocked(xx,groundY(xx,zz)+1,zz))t=new Titan('small',xx,zz);}
     if(!t)t=new Titan('small',x,z);titans.push(t);t.speed*=.35;t.hp=t.maxHp=Math.min(t.maxHp,60);this.titan=t;},
-  show(){const e=$('tutoP'),S=this.steps[this.i];if(!e)return;if(!S){e.innerHTML='<div class="st">Didacticiel terminé</div><span class="ok">Bravo !</span> Tu connais l\'essentiel. Continue à t\'exercer ici, ou <b class="k">Tab</b> → Menu principal.';e.hidden=false;return;}
+  show(){const e=$('tutoP'),S=this.steps[this.i];if(!e)return;this.st=0;if(!S){e.innerHTML='<div class="st">Didacticiel terminé</div><span class="ok">Bravo !</span> Tu connais l\'essentiel. Continue à t\'exercer ici, ou <b class="k">Tab</b> → Menu principal.';e.hidden=false;return;}
     e.innerHTML=`<div class="st">Didacticiel · étape ${this.i+1} / ${this.steps.length}</div>${S.t}${S.prog?'<div id="tutoPg" style="font-size:13px;color:#ffcf5a;margin-top:5px"></div>':''}<div style="font-size:12px;color:#9aa1a8;margin-top:6px">Entrée : passer l'étape</div>`;e.hidden=false;if(S.enter)S.enter(this);},
   next(){this.i++;this.okT=0;sfx.level();this.show();if(this.i>=this.steps.length)bigMsg('DIDACTICIEL TERMINÉ','Tu peux jouer au mode RPG ou au mode classique !');},
-  tick(dt){if(!this.on)return;const p=player;p.gas=ST.gasMax;p.inv=Math.max(p.inv,.25);p.hp=ST.hpMax;p.blade=CFG.bladeDurability;p.spareBlades=Math.max(p.spareBlades,8);
-    {const hs=Math.hypot(p.vel.x,p.vel.z);if(p.grounded&&p.sprint&&hs>6){this.runT+=dt;if(p.sheath&&!(p.shT>0))this.runS+=dt;}}{const S0=this.steps[this.i],pg=$('tutoPg');if(S0&&S0.prog&&pg)pg.textContent=S0.prog(this);}
+  tick(dt){if(!this.on)return;this.st=(this.st||0)+dt;const p=player;p.gas=ST.gasMax;p.inv=Math.max(p.inv,.25);p.hp=ST.hpMax;p.blade=CFG.bladeDurability;p.spareBlades=Math.max(p.spareBlades,8);
+    {const hs=Math.hypot(p.vel.x,p.vel.z);if(p.grounded&&p.sprint&&hs>6){this.runT+=dt;if(p.sheath&&!(p.shT>0))this.runS+=dt;}}{const S0=this.steps[this.i],pg=$('tutoPg');if(S0&&S0.prog&&pg)pg.textContent=S0.prog(this);}this.place();
     if(this.titan&&this.titan.state!=='dead'){this.titan.atkCd=Math.max(this.titan.atkCd,3);}
     const S=this.steps[this.i];if(!S)return;if(this.okT>0){this.okT-=dt;if(this.okT<=0)this.next();return;}
     if(S.ok(this)){this.okT=.9;const e=$('tutoP');if(e)e.innerHTML+='<div class="ok" style="margin-top:6px">Réussi !</div>';sfx.burst(2400,.12,.25,'bandpass',1.5);}}};
 addEventListener('mousemove',e=>{if(TUTO.on&&locked&&state==='play')TUTO.mv+=Math.abs(e.movementX)+Math.abs(e.movementY);});
-addEventListener('keydown',e=>{if(TUTO.on&&state==='play'&&(e.code==='Enter'||e.code==='NumpadEnter')&&TUTO.steps[TUTO.i]){TUTO.okT=0;TUTO.next();}});
+addEventListener('keydown',e=>{if(TUTO.on&&(state==='play'||state==='pause')&&(e.code==='Enter'||e.code==='NumpadEnter')&&TUTO.steps[TUTO.i]){TUTO.okT=0;TUTO.next();}});
 $('tutoBtn').onclick=()=>{startGame(1,'tuto');};
 /* ================= INPUT ================= */
 const keys={};let mouseR=false,locked=false,noLock=false,mouseX=innerWidth/2,mouseY=innerHeight/2;
@@ -7068,6 +7091,7 @@ function loop(now){
   else if(state==='play'){updPlayer(dt,rdt);updHooks(dt);updTitans(dt);if(ORIG)updOriginel(dt);updWave(dt);updBottles(dt);updSpears(dt);updSpearAim(dt,rdt);
     if(save.tut===4){tutTimer+=rdt;if(tutTimer>14)tut(4);}}
   else if(state==='menu'){if(CUS.open)updCustom(rdt);else{yaw+=rdt*.05;pitch=.12;}}
+  if(state==='pause'&&TUTO.on)TUTO.tick(rdt);   /* didacticiel : les étapes du menu avancent aussi en pause */
   updParts(dt);updBlood(dt);updCam(rdt);updGrass(rdt);
   if(state!=='menu'){updHUD();updMarkers();updPops(rdt);motionFX(rdt);drawFX(state==='play'?player.vel.length():0);}
   renderFrame();

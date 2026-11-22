@@ -1591,7 +1591,7 @@ function legsPose(tl,tr,sl,sr,spread=0){pose('thL',tl,0,-spread);pose('thR',tr,0
 const SPH={ua:.1,k:.25,uy:0,uz:.12,fa:-1.15,fy:0,fz:0};
 const WU={sp:.3,st:.75,hp:-.1,ht:-.5,ax:1.4,ay:.4,az:1.28,af:-.35,afy:1.51,bx:-1.26,by:-.4,bz:-1.41,bf:-.31,bfy:.07};   // coupe chargée : armement (bras du côté armé / autre bras)
 const WR={d:.42,dir:-1,ax:-1.45,az:.95,af:-.05,bx:-1.45,bz:.95,bf:-.05};                            // coupe chargée : bras grands ouverts pendant le tour
-const CARRY={n:{u:.75,s:.08,z:.34,f:-.2,sp:.48,hd:-.4},wu:.1,ws:.12,wz:.34,wf:-1.2,wp:.1,ru:.3,rs:.13,rz:.36,rf:-.45,rp:.08,rsp:.16,hu:.62,hz:.26,hf:-.05,cu:-1.22,cz:.3,cf:-1.05};   // port des lames au sol (marche w, course r), fourreaux (h), lames croisées (c)
+const CARRY={n:{u:.75,s:.08,z:.34,f:-.2,sp:.48,hd:-.4},wu:.1,ws:.12,wz:.34,wf:-1.2,wp:.1,ru:.2,rs:.13,rz:.36,rf:-.5,rp:.08,rsp:.16,hu:.62,hz:.26,hf:-.05,cu:-1.22,cz:.3,cf:-1.05};   // port des lames au sol (marche w, course r), fourreaux (h), lames croisées (c)
 const SL2={x:-1.45,z0:1.15,z1:-.45,z2:-.1,f0:-.75,f1:-.08,dy:.25,rx:-.55,rz:-.3,rf:-.9};   // coupe en deux arcs (bras, avant-bras)   // lances tenues basses (réglage)
 function animPlayer(dt){
   const p=player,spd=p.vel.length(),hs=Math.hypot(p.vel.x,p.vel.z),tm=performance.now()/1000,att=attCount();if(!(p.grounded&&hs<=1.5)||p.wall)p.idleT=0;
@@ -2046,7 +2046,7 @@ function alignBladeSet(G,BN,w,e=1,oq=null){   // lames : vers l'extérieur et un
   for(const k of ['L','R']){const bl=G[k],h=BN['h'+k],fa=BN['fa'+k],q0=bl&&bl.userData.qk;if(!bl||!h||!fa||!q0||bl.parent!==h)continue;bl.quaternion.copy(q0);if(w<.01)continue;
     h.updateWorldMatrix(true,false);const hq=h.getWorldQuaternion(_abQ),bd=_abV.set(0,-1,0).applyQuaternion(_abQ2.copy(hq).multiply(q0)),H=h.getWorldPosition(_abV4),fd=_abV2.subVectors(H,fa.getWorldPosition(_abV3)).normalize();let T=fd;
     if(oq&&BN.hips&&e<.999){const F=_abV5.set(0,0,1).applyQuaternion(oq);F.y=0;if(F.lengthSq()<1e-6)F.set(0,0,1);F.normalize();const O=_abV6.subVectors(H,BN.hips.getWorldPosition(_abV3));O.y=0;O.addScaledVector(F,-O.dot(F));if(O.lengthSq()<1e-6)O.set(F.z,0,-F.x);O.normalize();
-      const D=_abV7.copy(O).multiplyScalar(.7).addScaledVector(F,-.6);D.y-=.16;D.normalize();T=_abV8.copy(D).multiplyScalar(1-e).addScaledVector(fd,e).normalize();}
+      const D=_abV7.copy(O).multiplyScalar(.32).addScaledVector(F,.88);D.y-=.26;D.normalize();   /* réaliste : lames vers l'avant, légèrement écartées et un peu vers le bas */const sw=Math.sin(Math.PI*e);T=_abV8.copy(D).multiplyScalar(1-e).addScaledVector(fd,e).addScaledVector(O,sw*1.1);T.y+=sw*.35;T.normalize();}   /* passage de l'avant à l'arrière par l'extérieur : les lames ne piquent jamais vers le sol */
     _abQ3.setFromUnitVectors(bd.normalize(),T);_abQ2.identity().slerp(_abQ3,w);bl.quaternion.copy(_abQ.clone().invert().multiply(_abQ2).multiply(_abQ).multiply(q0));}}
 // doigts repliés autour de la poignée (chaque phalange plie vers la paume)
 function kitFist(h){if(h.userData.fist)return;h.userData.fist=1;const dn=new V3(0,-1,0),ax=new V3(),dir=new V3();

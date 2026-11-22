@@ -247,7 +247,8 @@ button:disabled{opacity:.35;cursor:not-allowed;filter:none;}
       <div><kbd>A</kbd> / <kbd>E</kbd> grappin gauche / droit <span style="color:var(--muted)">(Q/E en QWERTY)</span></div>
       <div><kbd>Clic gauche</kbd> trancher</div>
       <div><kbd>Espace</kbd> saut / boost de gaz</div>
-      <div><kbd>Shift</kbd> dash</div>
+      <div><kbd>Shift</kbd> courir au sol (maintenir) · dash en l'air</div>
+      <div><kbd>G</kbd> ranger / sortir les lames</div>
       <div><kbd>ZQSD</kbd> / <kbd>WASD</kbd> se diriger</div>
       <div><kbd>C</kbd> salto · <kbd>X</kbd> vrille</div>
       <div><kbd>F</kbd> tourbillon (en l'air)</div>
@@ -406,7 +407,7 @@ const ABIL=[   // uniquement ce qu'un soldat apprend par l'entraînement ou l'ex
   {k:'evasion',name:'Évasion',cost:1,desc:'Expérience du corps à corps : saisi par un titan, tu te débats deux fois plus efficacement (sans le Tourbillon).'},
   {k:'souffle',name:'Second souffle',cost:4,desc:'Instinct de survie du vétéran : une fois par vague, un coup mortel te laisse à 1 PV, invulnérable un instant.'}];
 const BASE_KIT=['agilite','tourbillon','charge'],GEAR=['ruee','pivot'];   // équipement de base : grappin simple et ruée, toujours disponibles
-function HAS(k){if(GEAR.includes(k))return true;if(gameMode==='pvp'&&window._pvTr)return !!window._pvTr[k];if(gameMode==='train'&&window._trAll)return true;   /* entraînements : techniques choisies */if(k==='lances1'&&gameMode==='rpg')return wave>10;   /* les deux premières lances sont offertes après la vague 10 */return gameMode==='rpg'?!!(save.abil&&save.abil[k]):BASE_KIT.includes(k);}
+function HAS(k){if(GEAR.includes(k))return true;if(gameMode==='pvp'&&window._pvTr)return !!window._pvTr[k];if(gameMode==='train'&&window._trAll)return true;   /* entraînements : techniques choisies */if(k==='lances1'&&gameMode==='rpg')return wave>10;   /* les deux premières lances sont offertes après la vague 10 */if(gameMode==='normal'){/* mode classique : toutes les techniques du RPG ; les lances arrivent avec les vagues */if(k==='lances1')return wave>10;if(k==='lances2')return wave>20;if(k==='lances3')return wave>30;return ABIL.some(a=>a.k===k);}return gameMode==='rpg'?!!(save.abil&&save.abil[k]):BASE_KIT.includes(k);}
 function rpgTP(){const ri=RANKS.filter(r=>save.level>=r.lv).length-1,spent=ABIL.filter(a=>save.abil&&save.abil[a.k]).reduce((n,a)=>n+a.cost,0);return Math.max(0,ri*3-spent);}   // 3 points par grade
 function lockedMsg(k){if(k==='lances1'){toast('Lances foudroyantes : remises après la vague 10');return;}const a=ABIL.find(x=>x.k===k);toast((a?a.name:'Technique')+' : à acheter dans Tab · Techniques');}
 // classes avancées du niveau 60 : chacune fait évoluer la spécialisation choisie au niveau 5
@@ -419,7 +420,10 @@ function deathCheck(){const p=player;if(p.hp>0)return false;
   gameOver();return true;}
 function struggleGrab(){const g=grab;if(!g)return;const k=HAS('evasion')?2:1;g.esc=(g.esc||0)+k;sfx.hit();shake=Math.max(shake,.35);
   if(g.esc>=8){escapeGrab(true);feed('Tu t\'es dégagé de sa main !','gold');}else{toastT=0;toast('Débats-toi : F encore '+Math.ceil((8-g.esc)/k)+' fois');}}
-function modeLabels(){const rw=profVal('rpg','bestWave'),rl=profVal('rpg','level'),cw=profVal('classic','bestWave');
+// reprise : une progression effacée par l'ancien bug de « Reprendre » (niveau 1, aucune élimination, mais une vague avancée) est rétablie à un niveau estimé
+const estLv=w=>clamp(Math.round(1.2*w+8),2,100);
+function profBroken(name){const w=profVal(name,'bestWave');return w>1&&profVal(name,'level')<=1&&!(profVal(name,'kills')>0)&&!(profVal(name,'xp')>0);}
+function modeLabels(){const rw=profVal('rpg','bestWave'),rl=profBroken('rpg')?estLv(rw):profVal('rpg','level'),cw=profVal('classic','bestWave');
   $('rpgBtn').textContent=(rl>1||rw>1)?'Mode RPG · vague 1':'Jouer · Mode RPG';
   $('rpgCont').hidden=!(rw>1);$('rpgCont').textContent='Reprendre le RPG · vague '+rw+' · Nv '+rl;
   $('contBtn').hidden=!(cw>1);$('contBtn').textContent='Classique · reprendre vague '+cw;
@@ -532,7 +536,7 @@ TREE_ICON.charge='<path d="M-10 6A11 11 0 0 1 8-8" fill="none" stroke="currentCo
 TREE_ICON.lances2=TREE_ICON.lances1;TREE_ICON.lances3=TREE_ICON.lances1;
 let techSel='agilite';
 function treePos(r,a){const t=a*Math.PI/180;return [Math.cos(t)*r*1.3,Math.sin(t)*r*.92];}
-function renderTree(){const own=k=>k==='lances1'?HAS('lances1'):!!save.abil[k],A=k=>ABIL.find(x=>x.k===k),tp=save.tp||0;
+function renderTree(){const own=k=>gameMode!=='rpg'?HAS(k):k==='lances1'?HAS('lances1'):!!save.abil[k],A=k=>ABIL.find(x=>x.k===k),tp=save.tp||0;
   const reqOK=a=>!a.req||own(a.req),can=a=>!a.auto&&!own(a.k)&&reqOK(a)&&tp>=a.cost;
   let lines='',nodes='',hubs='';const pos={};
   for(const br of TREE){const hub=treePos(98,br.ang);
@@ -596,12 +600,13 @@ $('game').appendChild(renderer.domElement);
 // carte graphique modeste (puce intégrée, rendu logiciel, peu de mémoire) : au tout premier lancement, réglages allégés d'office
 const GPU_NAME=(()=>{try{const gl=renderer.getContext(),x=gl.getExtension('WEBGL_debug_renderer_info');return String((x?gl.getParameter(x.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER))||'');}catch(e){return '';}})();
 const GPU_LOW=(/Intel/i.test(GPU_NAME)&&!/Arc/i.test(GPU_NAME))||/Mali|Adreno|PowerVR|SwiftShader|llvmpipe|Microsoft Basic|Radeon\(TM\) Graphics|Radeon Graphics|Vega \d/i.test(GPU_NAME)||(navigator.deviceMemory>0&&navigator.deviceMemory<=4)||renderer.capabilities.maxTextureSize<8192;
-const LOW_GFX={tex:'bas',shadowQ:2048,shadowFar:0,shaders:1,pr:1,grass:'low',view:900,fps:60,dyn:30};
+const GPU_WEAK=/Mali|Adreno|PowerVR|SwiftShader|llvmpipe|Microsoft Basic/i.test(GPU_NAME)||(navigator.deviceMemory>0&&navigator.deviceMemory<=2)||renderer.capabilities.maxTextureSize<8192;   // très faibles : ombres au minimum
+const LOW_GFX={tex:'bas',shadowQ:GPU_WEAK?2048:4096,shadowFar:GPU_WEAK?0:1024,shaders:0,pr:1,grass:'low',view:900,fps:60,dyn:30};
 if(!save.gfx&&GPU_LOW)save.gfx={tex:'bas',_low:1};   /* complété plus bas par les réglages par défaut */
 // la carte graphique a décroché (pilote réinitialisé) : pause, qualité réduite, puis le jeu redémarre proprement
 renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();
   try{if(state==='play')pause();}catch(_){}
-  try{save.gfx=Object.assign(save.gfx||{},LOW_GFX);delete save.gfx._low;persist();}catch(_){}
+  try{save.gfx=Object.assign(save.gfx||{},LOW_GFX,{shadowQ:2048,shadowFar:0,_d102:1});delete save.gfx._low;persist();}catch(_){}
   const d=document.createElement('div');d.style.cssText='position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(8,10,12,.92);color:#eee;font:600 20px/1.5 system-ui,sans-serif;text-align:center;padding:24px';
   d.textContent='La carte graphique a décroché. Le jeu repart en qualité réduite…';document.body.appendChild(d);setTimeout(()=>location.reload(),2500);},false);
 renderer.domElement.addEventListener('webglcontextrestored',()=>location.reload(),false);
@@ -1582,21 +1587,32 @@ function legsPose(tl,tr,sl,sr,spread=0){pose('thL',tl,0,-spread);pose('thR',tr,0
 const SPH={ua:.1,k:.25,uy:0,uz:.12,fa:-1.15,fy:0,fz:0};
 const WU={sp:.3,st:.75,hp:-.1,ht:-.5,ax:1.4,ay:.4,az:1.28,af:-.35,afy:1.51,bx:-1.26,by:-.4,bz:-1.41,bf:-.31,bfy:.07};   // coupe chargée : armement (bras du côté armé / autre bras)
 const WR={d:.42,dir:-1,ax:-1.45,az:.95,af:-.05,bx:-1.45,bz:.95,bf:-.05};                            // coupe chargée : bras grands ouverts pendant le tour
+const CARRY={n:{u:1.05,s:.1,z:.22,f:-.08,sp:.55,hd:-.4},wu:.1,ws:.12,wz:.28,wf:-1.2,wp:.1,ru:.15,rs:.12,rz:.3,rf:-1.33,rp:.08,rsp:.16,hu:.62,hz:.26,hf:-.05,cu:-1.22,cz:.3,cf:-1.05};   // port des lames au sol (marche w, course r), fourreaux (h), lames croisées (c)
 const SL2={x:-1.45,z0:1.15,z1:-.45,z2:-.1,f0:-.75,f1:-.08,dy:.25,rx:-.55,rz:-.3,rf:-.9};   // coupe en deux arcs (bras, avant-bras)   // lances tenues basses (réglage)
 function animPlayer(dt){
   const p=player,spd=p.vel.length(),hs=Math.hypot(p.vel.x,p.vel.z),tm=performance.now()/1000,att=attCount();if(!(p.grounded&&hs<=1.5)||p.wall)p.idleT=0;
-  let lean=0;pose('head',0);pose('spine',0);IDL.ex=Math.min(1,IDL.ex+dt*(spd>22?.2:hs>3?.07:0));   // l'effort accélère le souffle
+  let lean=0;p.gaitW=false;pose('head',0);pose('spine',0);IDL.ex=Math.min(1,IDL.ex+dt*(spd>22?.2:hs>3?.07:0));   // l'effort accélère le souffle
   if(p.landRoll>0){pose('spine',.8);pose('head',.3);armsPose(-1,.2,-1);legsPose(-1.7,-1.6,2.3,2.2);}
   else if(p.wall&&p.wall.mode==='cling'){pose('spine',.5);pose('head',-.5);armsPose(-1.2,.35,-1.2);legsPose(-1.5,-1.3,2.1,1.9,.25);}
   else if(p.grounded&&p.crouchT>0){p.crouchT-=dt;pose('spine',.6);pose('head',-.3);armsPose(.5,.5,-.6);legsPose(-1.2,-1,1.9,1.7,.15);}
   else if(p.wall||(p.grounded&&hs>1.5)){
-    const wr=!!p.wall;runPh+=dt*(wr?clamp(spd,8,40)*.6:hs*.72);
-    const s=Math.sin(runPh),c=Math.cos(runPh),a=wr?1.05:Math.min(1,hs/10)*.85+.1;
-    pose('spine',wr?.35:.15+Math.min(hs/14,1)*.2,s*.15);pose('head',-.15);
-    pose('thL',-s*a);pose('thR',s*a);
-    pose('shL',.2+Math.max(0,c)*1.2*a);pose('shR',.2+Math.max(0,-c)*1.2*a);
-    if(wr)armsPose(.9,.4,-.3);
-    else{pose('uaL',s*.7*a,0,-.12);pose('uaR',-s*.7*a,0,.12);pose('faL',-1);pose('faR',-1);}
+    const wr=!!p.wall,wk=!wr&&!p.sprint&&hs<(p.walkV||5.5)*1.25,arm=!bladesAway();p.gaitW=wk;   // marche rapide (sans Shift) ou course (Shift) ; lames en main ou rangées
+    if(wk){runPh+=dt*hs*1.6;const s=Math.sin(runPh),c=Math.cos(runPh),a=Math.min(1,hs/5.5)*.8+.2;
+      pose('spine',.1,s*.07);pose('head',-.08);
+      pose('thL',-s*.5*a);pose('thR',s*.5*a);pose('shL',.1+Math.max(0,c)*.8*a);pose('shR',.1+Math.max(0,-c)*.8*a);
+      if(arm){const C=CARRY;pose('uaL',C.wu+s*C.ws*a,0,-C.wz);pose('uaR',C.wu-s*C.ws*a,0,C.wz);pose('faL',C.wf-Math.max(0,-s)*C.wp);pose('faR',C.wf-Math.max(0,s)*C.wp);}   // lames tenues basses près des hanches, pointes vers l'avant
+      else{pose('uaL',s*.42*a,0,-.09);pose('uaR',-s*.42*a,0,.09);pose('faL',-.28-Math.max(0,-s)*.4);pose('faR',-.28-Math.max(0,s)*.4);}}   // bras libres qui balancent
+    else{runPh+=dt*(wr?clamp(spd,8,40)*.6:hs*.72);
+      const s=Math.sin(runPh),c=Math.cos(runPh),a=wr?1.05:Math.min(1,hs/10)*.85+.1;
+      pose('spine',wr?.35:.15+Math.min(hs/14,1)*.2,s*.15);pose('head',-.15);
+      pose('thL',-s*a);pose('thR',s*a);
+      pose('shL',.2+Math.max(0,c)*1.2*a);pose('shR',.2+Math.max(0,-c)*1.2*a);
+      if(wr)armsPose(.9,.4,-.3);
+      else if(arm&&(save.gfx&&save.gfx.runStyle)!=='real'){const N=CARRY.n;pose('spine',N.sp+Math.min(hs/14,1)*.1,s*.08);pose('head',N.hd);   // course « ninja » : buste penché, bras tendus derrière, lames qui traînent vers l'arrière
+        pose('uaL',N.u+s*N.s*a,0,-N.z);pose('uaR',N.u-s*N.s*a,0,N.z);pose('faL',N.f);pose('faR',N.f);}
+      else if(arm){const C=CARRY,m=s*C.rs*a;pose('spine',C.rsp+Math.min(hs/14,1)*.14,s*.1);   // course lames en main (« course réaliste ») : lames basses près des hanches, bras qui pompent peu
+        pose('uaL',C.ru+m,0,-C.rz);pose('uaR',C.ru-m,0,C.rz);pose('faL',C.rf-Math.max(0,-s)*C.rp);pose('faR',C.rf-Math.max(0,s)*C.rp);}
+      else{pose('uaL',s*.7*a,0,-.12);pose('uaR',-s*.7*a,0,.12);pose('faL',-1);pose('faR',-1);}}   // course lames rangées : bras libres
   }
   else if(p.grounded){const busy=!!(keys.KeyW||keys.KeyA||keys.KeyS||keys.KeyD||mouseR||p.slashT>0||p.slashA>0||p.spinT>0||p.chgA>0||CHG.on||spAim||grab||state!=='play'||fpBody());p.idleT=busy?0:(p.idleT||0)+dt;idleLife(dt,tm,busy);}
   else if(att>0){const up=clamp(p.vel.y/25,-1,1),sw=Math.sin(tm*3.1),lat=clamp((p.vel.x*Math.cos(yaw)-p.vel.z*Math.sin(yaw))/18,-1,1);
@@ -1607,14 +1623,19 @@ function animPlayer(dt){
   else if(p.vel.y<-10){pose('spine',-.1);pose('uaL',-2.2+Math.sin(tm*9)*.3,0,-.6);pose('uaR',-2+Math.sin(tm*9+1)*.3,0,.6);pose('faL',-.4);pose('faR',-.4);legsPose(-.45,-.1,.9,.5);}
   else{const sw=Math.sin(tm*2.4),up=clamp(p.vel.y/20,-1,1);pose('spine',.25-up*.15,sw*.06);pose('head',-.2);
     pose('uaL',.6+sw*.15,0,-.5);pose('uaR',.6-sw*.15,0,.5);pose('faL',-.45);pose('faR',-.45);legsPose(-.7+sw*.2+up*.3,-.35-sw*.2+up*.3,1.2-up*.3,.8+sw*.2,.12);}
-  if(spearsOK()&&save.weapon==='spear'&&!p.slashT&&!p.spinT&&!p.landRoll&&!(p.wall&&p.wall.mode==='cling')){const ap=clamp(pitch,-.7,.7),fps=fpBody()&&FPO().pose==='fp';for(const s of handSpears)if(s.userData.p0)s.position.copy(s.userData.p0).addScaledVector(s.userData.fw,fps?.3:0);
+  if(spearsOK()&&save.weapon==='spear'&&!p.slashT&&!p.spinT&&!p.landRoll&&!(p.wall&&p.wall.mode==='cling')&&!bladesAway()){const ap=clamp(pitch,-.7,.7),fps=fpBody()&&FPO().pose==='fp';for(const s of handSpears)if(s.userData.p0)s.position.copy(s.userData.p0).addScaledVector(s.userData.fw,fps?.3:0);
     if(spAim||fps||p.spearT>0){pose('uaR',-1.45-ap*.9,0,.12);pose('faR',-.05);pose('uaL',-1.25-ap*.7,0,-.25);pose('faL',-.25);}else{pose('uaR',SPH.ua-ap*SPH.k,SPH.uy,SPH.uz);pose('faR',SPH.fa,SPH.fy,SPH.fz);pose('uaL',SPH.ua-ap*SPH.k,-SPH.uy,-SPH.uz);pose('faL',SPH.fa,-SPH.fy,-SPH.fz);}if(spAim){pose('uaL',-1.5-ap*.9,0,-.05);pose('faL',-.08);pose('spine',.1);}if(p.spearT>0){const k=Math.pow(p.spearT/.45,2);pose('uaR',-1.45-ap*.9+1.1*k,0,.12+.25*k);pose('faR',-.05-1.3*k);pose('spine',.1-.4*k);}}
   T.head.y+=clamp(wrapA(yaw+Math.PI-Math.atan2(oF.x,oF.z)),-.9,.9)*.6;T.head.y=clamp(T.head.y,-1.15,1.15);
   if(p.spinT>0){pose('uaL',-.2,0,-1.5);pose('uaR',-.2,0,1.5);pose('faL',0);pose('faR',0);legsPose(-1.1,-1,1.7,1.6);}
   const fpb=fpBody();
-  if(fpb&&FPO().pose==='fp'&&!(spearsOK()&&save.weapon==='spear')){const ap=clamp(pitch,-.9,.9);   // première personne : lames tenues devant soi, les bras suivent le regard
+  if(fpb&&FPO().pose==='fp'&&!(spearsOK()&&save.weapon==='spear')&&!bladesAway()){const ap=clamp(pitch,-.9,.9);   // première personne : lames tenues devant soi, les bras suivent le regard
     const G=FPG;pose('uaL',G.ux-ap*G.pk,G.uy,G.uz);pose('uaR',G.ux-ap*G.pk,-G.uy,-G.uz);pose('faL',G.fx,G.fy,G.fz);pose('faR',G.fx,-G.fy,-G.fz);pose('spine',.06);pose('head',0);}
   if(fpb)lean=0;
+  if(p.shT>0){const dr=p.shDir<0,u=p.shT/(dr?SHD.out:SHD.inn),hip=dr?u<.3:(u>=.3&&u<.74),up=dr?(u>=.3&&u<.68):u<.3;   // G : rangement / sortie des lames, mêmes poses en 1re et en 3e personne
+    for(const k of ['L','R']){const sg=k==='L'?-1:1;
+      if(up){pose('ua'+k,CARRY.cu,0,-sg*CARRY.cz);pose('fa'+k,CARRY.cf,0,0);}      // lames levées, croisées devant la poitrine
+      else if(hip){pose('ua'+k,CARRY.hu,0,sg*CARRY.hz);pose('fa'+k,CARRY.hf,0,0);}}   // mains aux fourreaux des hanches, lames qui glissent vers l'arrière
+    if(hip&&!fpb)pose('spine',.2,0,0);}
   const arcs=FPO().slash==='arcs',fpS=fpb&&FPO().pose==='fp',sDur=arcs?.42:.36;
   if(p.slashA>0){p.slashA+=dt;if(p.slashA>sDur)p.slashA=0;}
   if(p.slashA>0&&arcs){const u=p.slashA/sDur,sd=p.slashSide,aim=fpS?-clamp(pitch,-.9,.9)*FPG.pk:0;
@@ -1646,7 +1667,7 @@ function animPlayer(dt){
       for(const k of ['L','R']){const sg=k==='L'?-1:1;
         if(sg===sd){pose('ua'+k,lerp(W.ax,WR.ax,s2),sg*lerp(W.ay,0,s2),sg*lerp(W.az,WR.az,s2));pose('fa'+k,lerp(W.af,WR.af,s2));}
         else{pose('ua'+k,lerp(W.bx,WR.bx,s2),sg*lerp(W.by,0,s2),sg*lerp(W.bz,WR.bz,s2));pose('fa'+k,lerp(W.bf,WR.bf,s2));}}}}
-  const fast=p.slashA>0||p.spinT>0||p.chgA>0||CHG.on,sdt=Math.min(dt,1/30);
+  const fast=p.slashA>0||p.spinT>0||p.chgA>0||CHG.on||p.shT>0,sdt=Math.min(dt,1/30);
   for(const n in T){if(n[0]==='c')continue;const t=T[n],g=J[n].rotation,fj=fast&&(n[0]==='u'||n[0]==='f'||n==='spine');
     const w=fj?34:(n[0]==='t'||n[0]==='s'&&n!=='spine')?11:13,zt=fj?1:(n[0]==='u'||n[0]==='f')?.68:.48,v=JV[n]||(JV[n]={x:0,y:0,z:0});
     const st=Math.max(1,Math.ceil(sdt*w/.35)),h=sdt/st;   /* petits pas : ressorts stables même à 30 images/s (sinon les membres s'emballent et se tordent) */
@@ -1680,7 +1701,7 @@ function syncVRM(dt){
   }
   // vie supplémentaire : bassin qui balance, léger rebond, pieds qui déroulent, jambes qui flottent en l'air
   const p=player,hs=Math.hypot(p.vel.x,p.vel.z),tt=performance.now()/1000;
-  const run=(p.grounded&&hs>1.5)||(p.wall&&p.wall.mode==='run')?Math.min(1,hs/8+.3):0,air=!p.grounded&&!p.wall;
+  const run=((p.grounded&&hs>1.5)||(p.wall&&p.wall.mode==='run')?Math.min(1,hs/8+.3):0)*(p.gaitW?.55:1),air=!p.grounded&&!p.wall;   // marche : bassin et rebond plus discrets
   if(B.hips){B.hips.quaternion.setFromAxisAngle(_ay,Math.sin(runPh)*.16*run);B.hips.position.y=B.hipsY0-Math.abs(Math.cos(runPh))*.035*run/vrmScale;}
   for(const k of ['L','R']){const ph=k==='L'?0:1.4;
     if(air){_qx.setFromAxisAngle(_ax,-Math.sin(tt*2.6+ph)*.13);B['th'+k].quaternion.multiply(_qx);_qx.setFromAxisAngle(_ax,Math.sin(tt*2.6+ph+.8)*.12);B['sh'+k].quaternion.multiply(_qx);}
@@ -2109,6 +2130,7 @@ function castHook(yo,side){
 function fireHook(h){
   if(state!=='play')return;
   if(player.gas<=0){toast('Plus de gaz : trouve une bouteille (marqueur vert)');return;}
+  drawIfAway();   // les gâchettes des grappins sont dans les poignées : les lames ressortent
   const yo=h.side<0?.04:-.04;
   hipPos(h.side,h.tip);
   const hit=castHook(yo,h.side);sfx.fire();
@@ -3437,7 +3459,7 @@ const chgGlow=document.createElement('div');chgGlow.style.cssText='position:fixe
 const chgFl=document.createElement('div');chgFl.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:3;opacity:0;background:#fff7e6;transition:opacity .35s';document.body.appendChild(chgFl);
 function chgFlash(k){chgFl.style.transition='none';chgFl.style.opacity=.32*k;requestAnimationFrame(()=>{chgFl.style.transition='opacity .35s';chgFl.style.opacity=0;});}
 function chgCancel(){CHG.down=CHG.on=CHG.full=false;CHG.lv=0;CHG.t=0;}
-const canChg=()=>{const p=player;return state==='play'&&!grab&&!(p.spinT>0)&&!(p.chgA>0)&&!spearMode()&&HAS('charge')&&bladeStock()>=.15&&(CHG.on?CHG.gt<.25:!p.grounded);};   // coûte jusqu'à 2 paires de lames selon la charge   // en l'air (ou sur un mur) ; un bref contact au sol ne la perd pas
+const canChg=()=>{const p=player;return state==='play'&&!grab&&!bladesAway()&&!(p.spinT>0)&&!(p.chgA>0)&&!spearMode()&&HAS('charge')&&bladeStock()>=.15&&(CHG.on?CHG.gt<.25:!p.grounded);};   // coûte jusqu'à 2 paires de lames selon la charge   // en l'air (ou sur un mur) ; un bref contact au sol ne la perd pas
 function updCharge(rdt){const p=player;CHG.gt=p.grounded?(CHG.gt||0)+rdt:0;
   if(CHG.down&&!CHG.on&&CHG.t>=.35&&!CHG.msg&&state==='play'&&!spearMode()&&HAS('charge')&&p.grounded){CHG.msg=true;toast('Coupe chargée : en l\'air seulement');}
   if(CHG.down&&!CHG.on&&CHG.t>=.35&&!CHG.msg&&state==='play'&&!spearMode()&&HAS('charge')&&!p.grounded&&bladeStock()<.15){CHG.msg=true;toastT=0;toast('Coupe chargée : plus assez de lames');}
@@ -3470,7 +3492,7 @@ function chargeRelease(){const p=player,l=CHG.lv,full=CHG.full;chgCancel();if(!c
   for(let i=0;i<14+Math.round(10*l);i++)emit(p.center,rv(7+5*l).clone(),.45,.35,1.3,0xfff2d0,.65);
   if(hit){slowT=Math.max(slowT,.1+.12*l);sfx.slash();chgFlash(.5+.5*l);addStyle(full?'Coupe parfaite':'Coupe chargée',.35+.5*l);}else chgFlash(.25*l);}
 function slash(){
-  const p=player;if(p.slashCd>0||p.spinT>0)return;ensureBlades();
+  const p=player;if(bladesAway()){drawBlades();return;}if(p.slashCd>0||p.spinT>0)return;ensureBlades();
   p.slashCd=.3;p.slashT=.001;p.slashA=.001;p.slashSide=-p.slashSide;sfx.slash();
   // aimant : petite ruée vers une nuque proche quand on est derrière
   let best=null,bd=1e9;
@@ -3479,14 +3501,32 @@ function slash(){
   if(best){tB.subVectors(best,p.center);const d=tB.length();tB.divideScalar(d);const mv=Math.min(4,Math.max(0,d-ST.range*.6));p.pos.addScaledVector(tB,mv);p.center.addScaledVector(tB,mv);p.vel.addScaledVector(tB,10);}
   if(bladeHit(ST.range,1,'slash'))slowT=Math.max(slowT,.06);
 }
-function spinAttack(){const p=player;if(spearsOK()&&save.weapon==='spear')return;ensureBlades();if(p.grounded||p.spinT>0||p.spinCd>0||p.gas<=0)return;if(!HAS('tourbillon')){lockedMsg('tourbillon');return;}if(bladeStock()<.5){toastT=0;toast('Tourbillon : il faut une demi-paire de lames');return;}p.spinPaid=false;p.spinT=.001;p.spinTick=0;p.spinCd=1.2*ST.spinCd;p.gas=Math.max(0,p.gas-3*ST.gasEff);addStyle('Tourbillon',.45);sfx.woosh();tut(3);}
+function spinAttack(){const p=player;if(bladesAway()){drawBlades();return;}if(spearsOK()&&save.weapon==='spear')return;ensureBlades();if(p.grounded||p.spinT>0||p.spinCd>0||p.gas<=0)return;if(!HAS('tourbillon')){lockedMsg('tourbillon');return;}if(bladeStock()<.5){toastT=0;toast('Tourbillon : il faut une demi-paire de lames');return;}p.spinPaid=false;p.spinT=.001;p.spinTick=0;p.spinCd=1.2*ST.spinCd;p.gas=Math.max(0,p.gas-3*ST.gasEff);addStyle('Tourbillon',.45);sfx.woosh();tut(3);}
 function trick(k){const p=player;if(p.grounded||p.spinT>0||p.gas<=0)return;if(!HAS('agilite')){lockedMsg('agilite');return;}
   if(k==='flip'&&p.flipT<=0&&p.rollT<=0){p.flipT=.001;addStyle('Salto',.3);sfx.woosh();tut(3);}
   if(k==='roll'&&p.rollT<=0&&p.flipT<=0){p.rollT=.001;addStyle('Vrille',.3);sfx.woosh();tut(3);}}
-function dash(){const p=player;if(p.dashCd>0||p.gas<=0)return;if(!HAS('ruee')){lockedMsg('ruee');return;}p.dashCd=.5;p.gas=Math.max(0,p.gas-2*ST.gasEff);
+function dash(){const p=player;if(p.grounded)return;if(p.dashCd>0||p.gas<=0)return;if(!HAS('ruee')){lockedMsg('ruee');return;}p.dashCd=.5;p.gas=Math.max(0,p.gas-2*ST.gasEff);TUTO.dsh=true;drawIfAway();
   const f=aimDir(0,0,tA);const ix=(keys.KeyD?1:0)-(keys.KeyA?1:0),iz=(keys.KeyW?1:0)-(keys.KeyS?1:0);
   if(ix||iz){tB.set(-Math.sin(yaw)*iz+Math.cos(yaw)*ix,0,-Math.cos(yaw)*iz-Math.sin(yaw)*ix).normalize();if(iz>0)tB.y=f.y;tB.normalize();}else tB.copy(f);
   p.vel.addScaledVector(tB,ST.boost*.85);sfx.woosh();for(let i=0;i<8;i++)emit(p.center,rv(6).clone(),.5,.4,1.6,0xffffff,.6);}
+/* ----- G : ranger / sortir les lames. Même geste en 1re et en 3e personne : pour les ranger, les deux lames montent se croiser devant la poitrine,
+   puis descendent glisser dans les fourreaux des hanches ; pour les sortir, les mains vont aux fourreaux et les ramènent croisées devant soi ----- */
+const SHD={inn:.62,out:.55};
+const bladesAway=()=>{const p=player;return !!p.sheath||p.shT>0;};
+function bladesShown(){const p=player;if(p.shT>0){const u=p.shT/(p.shDir>0?SHD.inn:SHD.out);return p.shDir>0?u<.6:u>=.3;}return !p.sheath;}
+function sheathK(){const p=player;if(p.shT>0){const dr=p.shDir<0,u=clamp(p.shT/(dr?SHD.out:SHD.inn),0,1),e=u*u*(3-2*u);return dr?1-e:e;}return p.sheath?1:0;}
+function setBladeVis(v){for(const k of ['L','R']){const b=bladeGroups[k];if(b&&b.visible!==v)b.visible=v;}}
+function sheathNow(v){const p=player;p.sheath=!!v;p.shT=0;setBladeVis(!v);}
+function sheathBlades(){const p=player;if(p.sheath||p.shT>0||grab||p.spinT>0||p.chgA>0||spAim)return;chgCancel();p.sheath=true;p.shT=.001;p.shDir=1;p.shSnd=0;}
+function drawBlades(){const p=player;if(!p.sheath)return;p.sheath=false;p.shT=.001;p.shDir=-1;p.shSnd=0;}
+function drawIfAway(){if(player.sheath)drawBlades();}
+function toggleSheath(){const p=player;if(state!=='play'||grab||p.shT>0)return;if(p.sheath)drawBlades();else sheathBlades();}
+function updSheath(dt){const p=player;if(grab&&bladesAway())sheathNow(false);   // saisi par un titan : lames en main
+  if(p.shT>0){p.shT+=dt;const dr=p.shDir<0,u=p.shT/(dr?SHD.out:SHD.inn);
+    if(!dr){if(u>=.3&&p.shSnd<1){p.shSnd=1;sfx.burst(5200,.24,.12,'bandpass',2.2,0,2400);}if(u>=.6&&p.shSnd<2){p.shSnd=2;sfx.burst(1500,.05,.3,'bandpass',3);sfx.burst(700,.09,.22,'lowpass',1);}}   // glissement dans le fourreau, puis déclic
+    else if(u>=.3&&p.shSnd<1){p.shSnd=1;sfx.burst(2600,.32,.2,'bandpass',1.8,0,7400);sfx.burst(6400,.12,.12,'highpass',.8);}   // lames tirées des fourreaux
+    if(u>=1)p.shT=0;}
+  setBladeVis(bladesShown());}
 function hurtPlayer(t,mult){
   if(NET&&NET.poss){NET.pHurt(t,mult);return;}   // l'hôte joue ce titan contre un coéquipier : le coup part chez lui
   if(NET&&NET.on&&NET.host&&!NET.deliver&&NET.debt>.05){NET.q.push({at:performance.now()+NET.debt*1000,m:{k:'self',t,mult}});return;}   // pendant un ralenti local, le coup arrive quand on le voit arriver
@@ -3589,8 +3629,8 @@ function showTut(){const h=$('hint');if(gameMode==='tuto'||gameMode==='train'){h
 
 /* ================= WAVES ================= */
 let wave=1,toSpawn=0,spawnT=0,waveBreak=0;var gameMode='normal';
-let waveSnap=null;
-function startWave(n){wave=n;waveSnap={level:save.level,xp:save.xp,points:save.points,kills:save.kills,spec:save.spec,spec2:save.spec2,tp:save.tp||0,abil:JSON.parse(JSON.stringify(save.abil||{})),stats:JSON.parse(JSON.stringify(save.stats))};player.souffleUsed=false;   // progression au début de la manche
+let waveSnap=null,GID=0;   // GID : numéro de la partie en cours ; la progression notée au début d'une manche ne sert qu'à cette partie-là
+function startWave(n){wave=n;waveSnap={gid:GID,prof:save.prof,level:save.level,xp:save.xp,points:save.points,kills:save.kills,spec:save.spec,spec2:save.spec2,tp:save.tp||0,abil:JSON.parse(JSON.stringify(save.abil||{})),stats:JSON.parse(JSON.stringify(save.stats))};player.souffleUsed=false;   // progression au début de la manche
   if(ORIG&&ORIG.dead)clearOriginel();
   if(gameMode==='pvp'){toSpawn=0;waveBreak=0;if(!(NET.on&&!NET.host))PV.begin();return;}
   if(gameMode==='tuto'){toSpawn=0;waveBreak=0;TUTO.begin();return;}
@@ -3611,6 +3651,7 @@ function startWave(n){wave=n;waveSnap={level:save.level,xp:save.xp,points:save.p
   if(rb&&n%10===0)originelArrival();
   if(n>10&&!save.modern){save.modern=true;persist();}
   if(gameMode==='rpg'&&n===1&&!(save.abil&&Object.keys(save.abil).length))setTimeout(()=>bigMsg('MODE RPG','Chaque nouveau grade rapporte 3 points de technique : Tab · Techniques. Les lances foudroyantes arrivent après la vague 10'),2800);
+  if(gameMode==='normal'&&n===1)setTimeout(()=>bigMsg('MODE CLASSIQUE','Toutes les techniques sont maîtrisées (Tab · Techniques). Les lances foudroyantes arrivent après la vague 10'),2800);
   if(gameMode==='rpg'&&n===11){player.spears=spearMax();applyEquipVisual();setTimeout(()=>bigMsg('2 LANCES FOUDROYANTES','B : alterner lames et lances. Tab · Techniques : passe à 4 lances, puis à 6'),2600);}
   if(gameMode==='normal'&&(n===11||n===21||n===31)){const m=spearMax();player.spears=m;applyEquipVisual();
     setTimeout(()=>bigMsg(n===11?'2 LANCES FOUDROYANTES':'+2 LANCES FOUDROYANTES',n===11?'B : alterner entre les lames et les lances. 2 de plus toutes les 10 vagues':n===31?'Tu portes maintenant 6 lances : le maximum':'Tu portes maintenant '+m+' lances'),2600);}}
@@ -3649,29 +3690,36 @@ $('trainBack').onclick=()=>{$('trainScr').hidden=true;$('start').hidden=false;};
 $('trainEd').addEventListener('click',e=>TRN.click(e));
 $('trainGo').onclick=()=>{TRN.save();$('trainScr').hidden=true;startGame(1,'train');};
 /* ================= DIDACTICIEL ================= */
-const TUTO={on:false,i:0,okT:0,mv:0,d0:null,flip:false,roll:false,cam0:null,paused:false,titan:null,
+const TUTO={on:false,i:0,okT:0,mv:0,d0:null,flip:false,roll:false,cam0:null,paused:false,titan:null,tabs:new Set(),runT:0,runS:0,dsh:false,
   steps:[
-    {t:'Bouge la souris : le cercle blanc est ton <b>viseur</b>. Il suffit de viser là où tu veux aller.',ok:T=>T.mv>500},
-    {t:'Déplace-toi au sol avec <b class="k">Z</b><b class="k">Q</b><b class="k">S</b><b class="k">D</b> (ou <b class="k">W</b><b class="k">A</b><b class="k">S</b><b class="k">D</b>).',ok:T=>T.d0&&Math.hypot(player.pos.x-T.d0.x,player.pos.z-T.d0.z)>8},
+    {id:'menu',t:'Commence par le <b>menu</b> : appuie sur <b class="k">Tab</b> et ouvre ses 4 onglets : <b>Améliorations</b>, <b>Techniques</b>, <b>Graphismes</b> et <b>Commandes</b>. Reviens ensuite au jeu avec <b class="k">Tab</b>.',enter:T=>{T.tabs.clear();},ok:T=>T.tabs.size>=4&&state==='play',prog:T=>'Onglets ouverts : '+T.tabs.size+' / 4'},
+    {t:'Tu es en vue <b>Libre</b>. <b class="k">V</b> (ou <b class="k">1</b> à <b class="k">4</b>) change de vue : 1 Auto, 2 Verrouillage, 3 Libre, 4 Première personne. Essaie une autre vue ; tu pourras revenir à celle que tu préfères.',enter:T=>{T.cam0=save.camMode;},ok:T=>save.camMode!==T.cam0},
+    {t:'Bouge la souris : le cercle blanc est ton <b>viseur</b>. Il suffit de viser là où tu veux aller.',enter:T=>{T.mv=0;},ok:T=>T.mv>500},
+    {t:'Déplace-toi au sol avec <b class="k">Z</b><b class="k">Q</b><b class="k">S</b><b class="k">D</b> (ou <b class="k">W</b><b class="k">A</b><b class="k">S</b><b class="k">D</b>) : tu marches d\'un pas rapide.',enter:T=>{T.d0=player.pos.clone();},ok:T=>T.d0&&Math.hypot(player.pos.x-T.d0.x,player.pos.z-T.d0.z)>8},
+    {t:'Au sol, <b>maintiens</b> <b class="k">Shift</b> en avançant : tu <b>cours</b>. Ça marche aussi quand tu n\'as plus de gaz.',enter:T=>{T.runT=0;},ok:T=>T.runT>1.2},
+    {t:'<b class="k">G</b> range tes lames dans les fourreaux de tes hanches : tu cours les mains libres. Range-les, puis cours un peu avec <b class="k">Shift</b>.',enter:T=>{T.runS=0;},ok:T=>T.runS>1},
+    {t:'Appuie encore sur <b class="k">G</b> pour <b>sortir tes lames</b>. Un clic gauche, un grappin ou un boost les sortent aussi tout seuls.',ok:()=>!player.sheath&&!(player.shT>0)},
     {t:'Vise un bâtiment ou un arbre et <b>maintiens le clic droit</b> : les deux grappins s\'accrochent et te tirent.',ok:()=>mouseR&&hooks.filter(h=>h.state==='att').length>=2},
     {t:'En l\'air, appuie sur <b class="k">Espace</b> : un boost de gaz te propulse vers l\'avant.',ok:()=>player.boosting&&!player.grounded},
     {t:'<b class="k">A</b> ou <b class="k">E</b> (Q ou E en QWERTY) : un seul grappin, à gauche ou à droite, pour tourner autour d\'un point.',ok:()=>!mouseR&&hooks.filter(h=>h.state==='att').length===1},
-    {t:'<b class="k">Shift</b> : un dash, une poussée brève dans la direction où tu vas.',ok:()=>keys.ShiftLeft||keys.ShiftRight},
-    {t:'En l\'air : <b class="k">C</b> pour un salto, <b class="k">X</b> pour une vrille. Fais les deux.',ok:T=>{if(player.flipT>0)T.flip=true;if(player.rollT>0)T.roll=true;return T.flip&&T.roll;}},
+    {t:'En l\'air, <b class="k">Shift</b> fait un <b>dash</b> : une poussée brève dans la direction où tu vas (au sol, Shift sert à courir).',enter:T=>{T.dsh=false;},ok:T=>T.dsh},
+    {t:'En l\'air : <b class="k">C</b> pour un salto, <b class="k">X</b> pour une vrille. Fais les deux.',enter:T=>{T.flip=T.roll=false;},ok:T=>{if(player.flipT>0)T.flip=true;if(player.rollT>0)T.roll=true;return T.flip&&T.roll;}},
     {t:'Un titan arrive. Approche-toi par derrière et frappe sa <b>nuque</b> avec le <b>clic gauche</b> : c\'est le seul coup qui l\'abat.',enter:T=>T.spawn(),ok:T=>T.titan&&T.titan.state==='dead'},
     {t:'En l\'air, appuie sur <b class="k">F</b> : le tourbillon fait tournoyer tes lames tout autour de toi.',ok:()=>player.spinT>0},
-    {t:'En l\'air, <b>maintiens le clic gauche</b> pour armer tes lames, puis relâche : coupe chargée, avec élan vers la nuque la plus proche.',ok:()=>player.chgA>0},
-    {t:'<b class="k">V</b> (ou <b class="k">1</b> à <b class="k">4</b>) change de caméra : Auto, Verrouillage, Libre, 1re personne. Essaie-en une autre.',enter:T=>{T.cam0=save.camMode;},ok:T=>save.camMode!==T.cam0},
-    {t:'<b class="k">Tab</b> ouvre le menu : améliorations, graphismes, commandes. Ouvre-le, puis reviens au jeu.',ok:T=>{if(state==='pause')T.paused=true;return T.paused&&state==='play';}}],
-  begin(){this.on=true;this.i=0;this.okT=0;this.mv=0;this.flip=this.roll=this.paused=false;this.titan=null;this.d0=player.pos.clone();bigMsg('DIDACTICIEL','Suis les consignes en haut de l\'écran · Entrée pour passer une étape');this.show();},
+    {t:'En l\'air, <b>maintiens le clic gauche</b> pour armer tes lames, puis relâche : coupe chargée, avec élan vers la nuque la plus proche.',ok:()=>player.chgA>0}],
+  cur(){return this.steps[this.i];},
+  begin(){this.on=true;this.i=0;this.okT=0;this.mv=0;this.flip=this.roll=this.paused=false;this.titan=null;this.tabs=new Set();this.runT=this.runS=0;this.dsh=false;this.d0=player.pos.clone();sheathNow(false);
+    if(save.camMode!=='libre')setCamMode('libre');   // le didacticiel commence toujours en vue libre
+    bigMsg('DIDACTICIEL','Suis les consignes en haut de l\'écran · Entrée pour passer une étape');this.show();},
   stop(){this.on=false;const e=$('tutoP');if(e)e.hidden=true;},
   spawn(){const p=player,a=yaw+Math.PI,x=clamp(p.pos.x-Math.sin(a)*45,-440,440),z=clamp(p.pos.z-Math.cos(a)*45,-440,440);let t=null;
     for(let k=0;k<12&&!t;k++){const aa=a+k*.5,xx=clamp(p.pos.x-Math.sin(aa)*45,-440,440),zz=clamp(p.pos.z-Math.cos(aa)*45,-440,440);if(!pointBlocked(xx,groundY(xx,zz)+1,zz))t=new Titan('small',xx,zz);}
     if(!t)t=new Titan('small',x,z);titans.push(t);t.speed*=.35;t.hp=t.maxHp=Math.min(t.maxHp,60);this.titan=t;},
   show(){const e=$('tutoP'),S=this.steps[this.i];if(!e)return;if(!S){e.innerHTML='<div class="st">Didacticiel terminé</div><span class="ok">Bravo !</span> Tu connais l\'essentiel. Continue à t\'exercer ici, ou <b class="k">Tab</b> → Menu principal.';e.hidden=false;return;}
-    e.innerHTML=`<div class="st">Didacticiel · étape ${this.i+1} / ${this.steps.length}</div>${S.t}<div style="font-size:12px;color:#9aa1a8;margin-top:6px">Entrée : passer l'étape</div>`;e.hidden=false;if(S.enter)S.enter(this);},
+    e.innerHTML=`<div class="st">Didacticiel · étape ${this.i+1} / ${this.steps.length}</div>${S.t}${S.prog?'<div id="tutoPg" style="font-size:13px;color:#ffcf5a;margin-top:5px"></div>':''}<div style="font-size:12px;color:#9aa1a8;margin-top:6px">Entrée : passer l'étape</div>`;e.hidden=false;if(S.enter)S.enter(this);},
   next(){this.i++;this.okT=0;sfx.level();this.show();if(this.i>=this.steps.length)bigMsg('DIDACTICIEL TERMINÉ','Tu peux jouer au mode RPG ou au mode classique !');},
   tick(dt){if(!this.on)return;const p=player;p.gas=ST.gasMax;p.inv=Math.max(p.inv,.25);p.hp=ST.hpMax;p.blade=CFG.bladeDurability;p.spareBlades=Math.max(p.spareBlades,8);
+    {const hs=Math.hypot(p.vel.x,p.vel.z);if(p.grounded&&p.sprint&&hs>6){this.runT+=dt;if(p.sheath&&!(p.shT>0))this.runS+=dt;}}{const S0=this.steps[this.i],pg=$('tutoPg');if(S0&&S0.prog&&pg)pg.textContent=S0.prog(this);}
     if(this.titan&&this.titan.state!=='dead'){this.titan.atkCd=Math.max(this.titan.atkCd,3);}
     const S=this.steps[this.i];if(!S)return;if(this.okT>0){this.okT-=dt;if(this.okT<=0)this.next();return;}
     if(S.ok(this)){this.okT=.9;const e=$('tutoP');if(e)e.innerHTML+='<div class="ok" style="margin-top:6px">Réussi !</div>';sfx.burst(2400,.12,.25,'bandpass',1.5);}}};
@@ -3690,12 +3738,14 @@ addEventListener('keydown',e=>{
   if(c==='Escape'&&NET.on&&NET.menu){resume();return;}
   if(c==='Escape'&&state==='play'&&!locked){pause();return;}
   if(NET.on&&NET.menu)return;   /* menu ouvert : les touches ne pilotent pas le soldat */
+  if(state!=='play'&&e.target&&/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName||''))return;   // menus : les flèches et l'espace règlent les curseurs et les listes (champ de vision, etc.)
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(c))e.preventDefault();
   if(e.repeat){keys[c]=true;return;}
   keys[c]=true;if(state!=='play')return;
   switch(c){
-    case'Space':if(player.wall)wallJump();else if(player.grounded){player.vel.y=player.gas>0?(gameMode==='rpg'&&HAS('agilite')?15.5:13):7.5;player.grounded=false;}break;
-    case'ShiftLeft':case'ShiftRight':dash();break;
+    case'Space':if(player.wall)wallJump();else if(player.grounded){player.vel.y=player.gas>0?((gameMode==='rpg'||gameMode==='normal')&&HAS('agilite')?15.5:13):7.5;player.grounded=false;}break;
+    case'ShiftLeft':case'ShiftRight':dash();break;   // au sol : courir (maintenu) ; en l'air : dash
+    case'KeyG':toggleSheath();break;
     case'KeyQ':if(HAS('pivot'))fireHook(hooks[0]);else lockedMsg('pivot');break;
     case'KeyE':if(HAS('pivot'))fireHook(hooks[1]);else lockedMsg('pivot');break;
     case'KeyC':trick('flip');break;
@@ -3721,7 +3771,7 @@ cv.addEventListener('mousedown',e=>{
   if(state!=='play')return;
   if(!locked&&!noLock){goFull();lockPointer();return;}
   if(e.button===1){e.preventDefault();nextLock();return;}
-  if(e.button===0){if(spearMode())beginAim();else if(grab)attackPrimary();else{CHG.down=true;CHG.t=0;CHG.msg=false;}}
+  if(e.button===0){if(bladesAway()&&!grab){drawBlades();return;}if(spearMode())beginAim();else if(grab)attackPrimary();else{CHG.down=true;CHG.t=0;CHG.msg=false;}}
   if(e.button===2){mouseR=true;for(const h of hooks)if(h.state==='none'||h.state==='back')fireHook(h);}
 });
 addEventListener('mouseup',e=>{if(e.button===2)mouseR=false;if(e.button===0&&spAim)releaseAim();
@@ -3795,9 +3845,9 @@ function updCamControl(rdt){
     if(lockT){
       const np=lockT.nape.getWorldPosition(tC);
       const dx=np.x-p.pos.x,dy=np.y-(p.pos.y+1.5),dz=np.z-p.pos.z,hd=Math.hypot(dx,dz);
-      const k=1-Math.exp(-5*rdt);
-      yaw+=wrapA(Math.atan2(-dx,-dz)-yaw)*k;
-      pitch=lerp(pitch,clamp(Math.atan2(dy,hd)-.1,-.75,.75),k);
+      const k=(1-Math.exp(-5*rdt))*clamp(hd/14,.3,1),mx=2.6*rdt;   // de près, la direction du titan change vite : la caméra le suit plus doucement, sans tourner de plus de 150°/s
+      yaw+=clamp(wrapA(Math.atan2(-dx,-dz)-yaw)*k,-mx,mx);
+      pitch+=clamp((clamp(Math.atan2(dy,hd)-.1,-.75,.75)-pitch)*k,-mx,mx);
       return;
     }
   }
@@ -3818,17 +3868,19 @@ function updCamControl(rdt){
 
 /* ================= GAME STATE ================= */
 let state='menu',slowT=0,timeScale=1,shake=0,roll=0,camDist=6.5;
-function resetPlayer(){endGrab();const p=player;p.pos.set(0,0,30);p.vel.set(0,0,0);p.hp=ST.hpMax;p.gas=ST.gasMax;p.inv=1.5;combo=1;resetBottles();resupply();clearSpears();p.wall=null;p.landRoll=0;p.flipT=p.rollT=p.spinT=0;pTrick.rotation.set(0,0,0);pTrick.position.y=0;camTgt.copy(p.pos);for(const h of hooks)h.state='none';yaw=0;pitch=-.05;}
+function resetPlayer(){endGrab();sheathNow(false);const p=player;p.pos.set(0,0,30);p.vel.set(0,0,0);p.hp=ST.hpMax;p.gas=ST.gasMax;p.inv=1.5;combo=1;resetBottles();resupply();clearSpears();p.wall=null;p.landRoll=0;p.flipT=p.rollT=p.spinT=0;pTrick.rotation.set(0,0,0);pTrick.position.y=0;camTgt.copy(p.pos);for(const h of hooks)h.state='none';yaw=0;pitch=-.05;}
+function repairProfile(w){if(!(gameMode==='rpg'||gameMode==='normal')||!(w>1)||save.level>1||save.kills>0||save.xp>0)return;   // progression effacée par l'ancien bug de « Reprendre » : niveau estimé, points à répartir
+  const lv=estLv(w);save.level=lv;save.points=lv-1;persist();setTimeout(()=>bigMsg('PROGRESSION RÉTABLIE','Niveau '+lv+' · '+(lv-1)+' points à répartir'+(gameMode==='rpg'?' et des points de technique':'')+' (Tab)'),3400);}
 function freshProfile(){const D=PROF_DEF();for(const k of PROF_KEYS)save[k]=JSON.parse(JSON.stringify(D[k]));if(gameMode==='final'){save.level=100;save.points=100;}if(gameMode==='pvp'){save.level=10;save.points=10;}if(gameMode==='train'){save.level=TRN.cfg.lv;save.points=TRN.cfg.lv;}save.weapon='blade';persist();}
-function startGame(w,mode,cont){gameMode=mode||'normal';wave=w;window._trAll=gameMode==='train'&&!!TRN.cfg.all;TRN.done=false;useProfile(NET&&NET.on?'coop':gameMode==='train'||gameMode==='tuto'?'train':gameMode==='rpg'?'rpg':gameMode==='final'?'final':gameMode==='pvp'?'pvp':'classic');if(NET&&NET.on)NET.zero();else if(!cont)freshProfile();if(gameMode==='rpg')save.tp=rpgTP();ST=calcStats();   // la vague est connue avant le réapprovisionnement (nombre de lances)
+function startGame(w,mode,cont){GID++;gameMode=mode||'normal';wave=w;window._trAll=gameMode==='train'&&!!TRN.cfg.all;TRN.done=false;useProfile(NET&&NET.on?'coop':gameMode==='train'||gameMode==='tuto'?'train':gameMode==='rpg'?'rpg':gameMode==='final'?'final':gameMode==='pvp'?'pvp':'classic');if(NET&&NET.on)NET.zero();else if(!cont)freshProfile();else repairProfile(w);if(gameMode==='rpg')save.tp=rpgTP();ST=calcStats();   // la vague est connue avant le réapprovisionnement (nombre de lances)
   sfx.init();$('start').hidden=true;$('hud').hidden=false;
   finalWon=false;clearTitans();resetPlayer();startWave(w);state='play';goFull();lockPointer();showTut();last=performance.now();
 }
 function pause(){if(NET&&NET.on){if(state!=='play'||NET.menu)return;NET.menu=true;cancelAim();for(const k in keys)keys[k]=false;mouseR=false;renderMenu();$('pauseNote').hidden=false;$('pause').hidden=false;if(document.pointerLockElement)document.exitPointerLock();return;}   /* coop : le jeu continue pendant le menu */
   if(state!=='play')return;$('pauseNote').hidden=true;cancelAim();state='pause';renderMenu();$('pause').hidden=false;if(document.pointerLockElement)document.exitPointerLock();tut(4);}
-function resume(){if(NET&&NET.on&&NET.menu){NET.menu=false;$('pause').hidden=true;ST=calcStats();player.hp=Math.min(player.hp,ST.hpMax);goFull();lockPointer();return;}$('pause').hidden=true;state='play';ST=calcStats();player.hp=Math.min(player.hp,ST.hpMax);goFull();lockPointer();last=performance.now();}
+function resume(){try{const ae=document.activeElement;if(ae&&ae!==document.body&&ae.blur)ae.blur();}catch(_){}if(NET&&NET.on&&NET.menu){NET.menu=false;$('pause').hidden=true;ST=calcStats();player.hp=Math.min(player.hp,ST.hpMax);goFull();lockPointer();return;}$('pause').hidden=true;state='play';ST=calcStats();player.hp=Math.min(player.hp,ST.hpMax);goFull();lockPointer();last=performance.now();}
 function gameOver(){if(gameMode==='pvp'){NET.goDown();return;}$('overH').textContent='Vous êtes mort.';if(!(NET&&NET.on))$('retryBtn').hidden=false;if(NET&&NET.on){NET.goDown();return;}state='over';player.hp=0;if(document.pointerLockElement)document.exitPointerLock();
-  let lost='';if(waveSnap){const gl=save.level-waveSnap.level;lost=gl>1?' Les '+gl+' niveaux gagnés pendant cette manche sont perdus.':gl===1?' Le niveau gagné pendant cette manche est perdu.':' L\'expérience gagnée pendant cette manche est perdue.';
+  let lost='';if(waveSnap&&waveSnap.gid===GID&&waveSnap.prof===save.prof){const gl=save.level-waveSnap.level;lost=gl>1?' Les '+gl+' niveaux gagnés pendant cette manche sont perdus.':gl===1?' Le niveau gagné pendant cette manche est perdu.':' L\'expérience gagnée pendant cette manche est perdue.';
     Object.assign(save,{level:waveSnap.level,xp:waveSnap.xp,points:waveSnap.points,kills:waveSnap.kills,spec:waveSnap.spec,spec2:waveSnap.spec2,tp:waveSnap.tp,abil:JSON.parse(JSON.stringify(waveSnap.abil)),stats:JSON.parse(JSON.stringify(waveSnap.stats))});ST=calcStats();}
   $('overT').textContent=`${gameMode==='final'?'Assaut final · ':gameMode==='rumbling'?'The Rumbling · ':gameMode==='boss'?'Vague de boss · ':gameMode==='rpg'?'Mode RPG · ':''}Vague ${wave} · Niveau ${save.level}. Tu recommences au début de la vague.${lost}`;
   $('over').hidden=false;sfx.set(sfx.gasG,0);sfx.set(sfx.windG,0);persist();}
@@ -3859,19 +3911,20 @@ $('retryBtn').onclick=()=>{if(gameMode==='pvp'){PV.replay();return;}if(NET.on){i
 /* ================= MENU ================= */
 let resetArm=false;
 let menuTab='up';
-const GFX_DEF=()=>({fps:60,pr:Math.min(window.devicePixelRatio||1,1.5),shadowQ:2048,view:900,blur:true,lines:true,decals:true,grass:'mid',fp:FP_DEF()});
+const GFX_DEF=()=>({runStyle:'ninja',fps:60,pr:Math.min(window.devicePixelRatio||1,1.5),shadowQ:4096,shadowFar:1024,shaders:0,view:900,blur:true,lines:true,decals:true,grass:'mid',fp:FP_DEF()});
 function applyGfx(){const g=save.gfx;renderer.setPixelRatio(g.pr*(typeof DYN!=='undefined'?DYN.k:1));renderer.setSize(innerWidth,innerHeight);
   if(!(g.shadowQ>=2048))g.shadowQ=2048;const fq=g.shadowFar===undefined?1024:+g.shadowFar,sq=Math.min(g.shadowQ,renderer.capabilities.maxTextureSize||4096),hi=g.shadowQ>=8192,ext=fq?60:hi?150:120,C=sun.shadow.camera;   // avec la carte lointaine, la carte proche se concentre sur 60 m : beaucoup plus fine
   sunFar.castShadow=fq>0;if(fq&&sunFar.shadow.mapSize.x!==fq){sunFar.shadow.mapSize.set(fq,fq);if(sunFar.shadow.map){sunFar.shadow.map.dispose();sunFar.shadow.map=null;}}
   if(sun.shadow.mapSize.x!==sq){sun.shadow.mapSize.set(sq,sq);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}}
   if(C.right!==ext){Object.assign(C,{left:-ext,right:ext,top:ext,bottom:-ext});C.updateProjectionMatrix();}sun.shadow.bias=hi?-.0004:-.0008;sun.shadow.normalBias=hi?.025:.012;
   renderer.shadowMap.enabled=save.shadows;scene.fog.far=g.view;scene.fog.near=g.view*.22;camera.far=Math.max(1600,g.view*3.5);camera.updateProjectionMatrix();}
-const CONTROLS=[['Souris','Viser (le curseur ou le centre de l\'écran est ton viseur)'],['Clic droit (maintenir)','Double grappin vers le viseur'],['A / E (Q / E en QWERTY)','Grappin gauche / droit'],['Clic gauche','Trancher (clic bref : coupe rapide · maintenu puis relâché, en l\'air : coupe chargée avec élan vers la nuque)'],['Espace','Saut au sol, boost de gaz en l\'air, saut mural sur un mur'],['Shift','Dash'],['ZQSD / WASD','Se diriger'],['C','Salto'],['X','Vrille'],['F','Tourbillon (en l\'air)'],['V','Mode de caméra suivant : Auto · Verrouillage · Libre · 1re personne'],['1 · 2 · 3 · 4','Choisir la caméra (chiffres du haut du clavier ou pavé numérique) : 1 Auto · 2 Verrouillage · 3 Libre · 4 Première personne'],['T / clic molette','Verrouiller un titan'],['Alt (maintenir) + souris','Tourner la caméra autour du soldat ; elle revient en place dès qu\'on relâche Alt'],['R','Demi-tour'],['F (saisi)','Se libérer de la main d\'un titan en tourbillon'],['B','Lames ou lances foudroyantes (après la vague 10)'],['Clic gauche maintenu (lances)','Viser au ralenti (aide à la visée sur la nuque), relâcher pour tirer'],['Molette','Zoom de la caméra'],['Tab','Menu'],['Échap','Pause et libérer la souris'],['Mur','Fonce dessus : course murale, montée verticale ou accroche']];
+const CONTROLS=[['Souris','Viser (le curseur ou le centre de l\'écran est ton viseur)'],['Clic droit (maintenir)','Double grappin vers le viseur'],['A / E (Q / E en QWERTY)','Grappin gauche / droit'],['Clic gauche','Trancher (clic bref : coupe rapide · maintenu puis relâché, en l\'air : coupe chargée avec élan vers la nuque)'],['Espace','Saut au sol, boost de gaz en l\'air, saut mural sur un mur'],['Shift','Au sol : courir (maintenir), même sans gaz · en l\'air : dash'],['G','Ranger ou sortir les lames (geste animé) ; un clic gauche, un grappin ou un boost les ressortent'],['ZQSD / WASD','Se diriger'],['C','Salto'],['X','Vrille'],['F','Tourbillon (en l\'air)'],['V','Mode de caméra suivant : Auto · Verrouillage · Libre · 1re personne'],['1 · 2 · 3 · 4','Choisir la caméra (chiffres du haut du clavier ou pavé numérique) : 1 Auto · 2 Verrouillage · 3 Libre · 4 Première personne'],['T / clic molette','Verrouiller un titan'],['Alt (maintenir) + souris','Tourner la caméra autour du soldat ; elle revient en place dès qu\'on relâche Alt'],['R','Demi-tour'],['F (saisi)','Se libérer de la main d\'un titan en tourbillon'],['B','Lames ou lances foudroyantes (après la vague 10)'],['Clic gauche maintenu (lances)','Viser au ralenti (aide à la visée sur la nuque), relâcher pour tirer'],['Molette','Zoom de la caméra'],['Tab','Menu'],['Échap','Pause et libérer la souris'],['Mur','Fonce dessus : course murale, montée verticale ou accroche']];
 function renderMenu(){
   const r=rank(),nx=RANKS.find(k=>k.lv>save.level),s=save.stats,g=save.gfx;ST=calcStats();
   const tab=(k,l)=>`<button class="ghost tabb${menuTab===k?' on':''}" data-tab="${k}">${l}</button>`;
-  if(menuTab==='tech'&&gameMode!=='rpg')menuTab='up';
-  let h=`<div class="tabs">${tab('up','Améliorations')}${gameMode==='rpg'?tab('tech','Techniques'+(save.tp?' · '+save.tp+' pt':'')):''}${tab('gfx','Graphismes')}${tab('ctl','Commandes')}</div>`;
+  const techOK=gameMode==='rpg'||gameMode==='normal'||gameMode==='tuto';if(menuTab==='tech'&&!techOK)menuTab='up';if(TUTO.on)TUTO.tabs.add(menuTab);
+  let h=`<div class="tabs">${tab('up','Améliorations')}${techOK?tab('tech','Techniques'+(gameMode==='rpg'&&save.tp?' · '+save.tp+' pt':'')):''}${tab('gfx','Graphismes')}${tab('ctl','Commandes')}</div>`;
+  if(TUTO.on&&TUTO.cur()&&TUTO.cur().id==='menu')h+='<p class="sub" style="color:var(--gold);margin:6px 0 0">Didacticiel : onglets ouverts '+TUTO.tabs.size+' / 4'+(TUTO.tabs.size>=4?' · reviens au jeu avec Tab':'')+'</p>';
   if(menuTab==='up'){
     h+=`<div class="mhead"><div><div class="eyebrow">Grade</div><div class="rank">${r.name}</div><div class="sub">Niveau ${save.level} · ${Math.floor(save.xp)} / ${need(save.level)} XP${nx?` · prochain grade : ${nx.name} au niveau ${nx.lv}`:' · grade maximum'}</div></div><div class="pts"><b>${save.points}</b><span>points à dépenser</span></div></div>`;
     h+='<div class="sect">Spécialisation</div>';
@@ -3884,15 +3937,15 @@ function renderMenu(){
     h+='<div class="sect">Statistiques</div><div class="stats">';
     for(const d of STATDEFS){const v=s[d.k];h+=`<div class="st"><div><h4>${d.name} <span style="color:var(--muted);font-size:16px">${v}/${STAT_MAX}</span></h4><p>${d.desc}</p><div class="pips">${Array.from({length:STAT_MAX},(_,i)=>`<i class="${i<v?'on':''}"></i>`).join('')}</div></div>${RESPEC()?`<span style="display:flex;gap:6px"><button data-km="${d.k}" ${v<=0?'disabled':''} aria-label="Diminuer ${d.name}">−</button>`:''}<button data-k="${d.k}" ${save.points<=0||v>=STAT_MAX?'disabled':''} aria-label="Augmenter ${d.name}">+</button>${RESPEC()?'</span>':''}</div>`;}
     h+='</div>';
-  }else if(menuTab==='tech'){
-    h+=`<div class="mhead"><div><div class="eyebrow">Mode RPG</div><div class="rank">Techniques</div><div class="sub">Chaque nouveau grade rapporte 3 points de technique. Le prix dépend de la valeur de la technique : de 1 point (Évasion) à 6 pour les lances foudroyantes, l'arme la plus précieuse.</div></div><div class="pts"><b>${save.tp||0}</b><span>points de technique</span></div></div>`;
+  }else if(menuTab==='tech'){const ey=gameMode==='rpg'?'Mode RPG':gameMode==='normal'?'Mode classique':'Didacticiel',sb=gameMode==='rpg'?'Chaque nouveau grade rapporte 3 points de technique. Le prix dépend de la valeur de la technique : de 1 point (Évasion) à 6 pour les lances foudroyantes, l\'arme la plus précieuse.':gameMode==='normal'?'Toutes les techniques sont déjà maîtrisées. Les lances foudroyantes arrivent après la vague 10 : 2, puis 2 de plus toutes les 10 vagues.':'En mode RPG, chaque nouveau grade rapporte 3 points de technique pour acheter ces techniques. En mode classique, elles sont toutes maîtrisées.';
+    h+=`<div class="mhead"><div><div class="eyebrow">${ey}</div><div class="rank">Techniques</div><div class="sub">${sb}</div></div><div class="pts"><b>${save.tp||0}</b><span>points de technique</span></div></div>`;
     h+=renderTree();
   }else if(menuTab==='gfx'){
     const sel=(id,label,opts,val)=>`<label for="${id}">${label} <select id="${id}">${opts.map(([v,l])=>`<option value="${v}" ${String(val)===String(v)?'selected':''}>${l}</option>`).join('')}</select></label>`;
     const chk=(id,label,val)=>`<label for="${id}"><input id="${id}" type="checkbox" ${val?'checked':''}> ${label}</label>`;
     h+='<div class="sect">Image</div><div class="opts">';
     h+=sel('g_fps','Images par seconde (limite)',[[0,'Illimitées'],[30,'30'],[60,'60'],[120,'120'],[144,'144']],g.fps===undefined?60:g.fps)+chk('g_showFps','Afficher les images par seconde',!!g.showFps);
-    h+=sel('g_sh','Shaders',[[0,'Désactivés'],[1,'Légers (couleurs, netteté, vignette)'],[2,'Complets (+ éclat lumineux)']],g.shaders===undefined?2:g.shaders)+sel('g_tex','Textures',[['bas','Basses (1K)'],['normal','Normales (2K)'],['haut','Hautes (2K, filtrage maximal)']],g.tex||'normal');
+    h+=sel('g_sh','Shaders',[[0,'Désactivés'],[1,'Légers (couleurs, netteté, vignette)'],[2,'Complets (+ éclat lumineux)']],g.shaders===undefined?0:g.shaders)+sel('g_tex','Textures',[['bas','Basses (1K)'],['normal','Normales (2K)'],['haut','Hautes (2K, filtrage maximal)']],g.tex||'normal');
     h+=sel('g_dyn','Résolution dynamique',[[0,'Désactivée (sauf sous 20 images/s)'],[30,'Garder au moins 30 images/s'],[45,'Garder au moins 45 images/s'],[60,'Garder au moins 60 images/s']],g.dyn===undefined?30:g.dyn);
     h+=sel('g_pr','Résolution',[[.75,'Basse (75 %)'],[1,'Normale'],[1.25,'Haute (125 %)'],[1.5,'Très haute (150 %)'],[2,'Maximale (200 %)']],g.pr);
     h+=sel('g_view','Distance de vue',[[600,'Proche'],[900,'Normale'],[1300,'Lointaine']],g.view);
@@ -3902,6 +3955,7 @@ function renderMenu(){
     h+=chk('shadows','Ombres',save.shadows)+sel('g_sq','Ombres proches',[[2048,'Basses'],[4096,'Moyennes'],[8192,'Hautes']],g.shadowQ)+sel('g_sf','Ombres lointaines',[[0,'Désactivées'],[1024,'Basses'],[2048,'Moyennes'],[4096,'Hautes']],g.shadowFar===undefined?1024:g.shadowFar)+'</div>';
     h+='<div class="sect">Effets</div><div class="opts">';
     h+=sel('g_grass','Herbe',[['off','Désactivée'],['low','Légère'],['mid','Normale'],['high','Dense']],g.grass||'mid');
+    h+=sel('g_run','Course lames en main',[['ninja','Ninja : lames tenues derrière'],['real','Réaliste : lames aux hanches']],g.runStyle||'ninja');
     h+=chk('g_blur','Flou de mouvement',g.blur)+chk('g_lines','Traits de vitesse',g.lines)+chk('g_decals','Marques de sang au sol et sur les murs',g.decals)+chk('g_chgGlow','Halo d\'écran pendant la coupe chargée',g.chgGlow!==false)+'</div>';
     {const O=FPO(),rng=(id,label,mn,mx,st,val,un)=>`<label for="fp_${id}">${label} <input id="fp_${id}" type="range" min="${mn}" max="${mx}" step="${st}" value="${val}"> <b id="fpv_${id}">${val}${un}</b></label>`;
       h+='<div class="sect">Première personne</div><div class="opts">';
@@ -3951,7 +4005,7 @@ $('menuBody').addEventListener('change',e=>{const id=e.target.id,g=save.gfx;if(i
   if(id==='camSel'){save.camMode=e.target.value;persist();if(save.camMode==='lock')pickLock(false);return;}
   if(id==='shadows'){save.shadows=e.target.checked;scene.traverse(o=>{if(o.material)o.material.needsUpdate=true;});}
   if(id==='g_pr')g.pr=+e.target.value;if(id==='g_sf')g.shadowFar=+e.target.value;if(id==='g_view')g.view=+e.target.value;if(id==='g_sq')g.shadowQ=+e.target.value;
-  if(id==='g_grass'){g.grass=e.target.value;grassReset();}if(id==='g_blur')g.blur=e.target.checked;if(id==='g_lines')g.lines=e.target.checked;if(id==='g_decals')g.decals=e.target.checked;if(id==='g_fps')g.fps=+e.target.value;if(id==='g_dyn'){g.dyn=+e.target.value;}if(id==='g_sh')g.shaders=+e.target.value;if(id==='g_tex'){g.tex=e.target.value;applyTexQ();}if(id==='g_showFps')g.showFps=e.target.checked;if(id==='g_chgGlow')g.chgGlow=e.target.checked;
+  if(id==='g_grass'){g.grass=e.target.value;grassReset();}if(id==='g_blur')g.blur=e.target.checked;if(id==='g_lines')g.lines=e.target.checked;if(id==='g_decals')g.decals=e.target.checked;if(id==='g_fps')g.fps=+e.target.value;if(id==='g_dyn'){g.dyn=+e.target.value;}if(id==='g_sh')g.shaders=+e.target.value;if(id==='g_run')g.runStyle=e.target.value;if(id==='g_tex'){g.tex=e.target.value;applyTexQ();}if(id==='g_showFps')g.showFps=e.target.checked;if(id==='g_chgGlow')g.chgGlow=e.target.checked;
   applyGfx();persist();});
 
 /* ================= UPDATE ================= */
@@ -3980,7 +4034,7 @@ function wallJump(){
   for(let i=0;i<10;i++)emit(p.pos,rv(6).clone().addScaledVector(n,-4),.5,.4,1.6,0xffffff,.55);
 }
 function updPlayer(dt,rdt){
-  const p=player;updCharge(rdt);
+  const p=player;updCharge(rdt);updSheath(dt);
   p.inv-=dt;p.slashCd-=dt;p.dashCd-=dt;p.spinCd-=dt;p.lastHit+=dt;p.gasIdle+=dt;p.wallCd-=dt;toastT-=rdt;
   updCamControl(rdt);
   if(grab){for(const h of hooks)if(h.state==='fly'||h.state==='att')h.state='back';updGrabPlayer(dt);if(grab||state!=='play'){pModel.position.copy(p.pos);orient(dt);animPlayer(dt);syncVRM(dt);pModel.updateMatrixWorld();pModel.visible=true;return;}}
@@ -3996,14 +4050,15 @@ function updPlayer(dt,rdt){
     h.len=Math.max(1.5,Math.min(h.len,dist)-ST.reel*.25*dt);gasUse+=.73;}
   if(pulledOff){exitWall(.35);addStyle('Bond',.15);}
   if(att>0&&!p.wall)p.vel.y+=GRAV*.25*dt;
+  p.sprint=false;
   if(p.wall){}
-  else if(p.grounded&&att===0){const run=(p.gas>0?9:5.5)*(1+.035*.975*save.stats.speed),k=1-Math.exp(-10*dt);p.vel.x=lerp(p.vel.x,wx*run,k);p.vel.z=lerp(p.vel.z,wz*run,k);}
+  else if(p.grounded&&att===0){const sk=1+.035*.975*save.stats.speed,sh=!!(keys.ShiftLeft||keys.ShiftRight)&&wl>0,run=(sh?9:5.5)*sk,k=1-Math.exp(-10*dt);p.walkV=5.5*sk;p.sprint=sh;p.vel.x=lerp(p.vel.x,wx*run,k);p.vel.z=lerp(p.vel.z,wz*run,k);}   // au sol : marche rapide, ou course en maintenant Shift (avec ou sans gaz)
   else{const ac=att>0?24:16;p.vel.x+=wx*ac*dt;p.vel.z+=wz*ac*dt;}
   p.boosting=false;
-  if(keys.Space&&!p.grounded&&!p.wall&&p.gas>0){p.vel.addScaledVector(fwd,ST.boost*dt);p.vel.y+=ST.boost*.2*dt;gasUse+=4.7;p.boosting=true;p.boostTime+=dt;if(p.boostTime>.5)tut(1);}
+  if(keys.Space&&!p.grounded&&!p.wall&&p.gas>0){drawIfAway();p.vel.addScaledVector(fwd,ST.boost*dt);p.vel.y+=ST.boost*.2*dt;gasUse+=4.7;p.boosting=true;p.boostTime+=dt;if(p.boostTime>.5)tut(1);}
   if(gasUse>0){p.gas=Math.max(0,p.gas-gasUse*ST.gasEff*dt);p.gasIdle=0;}
   if(p.gas<25&&!p.lowGas){p.lowGas=true;toast('Gaz bas : cherche une bouteille (marqueurs verts)');}else if(p.gas>40)p.lowGas=false;
-  if(p.gas<=0){if(p.wall)exitWall(.5);if(hooks.some(h=>h.state==='att'||h.state==='fly'))releaseAll();if(!p.noGas){p.noGas=true;toastT=0;toast('Plus de gaz ! Cours jusqu\'à une bouteille (marqueur vert)');}}else p.noGas=false;
+  if(p.gas<=0){if(p.wall)exitWall(.5);if(hooks.some(h=>h.state==='att'||h.state==='fly'))releaseAll();if(!p.noGas){p.noGas=true;toastT=0;toast('Plus de gaz ! Cours (Shift) jusqu\'à une bouteille (marqueur vert)');}}else p.noGas=false;
   if(p.lastHit>4)p.hp=Math.min(ST.hpMax,p.hp+ST.hpRegen*dt);
   p.vel.y-=GRAV*dt;
   if(p.wall){
@@ -4090,8 +4145,9 @@ function updCam(rdt){
   const cz0=clamp((4.6-zoomBase)/2.6,0,1),cz=cz0*cz0*(3-2*cz0),side=lerp(.8,.42,cz),up=lerp(.42,.13,cz);/* caméra un peu basse : on lève les yeux vers les titans */   // plus on zoome, plus le cadrage descend sur le corps entier
   const tx=camTgt.x,ty=camTgt.y+lerp(1.48,1.18,cz),tz=camTgt.z;   // de près : visée un peu au-dessus du bassin, la tête arrive au tiers supérieur
   let want=zoomBase+Math.min(sp,80)*.035+(save.camMode==='lock'?1.5:0);
-  for(let i=1;i<=10;i++){const d=want*i/10,f=i/10;if(pointBlocked(tx-dir.x*d+rx*side*f,ty-dir.y*d+up*f,tz-dir.z*d+rz*side*f)){want=Math.max(1.2,d-.6);break;}}
-  camDist=want<camDist?want:lerp(camDist,want,1-Math.exp(-3*rdt));
+  {const W=want,blk=f=>{const d=W*f;return pointBlocked(tx-dir.x*d+rx*side*f,ty-dir.y*d+up*f,tz-dir.z*d+rz*side*f);};   // mur entre la caméra et le soldat : point de contact mesuré finement (plus de rapprochement par crans)
+    for(let i=1;i<=12;i++){const f=i/12;if(blk(f)){let a=(i-1)/12,b=f;for(let k=0;k<6;k++){const m=(a+b)/2;if(blk(m))b=m;else a=m;}want=Math.max(1.2,W*a-.35);break;}}}
+  camDist=want<camDist?lerp(camDist,want,1-Math.exp(-16*rdt)):lerp(camDist,want,1-Math.exp(-3*rdt));   // rapprochement rapide mais glissé : plus de saut d'une image à l'autre
   shake=Math.max(0,shake-rdt*2.2);const sh=shake*shake*.6;
   camera.position.set(tx-dir.x*camDist+rx*side+(Math.random()-.5)*sh,ty-dir.y*camDist+up+(Math.random()-.5)*sh,tz-dir.z*camDist+rz*side+(Math.random()-.5)*sh);
   if(fl){const lo=Math.max(p.pos.y+.35,groundY(camera.position.x,camera.position.z)+.3);if(camera.position.y<lo)camera.position.y=lo;}   // un peu par en dessous, jamais sous le soldat
@@ -4169,6 +4225,7 @@ function animRig(rdt){
     if(spAim){px=sd*.2;py=-.25;pz=-.62;rx=.02;ry=sd*.04;rz=0;}
     if(p.spearT>0&&sd===1){const e=p.spearT/.45;pz+=.18*e;py+=.06*e;rx-=.8*e;}
     if(g.userData.kick>0){g.userData.kick-=rdt;pz+=.08;rx-=.25;}               // recul du lanceur de grappin
+    {const k=sheathK();if(k>0){py-=.55*k;rx+=1*k;}g.visible=k<.97;}   // lames rangées : les bras descendent hors de la vue
     px+=bobx-fpSwayX*.6;py+=boby+fpSwayY*.4+(p.landRoll>0?-.15:0);
     const k=(p.slashT>0||p.spinT>0)?1-Math.exp(-30*rdt):1-Math.exp(-12*rdt);
     g.position.x=lerp(g.position.x,px,k);g.position.y=lerp(g.position.y,py,k);g.position.z=lerp(g.position.z,pz,k);
@@ -4337,7 +4394,7 @@ function ppRun(sh,want){renderer.setRenderTarget(MB.rt);renderer.render(scene,ca
   u.uC.value.set(speedFX.fx,1-speedFX.fy);u.uAmt.value=want;u.uAsp.value=MB.w/MB.h;u.uTx.value.set(1/MB.w,1/MB.h);
   PP.q.material=PP.fin;renderer.setRenderTarget(null);renderer.render(PP.scene,PP.cam);}
 function renderFrame0(){
-  const want=save.gfx.blur&&state!=='menu'?MB.amt:0,sh=save.gfx.shaders===undefined?2:(save.gfx.shaders|0);
+  const want=save.gfx.blur&&state!=='menu'?MB.amt:0,sh=save.gfx.shaders===undefined?0:(save.gfx.shaders|0);
   if(want<.01&&!sh){renderer.render(scene,camera);return;}
   renderer.getDrawingBufferSize(_mbSz);
   if(!MB.rt||MB.w!==_mbSz.x||MB.h!==_mbSz.y){if(MB.rt)MB.rt.dispose();MB.w=_mbSz.x;MB.h=_mbSz.y;
@@ -4696,7 +4753,7 @@ const aimLine=(()=>{const g=new THREE.BufferGeometry();g.setAttribute('position'
 const _ao=new V3(),_ad=new V3(),_ap=new V3(),_av=new V3(),_at=new V3();
 function spearMode(){return spearsOK()&&save.weapon==='spear';}
 function spearOrigin(out){return bladeGroups.R?bladeGroups.R.getWorldPosition(out):out.copy(player.center);}
-function beginAim(){const p=player;if(grab||spAim||state!=='play')return;
+function beginAim(){const p=player;if(grab||spAim||state!=='play')return;if(bladesAway()){drawBlades();return;}
   if(p.spears<=0){toast('Plus de lances : trouve une bouteille pour te réapprovisionner');return;}
   spAim={t:0,tg:null,lk:0};sfx.aimIn();}
 function cancelAim(){spAim=null;aimLine.visible=false;const L=$('aimL'),V=$('aimV');if(L)L.hidden=true;if(V)V.hidden=true;}
@@ -6012,11 +6069,12 @@ function idleLife(dt,tm,busy){const p=player,I=IDL,d=Math.min(dt,.05);I.t+=d;I.n
   pose('head',I.hp*.82-br2*.011+.02,I.hy*.74-I.cy,I.hz+s*.04-sw*.008);
   pose('uaL',-.33+br*.016+sw3*.025,0,-.2-br*.013+Math.max(0,-s)*.03);pose('uaR',-.37+br2*.016-sw3*.02,0,.2+br*.013-Math.max(0,s)*.03);
   pose('faL',-.86+br2*.028+nz(I.t*.61,9.2)*.05);pose('faR',-.82+br*.028+nz(I.t*.57,11.4)*.05);
+  if(state==='play'&&bladesAway()){pose('uaL',-.04+br*.012+sw3*.02,0,-.11-br*.01+Math.max(0,-s)*.03);pose('uaR',-.06+br2*.012-sw3*.02,0,.11+br*.01-Math.max(0,s)*.03);pose('faL',-.2+br2*.02+nz(I.t*.61,9.2)*.04);pose('faR',-.18+br*.02+nz(I.t*.57,11.4)*.04);}   // lames rangées : bras relâchés le long du corps
   legsPose(.02+s*.045,-.05-s*.045,.1+Math.max(0,s)*.15,.12+Math.max(0,-s)*.15,.05);T.thL.z+=s*.034;T.thR.z+=s*.034;
   // gestes, mélangés à la pose de base
   if(w>.001){
     if(gn==='epaule'){add('spine',0,I.gs*.3*w,0);add(I.gs>0?'uaL':'uaR',.1*w,0,0);}
-    else if(gn==='lame'){mix('uaR',-1.12,0,.4,w);mix('faR',-1.95,Math.sin(I.gt*2.1)*.28,0,w);add('spine',.11*w,-.15*w,0);}
+    else if(gn==='lame'){if(state==='play'&&bladesAway()){mix('uaR',.1,0,.3,w);mix('faR',-.45,0,0,w);}else{mix('uaR',-1.12,0,.4,w);mix('faR',-1.95,Math.sin(I.gt*2.1)*.28,0,w);}add('spine',.11*w,-.15*w,0);}
     else if(gn==='cou'){add('uaL',0,0,-.06*w);add('uaR',0,0,.06*w);add('spine',-.05*w,0,0);}
     else if(gn==='equip'){mix('uaL',-.15,0,-.62,w);mix('faL',-1.7,0,0,w);add('spine',.07*w,.12*w,.08*w);}
     else if(gn==='ciel'){add('spine',-.1*w,0,0);add('uaL',.05*w,0,-.05*w);add('uaR',.05*w,0,.05*w);}
@@ -6051,7 +6109,7 @@ function renderLook(){const css=c=>'rgb('+c.map(x=>Math.round(Math.min(1,Math.po
   h+='<div class="lk-r" style="margin-top:18px"><button id="lookDone">Terminé</button><button class="ghost" id="lookReset">Tenue d\'origine</button></div>';
   h+='<p class="note" style="margin-top:10px">Glisse la souris sur le soldat pour le faire tourner, molette pour zoomer. Les choix sont enregistrés et valent pour tous les modes.</p>';
   $('lookBody').innerHTML=h;}
-function openLook(){lookSpot();CUS.open=true;CUS.face=.35;CUS.zoomT=.3;$('start').hidden=true;$('look').hidden=false;renderLook();const p=player;p.vel.set(0,0,0);p.grounded=true;p.wall=null;p.landRoll=0;p.flipT=p.rollT=p.spinT=p.slashT=0;p.crouchT=0;pTrick.rotation.set(0,0,0);}
+function openLook(){sheathNow(false);lookSpot();CUS.open=true;CUS.face=.35;CUS.zoomT=.3;$('start').hidden=true;$('look').hidden=false;renderLook();const p=player;p.vel.set(0,0,0);p.grounded=true;p.wall=null;p.landRoll=0;p.flipT=p.rollT=p.spinT=p.slashT=0;p.crouchT=0;pTrick.rotation.set(0,0,0);}
 function closeLook(){CUS.open=false;applyTime();$('look').hidden=true;$('start').hidden=false;persist();}
 function updCustom(rdt){const p=player;p.pos.set(CUS.x,groundY(CUS.x,CUS.z),CUS.z);p.vel.set(0,0,0);p.grounded=true;oF.set(-Math.sin(yaw),0,-Math.cos(yaw));pModel.position.copy(p.pos);pOri.quaternion.setFromAxisAngle(_ay,CUS.face);
   animPlayer(rdt);syncVRM(rdt);pModel.updateMatrixWorld();pModel.visible=true;}
@@ -6081,11 +6139,31 @@ $('look').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)
    Tout le monde affiche les titans à partir d'un tampon de poses : ce petit retard permet un ralenti LOCAL (kill, visée)
    qui est ensuite rattrapé en accéléré, sans jamais ralentir les autres joueurs. Seule la fin d'une vague ralentit tout le monde. */
 const N_MODES={normal:'Mode classique',rpg:'Mode RPG',boss:'Vague de boss',rumbling:'The Rumbling',pvp:'PvP'};
-const NET_V=5,N_INTERP=.1,N_DEBT=.6,N_DEBT_RE=.2,N_CATCH=1.2,N_RN=96,N_PST=114,N_TS=72,N_PSN=59,N_RESPAWN=30;
+const NET_V=6,N_INTERP=.1,N_DEBT=.6,N_DEBT_RE=.2,N_CATCH=1.2,N_RN=96,N_PST=114,N_TS=72,N_PSN=59,N_RESPAWN=30;
 const N_ST=['walk','attack','kick','stomp','guard','grab','bite','snap','dead'],N_PB=[0,1,8,10],N_BF=['enraged','guardUp','armorT','steam','weaponOn','weaponKind','spikeT','harden','dashT','prepT','recoverT','phaseN','hardT','hardHP'],N_JN=['spine','head','uaL','uaR','faL','faR','thL','thR','shL','shR'];
 const nBuf=x=>x instanceof ArrayBuffer?x:(x.byteOffset===0&&x.byteLength===x.buffer.byteLength?x.buffer:x.buffer.slice(x.byteOffset,x.byteOffset+x.byteLength)),nI16=x=>x instanceof Int16Array?x:new Int16Array(nBuf(x)),nF32=x=>x instanceof Float32Array?x:new Float32Array(nBuf(x));
 const nEsc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const _nq1=new THREE.Quaternion(),_nq2=new THREE.Quaternion();
+/* relais de secours : quand la liaison directe entre deux joueurs ne s'établit pas (box, réseau mobile, même réseau sans « hairpin »…),
+   les messages passent par un serveur MQTT public (WebSocket sécurisé). L'hôte écoute toujours sur les deux serveurs ; un joueur n'y passe qu'en cas d'échec du direct */
+const MQ_URLS=['wss://broker.hivemq.com:8884/mqtt','wss://test.mosquitto.org:8081/mqtt'],MQ_PRE='tetines-jeu/6/';
+function netLoadMqtt(){return new Promise((res,rej)=>{if(window.mqtt)return res();const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js';s.onload=()=>window.mqtt?res():rej(new Error('mqtt'));s.onerror=()=>rej(new Error('mqtt'));document.head.appendChild(s);});}
+// messages du jeu → octets : JSON + tableaux typés bruts (états, instantanés des titans)
+const NQ={T:{Float32Array,Float64Array,Int8Array,Int16Array,Int32Array,Uint8Array,Uint16Array,Uint32Array},
+  enc(obj){const bufs=[],js=JSON.stringify(obj,(k,v)=>{if(v instanceof ArrayBuffer){bufs.push(new Uint8Array(v));return{$b:bufs.length-1,t:'AB'};}if(ArrayBuffer.isView(v)&&!(v instanceof DataView)){bufs.push(new Uint8Array(v.buffer,v.byteOffset,v.byteLength));return{$b:bufs.length-1,t:NQ.T[v.constructor.name]?v.constructor.name:'Uint8Array'};}return v;});
+    const jb=new TextEncoder().encode(js);let n=4+jb.length;for(const b of bufs)n+=4+b.length;const out=new Uint8Array(n),dv=new DataView(out.buffer);let o=0;dv.setUint32(o,jb.length);o+=4;out.set(jb,o);o+=jb.length;
+    for(const b of bufs){dv.setUint32(o,b.length);o+=4;out.set(b,o);o+=b.length;}return out;},
+  dec(u){u=u instanceof Uint8Array?new Uint8Array(u.buffer,u.byteOffset,u.byteLength):new Uint8Array(u);   /* vue simple : le Buffer reçu partage sa mémoire, slice() doit copier */const dv=new DataView(u.buffer,u.byteOffset,u.byteLength);let o=0;const jl=dv.getUint32(o);o+=4;const js=new TextDecoder().decode(u.subarray(o,o+jl));o+=jl;const bufs=[];
+    while(o+4<=u.length){const l=dv.getUint32(o);o+=4;bufs.push(u.slice(o,o+l).buffer);o+=l;}
+    return JSON.parse(js,(k,v)=>{if(v&&typeof v==='object'&&typeof v.$b==='number'&&v.t){const b=bufs[v.$b];if(!b)return null;return v.t==='AB'?b:new NQ.T[v.t](b);}return v;});}};
+// connexions MQTT : une par serveur ; onReady(client, url) quand l'abonnement est en place
+function mqOpen(subs,onReady,onMsg,onFail,will){const cls=[];let fails=0;
+  netLoadMqtt().then(()=>{for(const url of MQ_URLS){let cl;try{cl=mqtt.connect(url,{clientId:'t'+Math.random().toString(36).slice(2,12),connectTimeout:7000,reconnectPeriod:2500,keepalive:20,clean:true,will});}catch(e){if(++fails>=MQ_URLS.length)onFail();continue;}
+      cls.push(cl);let ready=false,dead=false;
+      cl.on('connect',()=>{cl.subscribe(subs,{qos:0},err=>{if(!err&&!ready){ready=true;onReady(cl,url);}});});
+      cl.on('message',(t,m)=>{try{onMsg(cl,t,NQ.dec(m));}catch(e){}});
+      cl.on('error',()=>{if(!ready&&!dead){dead=true;if(++fails>=MQ_URLS.length)onFail();}});}}).catch(()=>onFail());
+  return{end(){for(const c of cls)try{c.end(true);}catch(e){}},list:cls};}
 function netLoadPeer(){return new Promise((res,rej)=>{if(window.Peer)return res();const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';s.onload=()=>window.Peer?res():rej(new Error('peerjs'));s.onerror=()=>rej(new Error('peerjs'));document.head.appendChild(s);});}
 // transport : WebRTC (PeerJS), en étoile autour de l'hôte ; « bc » = canal entre onglets du même navigateur, pour les essais
 function netTx(kind,role,code,H){
@@ -6095,16 +6173,37 @@ function netTx(kind,role,code,H){
       else{if(d.m.k==='_bye')H.close('h');else H.data('h',d.m);}};
     setTimeout(()=>{if(role==='client')ch.postMessage({from:me,to:'h',m:{k:'_hi'}});H.open();},30);
     return{send(to,m){if(to==='all'){for(const k of known)ch.postMessage({from:me,to:k,m});}else ch.postMessage({from:me,to:role==='host'?to:'h',m});},close(){try{ch.postMessage({from:me,to:role==='host'?'*':'h',m:{k:'_bye'}});ch.close();}catch(e){}}};}
-  const conns=new Map();let pr=null,closed=false;
-  const tx={send(to,m){if(to==='all'){for(const c of conns.values())if(c.open)try{c.send(m);}catch(e){}}else{const c=conns.get(to);if(c&&c.open)try{c.send(m);}catch(e){}}},close(){closed=true;try{if(pr)pr.destroy();}catch(e){}}};
+  const conns=new Map(),me='m'+Math.random().toString(36).slice(2,10),top=s=>MQ_PRE+code+'/'+s;let heard=false,pr=null,closed=false,mq=null,via=null,opened=false,pFail=false,mFail=false,hostAt=0,mqT=0,beat=0;
+  const pub=(cl,topic,m)=>{try{cl.publish(topic,NQ.enc({f:me,m}),{qos:0});}catch(e){}};
+  const sendOne=(c,m)=>{if(!c)return;if(c.mq)pub(c.cl,top('c/'+c.id),m);else if(c.open)try{c.send(m);}catch(e){}};
+  const open1=()=>{if(opened||closed)return;opened=true;H.open();};
+  const tx={get via(){return via;},send(to,m){if(role==='client'){if(via==='mq'){const c=conns.get('h');if(c)pub(c.cl,top('h'),m);}else sendOne(conns.get('h'),m);return;}
+      if(to==='all'){for(const c of conns.values())sendOne(c,m);}else sendOne(conns.get(to),m);},
+    close(){if(closed)return;closed=true;clearTimeout(mqT);clearInterval(beat);try{if(role==='client'&&via==='mq'){const c=conns.get('h');if(c)pub(c.cl,top('h'),{k:'_bye'});}else if(role==='host')for(const c of conns.values())if(c.mq)pub(c.cl,top('c/'+c.id),{k:'_bye'});}catch(e){}
+      setTimeout(()=>{try{if(mq)mq.end();}catch(e){}},150);try{if(pr)pr.destroy();}catch(e){}}};
+  // relais : l'hôte écoute toujours ; le joueur s'y rabat si le direct ne s'ouvre pas
+  const startMq=()=>{if(mq||closed)return;
+    if(role==='host'){mq=mqOpen(top('h'),()=>open1(),(cl,t,d)=>{if(closed||!d||!d.f)return;const key='mq:'+d.f;let c=conns.get(key);
+        if(d.m&&d.m.k==='_bye'){if(c&&c.cl===cl){conns.delete(key);H.close(key);}return;}
+        if(!c){c={mq:true,id:d.f,cl,last:0};conns.set(key,c);H.conn(key);}c.cl=cl;c.last=performance.now();if(d.m&&d.m.k!=='_hi'&&d.m.k!=='_hb')H.data(key,d.m);},
+        ()=>{mFail=true;if(pFail)H.fail('relais');});
+      beat=setInterval(()=>{const now=performance.now();for(const [k,c] of conns)if(c.mq){if(now-c.last>12000){conns.delete(k);H.close(k);}else pub(c.cl,top('c/'+c.id),{k:'_hb'});}},3000);}   // présence : battement toutes les 3 s, joueur relayé perdu après 12 s de silence
+    else{mq=mqOpen([top('c/'+me)],(cl)=>{if(closed||via)return;via='mq';conns.set('h',{mq:true,cl});for(const o of mq.list)if(o!==cl)try{o.end(false);}catch(e){}try{if(pr)pr.destroy();}catch(e){}pr=null;
+          hostAt=performance.now();pub(cl,top('h'),{k:'_hi'});open1();beat=setInterval(()=>{if(performance.now()-hostAt>12000){clearInterval(beat);if(!closed)H.close('h');}else pub(cl,top('h'),{k:'_hb'});},3000);},
+        (cl,t,d)=>{if(closed||!d)return;heard=true;if(via!=='mq')return;hostAt=performance.now();if(d.m&&d.m.k==='_bye'){H.close('h');return;}if(d.m&&d.m.k!=='_hb')H.data('h',d.m);},
+        ()=>{mFail=true;if(pFail)H.fail('relais');},{topic:top('h'),payload:NQ.enc({f:me,m:{k:'_bye'}}),qos:0});}};
+  if(role==='host')startMq();else mqT=setTimeout(startMq,5000);   // 5 s sans liaison directe : on passe par le relais
   const cfg={config:{iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302','stun:stun.cloudflare.com:3478']},{urls:['turn:eu-0.turn.peerjs.com:3478','turn:us-0.turn.peerjs.com:3478'],username:'peerjs',credential:'peerjsp'}]}};
   netLoadPeer().then(()=>{if(closed)return;pr=role==='host'?new Peer('tetines-'+code,cfg):new Peer(cfg);
-    const wire=(c,key)=>{c.on('open',()=>{conns.set(key,c);if(role==='host')H.conn(key);else H.open();});c.on('data',d=>{if(!closed)H.data(key,d);});c.on('close',()=>{conns.delete(key);if(!closed)H.close(key);});c.on('error',()=>{});};
-    pr.on('open',()=>{if(role==='host')H.open();else wire(pr.connect('tetines-'+code,{reliable:true}),'h');});
+    const wire=(c,key)=>{c.on('open',()=>{if(role==='client'){if(via==='mq'){try{c.close();}catch(e){}return;}via='peer';clearTimeout(mqT);if(mq){mq.end();mq=null;}}conns.set(key,c);if(role==='host')H.conn(key);else open1();});
+      c.on('data',d=>{if(!closed&&(role==='host'||via==='peer'))H.data(key,d);});c.on('close',()=>{if(conns.get(key)===c)conns.delete(key);if(!closed&&(role==='host'||via==='peer'))H.close(key);});c.on('error',()=>{});};
+    pr.on('open',()=>{if(role==='host')open1();else wire(pr.connect('tetines-'+code,{reliable:true}),'h');});
     pr.on('connection',c=>{if(role==='host')wire(c,c.peer);});
-    pr.on('error',e=>{if(!closed)H.fail(e&&e.type||'erreur');});
+    pr.on('error',e=>{if(closed)return;const w=e&&e.type||'erreur';if(w==='unavailable-id'){H.fail(w);return;}   // code déjà pris : l'hôte en tire un autre
+      if(w==='peer-unavailable'){pFail=true;startMq();setTimeout(()=>{if(!closed&&!heard)H.fail(w);},8000);return;}   // inconnue en direct : on tente le relais avant de conclure
+      pFail=true;if(role==='client'&&!via)startMq();if(role==='host'&&!opened&&mFail)H.fail(w);});
     pr.on('disconnected',()=>{try{if(!closed)pr.reconnect();}catch(e){}});
-  }).catch(()=>{if(!closed)H.fail('script');});
+  }).catch(()=>{if(closed)return;pFail=true;if(role==='client')startMq();else if(mFail)H.fail('script');});
   return tx;}
 // soldat des coéquipiers : silhouette simple aux couleurs de leur personnalisation, animée par les articulations qu'ils envoient
 const NS_SPH=new THREE.SphereGeometry(1,14,10),NS_CYL=new THREE.CylinderGeometry(1,1,1,10),NS_BOX=new THREE.BoxGeometry(1,1,1);
@@ -6148,7 +6247,7 @@ function netCloneSoldier0(look){
     for(const n of N_JN){inst.j[n]=s2c.get(J[n]);if(!inst.j[n])return null;}
     for(const k in vrmBones)if(vrmBones[k]&&vrmBones[k].isObject3D)inst.B[k]=s2c.get(vrmBones[k]);
     for(const k of ['L','R']){const bg=bladeGroups[k];if(bg)for(const c of bg.children){const cc=s2c.get(c);if(cc)(typeof handSpears!=='undefined'&&handSpears.includes(c)?inst.blS:inst.blN).push(cc);}}
-    cl.visible=true;inst.trick.rotation.set(0,0,0);inst.trick.position.y=0;
+    cl.visible=true;for(const k of ['L','R']){const bg=s2c.get(bladeGroups[k]);if(bg)bg.visible=true;}inst.trick.rotation.set(0,0,0);inst.trick.position.y=0;
     netApplyLook(inst,look);
     for(let i=0;i<2;i++){const lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(6),3));const ln=new THREE.Line(lg,lineMat);ln.frustumCulled=false;ln.visible=false;scene.add(ln);inst.lines.push(ln);}
     scene.add(cl);return inst;
@@ -6190,7 +6289,7 @@ var NET={mode:'normal',on:false,host:false,lobby:false,started:false,welcomed:fa
   nm(id){return id===this.id?this.myName:(this.names.get(id)||'Un soldat');},
   // ----- salon -----
   msg(t){$('coopMsg').textContent=t||'';},
-  why(w){return w==='peer-unavailable'?'Partie introuvable : vérifie le code.':w==='script'?'Impossible de charger le module réseau. Vérifie ta connexion internet.':/network|server|socket/.test(w)?'Serveur de mise en relation injoignable depuis cette page. Vérifie ta connexion internet, ou lance le jeu depuis sa copie sur ton ordinateur.':/browser|webrtc/.test(w)?'Ce navigateur ne permet pas la connexion directe entre joueurs.':'Connexion impossible ('+w+').';},
+  why(w){return w==='relais'?'Ni le serveur de mise en relation ni le relais ne répondent. Vérifie ta connexion internet.':w==='peer-unavailable'?'Partie introuvable : vérifie le code.':w==='script'?'Impossible de charger le module réseau. Vérifie ta connexion internet.':/network|server|socket/.test(w)?'Serveur de mise en relation injoignable depuis cette page. Vérifie ta connexion internet, ou lance le jeu depuis sa copie sur ton ordinateur.':/browser|webrtc/.test(w)?'Ce navigateur ne permet pas la connexion directe entre joueurs.':'Connexion impossible ('+w+').';},
   setName(){this.myName=($('coopName').value||'').trim().slice(0,14)||'Soldat';save.coopName=this.myName;persist();},
   openMenu(mode){if(mode&&N_MODES[mode]&&!this.lobby)this.mode=mode;$('coopModeT').textContent='Coop · '+N_MODES[this.mode];$('start').hidden=true;$('coop').hidden=false;$('coopName').value=save.coopName||'';this.msg('');this.uiRoom();},
   closeMenu(){if(this.lobby)this.leave();$('coop').hidden=true;$('start').hidden=false;},
@@ -6207,7 +6306,8 @@ var NET={mode:'normal',on:false,host:false,lobby:false,started:false,welcomed:fa
     this.leave();this.host=false;this.lobby=true;this.welcomed=false;this.code=code;this.lobbyPl=[];this.msg('Connexion…');
     this.tx=netTx(this.kind(),'client',code,{open:()=>{this.send('h',{k:'hello',v:NET_V,name:this.myName,look:Object.assign({},getLook())});},conn(){},data:(k,m)=>this.cliData(m),close:()=>this.hostGone(),
       fail:w=>{if(this.on)return;this.msg(this.why(w));this.lobby=false;this.uiRoom();}});
-    clearTimeout(this.jt);this.jt=setTimeout(()=>{if(this.lobby&&!this.host&&!this.welcomed)this.msg('La partie existe, mais la liaison directe entre vos deux connexions internet ne s\'établit pas (pare-feu, réseau d\'entreprise ou partage de connexion mobile). Essayez depuis un autre réseau, ou demandez à l\'hôte de recréer la partie.');},15000);this.uiRoom();},
+    clearTimeout(this.jt);this.jt=setTimeout(()=>{if(this.lobby&&!this.host&&!this.welcomed)this.msg('Connexion lente : passage par le relais…');},6000);
+    clearTimeout(this.jt2);this.jt2=setTimeout(()=>{if(this.lobby&&!this.host&&!this.welcomed)this.msg('Impossible de joindre la partie, ni en direct ni par le relais. Vérifie le code et ta connexion internet, ou demande à l\'hôte de recréer la partie.');},25000);this.uiRoom();},
   lobbyBc(){const pl=[[0,this.myName]];for(const R of this.rem.values())pl.push([R.id,R.name]);this.bc({k:'lobby',pl});if(this.mode==='pvp')this.bc({k:'pcfg',cfg:PV.cfg});this.uiRoom();},
   dropKey(key){const R=[...this.rem.values()].find(r=>r.key===key);if(!R)return;if(R.grab)this.withP(R,()=>endGrab());this.rmRem(R);this.rem.delete(R.id);
     if(this.on){feed(R.name+' a quitté la partie','');this.bc({k:'left',id:R.id});}else this.lobbyBc();},
@@ -6227,7 +6327,7 @@ var NET={mode:'normal',on:false,host:false,lobby:false,started:false,welcomed:fa
     for(const id of [...this.rem.keys()])if(!pl.some(p=>p[0]===id)){this.rmRem(this.rem.get(id));this.rem.delete(id);}
     $('team').hidden=this.mode==='pvp';},
   place(){if(gameMode==='pvp'){const sp=pvSpawn(PV.myTeam());player.pos.copy(sp);player.center.set(sp.x,sp.y+1,sp.z);camTgt.copy(player.pos);return;}player.pos.x=(this.id-1.5)*3;player.pos.z=30;player.pos.y=groundY(player.pos.x,30);camTgt.copy(player.pos);},
-  clientStart(w){gameMode=this.mode;wave=w;useProfile('coop');this.zero();if(gameMode==='rpg')save.tp=rpgTP();ST=calcStats();sfx.init();$('start').hidden=true;$('hud').hidden=false;clearTitans();this.tmap.clear();resetPlayer();this.place();state='play';goFull();lockPointer();last=performance.now();
+  clientStart(w){GID++;gameMode=this.mode;wave=w;useProfile('coop');this.zero();if(gameMode==='rpg')save.tp=rpgTP();ST=calcStats();sfx.init();$('start').hidden=true;$('hud').hidden=false;clearTitans();this.tmap.clear();resetPlayer();this.place();state='play';goFull();lockPointer();last=performance.now();
     if(this.mode==='pvp')bigMsg('PVP · '+PV_TEAM[PV.myTeam()].n.toUpperCase(),'Tu es chez les '+PV_TEAM[PV.myTeam()].n+'. Niveau 10 et 10 points (Tab) : chaque élimination te fait monter d\'un niveau, chaque mort te ramène au niveau 10.');
     else bigMsg('COOP · '+N_MODES[this.mode].toUpperCase(),'Clique pour prendre le contrôle. Restez groupés : les titans arrivent.');},
   // ----- messages -----
@@ -6285,7 +6385,7 @@ var NET={mode:'normal',on:false,host:false,lobby:false,started:false,welcomed:fa
   // ----- état des soldats -----
   myState(){const a=new Float32Array(N_PSN),p=player,q=pOri.quaternion,r=pTrick.rotation;a[0]=p.pos.x;a[1]=p.pos.y;a[2]=p.pos.z;a[3]=p.vel.x;a[4]=p.vel.y;a[5]=p.vel.z;a[6]=q.x;a[7]=q.y;a[8]=q.z;a[9]=q.w;a[10]=pLean.rotation.x;a[11]=r.x;a[12]=r.y;a[13]=r.z;
     for(let i=0;i<10;i++){const e=J[N_JN[i]].rotation;a[14+i*3]=e.x;a[15+i*3]=e.y;a[16+i*3]=e.z;}
-    a[44]=(p.grounded?1:0)|(p.spinT>0?2:0)|(p.slashT>0?4:0)|(this.dead?8:0)|(spAim?16:0)|(p.boosting?32:0)|(spearMode()?64:0)|(timeScale<.9?128:0);a[45]=Math.max(0,p.hp);a[46]=ST.hpMax;a[47]=this.dead||state!=='play'?5:p.inv;
+    a[44]=(p.grounded?1:0)|(p.spinT>0?2:0)|(p.slashT>0?4:0)|(this.dead?8:0)|(spAim?16:0)|(p.boosting?32:0)|(spearMode()?64:0)|(timeScale<.9?128:0)|(bladesShown()?0:256);a[45]=Math.max(0,p.hp);a[46]=ST.hpMax;a[47]=this.dead||state!=='play'?5:p.inv;
     for(let i=0;i<2;i++){const h=hooks[i],v=h.state==='att'?h.point:h.tip;a[48+i*4]=h.state==='none'?0:h.state==='att'?1:2;a[49+i*4]=v.x;a[50+i*4]=v.y;a[51+i*4]=v.z;}a[56]=this.deadT;a[57]=save.level;a[58]=gameMode==='pvp'?PV.myTeam():0;return a;},
   pState(R,a){R.prev=R.cur;R.cur={a,at:performance.now()};R.pos.set(a[0],a[1],a[2]);R.center.set(a[0],a[1]+1,a[2]);R.vel.set(a[3],a[4],a[5]);const f=a[44]|0;R.fl=f;R.grounded=!!(f&1);R.spinT=f&2?1:0;R.dead=!!(f&8);R.hp=a[45];R.hpMax=a[46]||100;R.inv=a[47];R.deadT=a[56];R.lv=a[57]|0;},
   remotes(){const now=performance.now(),W=innerWidth,H=innerHeight;for(const R of this.rem.values())this.drawR(R,now,W,H);},
@@ -6295,7 +6395,7 @@ var NET={mode:'normal',on:false,host:false,lobby:false,started:false,welcomed:fa
       av.g.position.set(L(0),L(1),L(2));_nq1.set(A[6],A[7],A[8],A[9]);_nq2.set(B[6],B[7],B[8],B[9]);av.ori.quaternion.copy(_nq1).slerp(_nq2,Math.min(1,u)).normalize();av.lean.rotation.x=L(10);av.trick.rotation.set(L(11),L(12),L(13));av.trick.position.y=dead?-.8:0;
       for(let i=0;i<10;i++)av.j[N_JN[i]].rotation.set(L(14+i*3),L(15+i*3),L(16+i*3));
       if(av.cape)av.cape.rotation.x=.06+clamp(Math.hypot(B[3],B[4],B[5])/28,0,1)*1.15+Math.sin(now/1000*9+R.id)*.05*clamp(Math.hypot(B[3],B[4],B[5])/20,0,1);
-      if(av.full){netSyncInst(av);for(const b of av.blN)b.visible=!(f&64);for(const b of av.blS)b.visible=!!(f&64);}else for(const b of av.bl)b.visible=!(f&64);
+      {const sh=!!(f&256);if(av.full){netSyncInst(av);for(const b of av.blN)b.visible=!(f&64)&&!sh;for(const b of av.blS)b.visible=!!(f&64)&&!sh;}else for(const b of av.bl)b.visible=!(f&64)&&!sh;}   // 256 : lames rangées
       av.g.updateMatrixWorld(true);R.far=camera.position.distanceTo(av.g.position)>85;netLod(av,R);if(av.cloth)av.cloth.mesh.visible=!R.far&&av.g.visible;R.cf=(R.cf||0)+1;const cd=camera.position.distanceTo(av.g.position);if(av.full&&!R.far&&(cd<35||(R.cf&1))){av.vel.set(B[3],B[4],B[5]);netCape(av,Math.min(.06,R.sdt?R.sdt*(cd<35?1:2):(now-(av.capeAt||now))/1000));av.capeAt=now;}   /* de près : cape simulée à chaque image (sinon elle se décolle à grande vitesse) ; de loin : une image sur deux */
       for(let i=0;i<2;i++){const ln=av.lines[i],st=B[48+i*4];ln.visible=st>0&&!dead;if(ln.visible){const p=ln.geometry.attributes.position;av.trick.localToWorld(tA.set((i?1:-1)*.24,-.02,.06));p.setXYZ(0,tA.x,tA.y,tA.z);p.setXYZ(1,L(49+i*4),L(50+i*4),L(51+i*4));p.needsUpdate=true;}}
       tB.set(L(0),L(1)+2.4,L(2)).project(camera);const vis=tB.z<1&&Math.abs(tB.x)<1.05&&Math.abs(tB.y)<1.05;R.tag.style.display=vis?'':'none';
@@ -6975,7 +7075,7 @@ function loop(now){
 // écran titre : quelques titans qui rôdent
 for(let i=0;i<4;i++){const a=i*1.6+.5;const t=new Titan(['small','medium','large','abnormal'][i],Math.sin(a)*70,Math.cos(a)*70+20);titans.push(t);t.marker.style.display='none';}
 const origStart=startGame;
-startGame=function(w,m){for(const t of titans)t.marker.style.display='';origStart(w,m);};
-prewarmTitans();loadTick();if(!save.camLibre){save.camLibre=1;if(save.camMode==='auto')save.camMode='libre';}if(!save.gfx||save.gfx._low){const lo=!!(save.gfx&&save.gfx._low);save.gfx=GFX_DEF();if(lo)Object.assign(save.gfx,LOW_GFX);}save.gfx.fp=Object.assign(FP_DEF(),save.gfx.fp||{});applyGfx();if(save.bestWave>10)save.modern=true;if(!(player.spears>=0))player.spears=CFG.spearCount;if(save.stats.hook){save.points+=save.stats.hook;save.stats.hook=0;persist();}rumbLabel();save.equip='classic';
+startGame=function(w,m,c){for(const t of titans)t.marker.style.display='';origStart(w,m,c);};   // c (« reprendre ») transmis : sans lui, Reprendre repartait d'un profil vierge
+prewarmTitans();loadTick();if(!save.camLibre){save.camLibre=1;if(save.camMode==='auto')save.camMode='libre';}if(!save.gfx||save.gfx._low){const lo=!!(save.gfx&&save.gfx._low);save.gfx=GFX_DEF();if(lo)Object.assign(save.gfx,LOW_GFX);}save.gfx.fp=Object.assign(FP_DEF(),save.gfx.fp||{});if(!save.gfx._d102){save.gfx._d102=1;save.gfx.shaders=0;save.gfx.shadowQ=GPU_WEAK?2048:4096;save.gfx.shadowFar=GPU_WEAK?0:1024;persist();}   /* v102 : nouveaux réglages par défaut (shaders désactivés, ombres proches moyennes, lointaines basses) */applyGfx();if(save.bestWave>10)save.modern=true;if(!(player.spears>=0))player.spears=CFG.spearCount;if(save.stats.hook){save.points+=save.stats.hook;save.stats.hook=0;persist();}rumbLabel();save.equip='classic';
 requestAnimationFrame(loop);
 </script>

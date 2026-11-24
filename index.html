@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124100447">
+<meta name="build" content="20261124101335">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -429,7 +429,7 @@ button:disabled{opacity:.35;cursor:not-allowed;filter:none;}
   <div id="trainEd"></div><div class="row" style="margin-top:14px"><button id="trainGo">Lancer l'entraînement</button><button id="trainBack" class="ghost">Retour</button></div></div></div>
 <div id="tutoP" hidden></div><svg id="tutoLine" xmlns="http://www.w3.org/2000/svg"></svg>
 <div class="ov" id="pvpSolo" hidden><div class="card" style="width:min(640px,100%)"><h2>PvP contre des IA</h2>
-  <p class="tag">Deux camps. Tout le monde commence au niveau 10 avec 10 points (Tab) : chaque élimination fait gagner un niveau, chaque mort ramène au niveau 10. Les IA ont chacune une classe et dépensent leurs points à leur façon. Pas de ralenti en PvP. Lances foudroyantes : 2 au maximum, deux fois moins puissantes qu'en mode titans (ou désactivées).</p>
+  <p class="tag">Deux camps. Tout le monde commence au niveau 10 avec 10 points (Tab) : chaque élimination fait gagner un niveau, chaque mort ramène au niveau 10. Les IA ont chacune une classe et dépensent leurs points à leur façon. Pas de ralenti en PvP. Lances foudroyantes Mk2 : 4 au maximum, deux fois moins puissantes qu'en mode titans (ou désactivées). Pistolets Mk2 en option, pour les joueurs et, au choix, pour les IA.</p>
   <div id="pvpEdS"></div><div class="row" style="margin-top:14px"><button id="pvpGo">Lancer la partie</button><button id="pvpBack" class="ghost">Retour</button></div></div></div>
 <div id="pvpHud" hidden></div><div id="team" hidden></div><div id="coopDown" hidden><h3>À TERRE</h3><p id="coopDownT"></p></div><div id="coopBub" hidden><i></i></div>
 
@@ -4990,7 +4990,7 @@ const EQUIP_NAMES={classic:'Équipement classique',modern:'Équipement modernis�
 // lances foudroyantes : débloquées après la vague 10 (toujours disponibles en mode Vague de boss), sur le même équipement que les lames
 function spearsOK(){if(gameMode==='pvp')return PV.cfg.spears!==false;if(gameMode==='train')return !!TRN.cfg.spears;if(gameMode==='tuto')return false;return gameMode==='rpg'?HAS('lances1'):gameMode==='normal'?wave>10:(save.modern||gameMode==='boss'||gameMode==='final'||gameMode==='pvp');}
 // jeu normal : 2 lances après la vague 10, 2 de plus toutes les 10 vagues, jusqu'à 6 ; les autres modes en ont toujours 6
-function spearMax(){return gameMode==='train'?(TRN.cfg.spears?8:0):gameMode==='tuto'?0:gameMode==='rpg'?(!HAS('lances1')?0:HAS('lances3')?8:HAS('lances2')?4:2):gameMode==='normal'?(wave>30?8:wave>20?4:wave>10?2:0):gameMode==='pvp'?2:CFG.spearCount;}
+function spearMax(){return gameMode==='train'?(TRN.cfg.spears?8:0):gameMode==='tuto'?0:gameMode==='rpg'?(!HAS('lances1')?0:HAS('lances3')?8:HAS('lances2')?4:2):gameMode==='normal'?(wave>30?8:wave>20?4:wave>10?2:0):gameMode==='pvp'?4:CFG.spearCount;}   /* PvP : lances Mk2 (4) */
 // Mk1 : deux actionneurs, lances reliées aux poignées par un câble (F pour tirer) ; Mk2 : un actionneur, la lance explose seule une fois plantée
 function spearMk(){return gameMode==='rpg'?(HAS('lances2')?2:1):gameMode==='normal'?(wave>20?2:1):2;}
 
@@ -5050,7 +5050,7 @@ function updGunFx(rdt){for(let i=GFX.length-1;i>=0;i--){const f=GFX[i];f.t+=rdt;
   if(p.gunRl>0){p.gunRl-=rdt;if(p.gunRl<=0){p.gunRl=0;p.gunMag=GUN.mag;p.gunSpare=Math.max(0,(p.gunSpare|0)-1);sfx.burst(2400,.05,.25,'bandpass',2);}}
   if(GUN.hold&&gunMode()&&state==='play')fireGun();}
 // pistolet d'une IA : tir au jugé, précision selon son niveau et la distance
-function pvBotGun(b,dt,E){if(PV.cfg.guns===false||b.dead)return;b.gunCd=(b.gunCd||0)-dt;if(b.gunShowT>0){b.gunShowT-=dt;if(b.gunShowT<=0&&b.weapon==='gun')b.weapon='blade';}
+function pvBotGun(b,dt,E){if(PV.cfg.guns===false||PV.cfg.botGuns===false||b.dead)return;   /* option : pistolets réservés aux joueurs */b.gunCd=(b.gunCd||0)-dt;if(b.gunShowT>0){b.gunShowT-=dt;if(b.gunShowT<=0&&b.weapon==='gun')b.weapon='blade';}
   if(b.gunRl>0){b.gunRl-=dt;if(b.gunRl<=0)b.gunMag=GUN.mag;return;}if(b.gunMag===undefined)b.gunMag=GUN.mag;if(b.gunCd>0||b.slashA>0||b.spinT>0||b.chgA>0||b.mode==='aim')return;
   let T=null,bd=48;for(const f of E){const d=f.center.distanceTo(b.center);if(d>8&&d<bd){bd=d;T=f;}}if(!T){b.gunCd=.3;return;}
   if(Math.random()>.45){b.gunCd=.3;return;}if(!pvLos(b.center,T.center)){b.gunCd=.4;return;}
@@ -7295,7 +7295,7 @@ const PV={on:false,bots:[],teams:{},score:[0,0],t:0,over:false,sync:0,proj:[],bu
     h+=`</div><div class="eyebrow" style="margin:10px 0 6px">IA : ${C.bots.length} / 8 ${ed?`<button class="ghost pvS" data-pv="rem" ${C.bots.length?'':'disabled'}>−</button><button class="ghost pvS" data-pv="add" ${C.bots.length<8?'':'disabled'}>+</button>`:''}</div><div class="pvL">`;
     C.bots.forEach((b,i)=>{h+=`<div><b>IA ${i+1}</b>${tb(b.t|0,`data-pv="bt" data-i="${i}"`)}<button class="ghost pvS" ${ed?`data-pv="bs" data-i="${i}"`:'disabled'}>${PV_SKILL[b.s|0].n}</button></div>`;});
     if(!C.bots.length)h+='<div class="note">Aucune IA : seulement des joueurs.</div>';
-    h+=`</div><div class="eyebrow" style="margin:10px 0 6px">Partie</div><div class="row"><button class="ghost pvS" ${ed?'data-pv="lim"':'disabled'}>Victoire à ${C.limit} éliminations</button><button class="ghost pvS" ${ed?'data-pv="time"':'disabled'}>${C.time} min</button><button class="ghost pvS" ${ed?'data-pv="spr"':'disabled'}>Lances foudroyantes : ${C.spears!==false?'activées (2)':'désactivées'}</button><button class="ghost pvS" ${ed?'data-pv="gun"':'disabled'}>Pistolets Mk2 : ${C.guns!==false?'activés':'désactivés'}</button></div>`;
+    h+=`</div><div class="eyebrow" style="margin:10px 0 6px">Partie</div><div class="row"><button class="ghost pvS" ${ed?'data-pv="lim"':'disabled'}>Victoire à ${C.limit} éliminations</button><button class="ghost pvS" ${ed?'data-pv="time"':'disabled'}>${C.time} min</button><button class="ghost pvS" ${ed?'data-pv="spr"':'disabled'}>Lances foudroyantes Mk2 : ${C.spears!==false?'activées (4)':'désactivées'}</button><button class="ghost pvS" ${ed?'data-pv="gun"':'disabled'}>Pistolets Mk2 : ${C.guns!==false?'activés':'désactivés'}</button>${C.guns!==false?`<button class="ghost pvS" ${ed?'data-pv="bgun"':'disabled'}>Pistolets des IA : ${C.botGuns!==false?'oui':'non'}</button>`:''}</div>`;
     return h;},
   edClick(e,where){const b=e.target.closest('[data-pv]');if(!b||b.disabled)return;const C=this.cfg,k=b.dataset.pv,i=+b.dataset.i;
     if(k==='me')C.me=C.me?0:1;
@@ -7307,6 +7307,7 @@ const PV={on:false,bots:[],teams:{},score:[0,0],t:0,over:false,sync:0,proj:[],bu
     else if(k==='lim'){const L=[10,15,20,30,50];C.limit=L[(L.indexOf(C.limit)+1)%L.length];}
     else if(k==='spr')C.spears=C.spears===false;
     else if(k==='gun')C.guns=C.guns===false;
+    else if(k==='bgun')C.botGuns=C.botGuns===false;
     else if(k==='time'){const L=[5,8,12,20];C.time=L[(L.indexOf(C.time)+1)%L.length];}
     else if(k==='trn'){C.train=!C.train;this.trDef();}
     else if(C.train&&C.tr){const T=C.tr;
@@ -7318,7 +7319,7 @@ const PV={on:false,bots:[],teams:{},score:[0,0],t:0,over:false,sync:0,proj:[],bu
       else if(k==='ais'&&T.ai.stats){const st=b.dataset.s;T.ai.stats[st]=clamp((T.ai.stats[st]|0)+(+b.dataset.d),0,STAT_MAX);}
       else if(k==='keep')T.keep=!T.keep;}
     this.saveCfg();if(where==='solo')$('pvpEdS').innerHTML=this.edHTML('solo')+this.trainHTML()+this.rankHTML();else{NET.bc({k:'pcfg',cfg:this.cfg});NET.uiRoom();}},
-  takeCfg(c){if(!c||typeof c!=='object')return;const C=this.cfg;C.limit=[10,15,20,30,50].includes(+c.limit)?+c.limit:15;C.spears=c.spears!==false;C.guns=c.guns!==false;C.time=[5,8,12,20].includes(+c.time)?+c.time:8;
+  takeCfg(c){if(!c||typeof c!=='object')return;const C=this.cfg;C.limit=[10,15,20,30,50].includes(+c.limit)?+c.limit:15;C.spears=c.spears!==false;C.guns=c.guns!==false;C.botGuns=c.botGuns!==false;C.time=[5,8,12,20].includes(+c.time)?+c.time:8;
     C.bots=Array.isArray(c.bots)?c.bots.slice(0,8).map(b=>({t:b&&b.t?1:0,s:clamp(b&&b.s|0,0,2)})):[];C.pt={};if(c.pt&&typeof c.pt==='object')for(const k in c.pt)C.pt[k]=c.pt[k]?1:0;},
   // ----- début, fin -----
   begin(){this.stop();if(this.cfg.spears===false&&save.weapon==='spear'||this.cfg.guns===false&&save.weapon==='gun')save.weapon='blade';this.on=true;this.over=false;this.score=[0,0];this.t=this.cfg.time*60;this.sync=0;this.buys=[];this.lastBy=null;this.teams={};this.nameOf={};
@@ -7456,7 +7457,7 @@ function pvBotReset(b,full){if(!full&&PV.trainOn()&&PV.cfg.tr.keep)return;b.leve
 function pvSpawn(team){const B=MAP==='district'?[[-100,120],[130,120]]:[[-70,10],[70,10]],[bx,bz]=B[team?1:0];
   for(let i=0;i<40;i++){const x=bx+(Math.random()-.5)*(i<20?24:60),z=bz+(Math.random()-.5)*(i<20?16:60),y=groundY(x,z);if(!pointBlocked(x,y+.6,z)&&!pointBlocked(x,y+1.6,z))return new V3(x,y,z);}
   return new V3(bx,groundY(bx,bz),bz);}
-function pvBotRespawn(b){const s=pvSpawn(b.team);b.pos.copy(s);b.vel.set(0,0,0);b.center.set(s.x,s.y+1,s.z);b.dead=false;b.hp=b.st.hpMax;b.gas=100;b.inv=2.5;b.spears=PV.cfg.spears!==false&&!(b.off&&b.off.spear)?2:0;b.spare=8;b.blade=CFG.bladeDurability;
+function pvBotRespawn(b){const s=pvSpawn(b.team);b.pos.copy(s);b.vel.set(0,0,0);b.center.set(s.x,s.y+1,s.z);b.dead=false;b.hp=b.st.hpMax;b.gas=100;b.inv=2.5;b.spears=PV.cfg.spears!==false&&!(b.off&&b.off.spear)?4:0;b.spare=8;b.blade=CFG.bladeDurability;
   b.weapon='blade';for(const h of b.hooks)h.st=0;b.trick.set(0,0,0);b.flipT=b.rollT=b.spinT=b.landRoll=b.chgT=b.chgA=b.aimT=b.slashA=0;b.mode='roam';b.tgt=null;b.thinkT=.3;b.lastBy=null;
   const a=Math.random()*TAU;b.q.setFromAxisAngle(_ay,a);}
 function pvBotHurt(b,d,by,from,gun){if(b.dead||b.inv>(gun?.3:0)||PV.over)return;b.hp-=d;b.lastHit=0;b.lastBy=by;b.lastByT=4;if(!gun)b.inv=.25;bloodBurst(b.center,7,.4);

@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261123220819">
+<meta name="build" content="20261123222742">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -1978,7 +1978,7 @@ function buildGear(bn,H){
   }
   // boîtier central et bobines de câble
   gmesh(rbox(.2,.11,.085,.014),RAIL,GC,0,hy+.02,-.15);
-  for(const sd of [-1,1]){gmesh(cylG8,STL,GC,sd*.1,hy+.02,-.15,.055,.03,.055,0,0,Math.PI/2);gmesh(cylG8,RAIL,GC,sd*.118,hy+.02,-.15,.024,.012,.024,0,0,Math.PI/2,0);}
+  for(const sd of [-1,1]){tanks.push(gmesh(cylG8,STL,GC,sd*.1,hy+.02,-.15,.055,.03,.055,0,0,Math.PI/2),gmesh(cylG8,RAIL,GC,sd*.118,hy+.02,-.15,.024,.012,.024,0,0,Math.PI/2,0));}   /* bobines classiques : remplacées par les tambours de l'équipement Mk2 */
   // sangles des cuisses (suivent les jambes)
   for(const [b,top,knee] of [[bn(H.LeftUpperLeg),lL,kL],[bn(H.RightUpperLeg),lR,kR]]){
     for(const f of [.3,.62]){const p=top.clone().lerp(knee,f);const r=gmesh(torG,GM.leather,pTrick,p.x,p.y,p.z+.005,.078,.3,.075,0,0,0,.003);b.attach(r);}
@@ -2018,7 +2018,7 @@ function buildGear(bn,H){
   initCloth(chestB,neck,chest,bn(H.Hips),[[bn(H.LeftUpperArm),bn(H.LeftLowerArm)],[bn(H.RightUpperArm),bn(H.RightLowerArm)]],hw,hy);
   // collisions de la cape : chaque fourreau et sa bonbonne, dans le repère du fourreau (ils bougent avec le bassin)
   for(const o of scab)cloth.boxes.push([o,new V3(0,.04,-.02),new V3(.048,.116,.355)]);   // fourreau + bonbonne posée dessus
-  cloth.boxes.push([GC,new V3(0,hy+.02,-.15),new V3(.14,.07,.065)]);                       // boîtier central et bobines
+  cloth.boxes.push([GC,new V3(0,hy+.02,-.15),new V3(.14,.07,.065),1]);                       // boîtier central et bobines (1 : la cape drape aussi par-dessus, repoussée à l'horizontale)
   bn(H.Hips).attach(G);   // ceinture et équipement fixés au bassin : ils suivent ses mouvements
   buildModern(bn,H,chestB,chest,neck);applyEquipVisual();
 }
@@ -2109,7 +2109,7 @@ function initCloth(chestB,neck,chest,hipsB,arms,hw,hy){
       LK.hairCol={cols,arr};}}
 }
 const _cA=new V3(),_cB=new V3(),_cD=new V3(),_cO=new V3(),_cR=new V3(),_cF=new V3(),_cT=new V3(),_cQ=new V3();
-const _caps=[];for(let i=0;i<20;i++)_caps.push([new V3(),new V3(),0,0]);
+const _caps=[];for(let i=0;i<20;i++)_caps.push([new V3(),new V3(),0,0]);const _cbA=new V3(),_cbB=new V3();
 const _ax0=new V3(),_ax1=new V3(),_cU=new V3(),_bA=new V3(),_bB=new V3();
 const _segD=(p,a,b)=>{_cQ.subVectors(b,a);const L2=_cQ.lengthSq(),u=L2>1e-9?clamp(_cT.subVectors(p,a).dot(_cQ)/L2,0,1):0;_cT.copy(a).addScaledVector(_cQ,u);return p.distanceTo(_cT);};
 // équipement : boîtes ajustées (repère de l'objet) ; le tissu en sort à l'horizontale, en s'éloignant de l'axe du corps, par la face la plus proche
@@ -2163,6 +2163,8 @@ function updCape(dt){
     if(B['th'+k]&&B['sh'+k])cap(W(B['th'+k],new V3()),W(B['sh'+k],new V3()),.1);
     if(B['sh'+k]&&B['ft'+k])cap(W(B['sh'+k],new V3()),W(B['ft'+k],new V3()),.08);}
   _wbn=0;for(const [o,cc,hh] of c.boxes){if(_wbn>=_wbox.length)break;if(!o.visible||(o.parent&&!o.parent.visible))continue;   /* équipement masqué : pas de collision */o.updateWorldMatrix(true,false);const B=_wbox[_wbn++];B.m.copy(o.matrixWorld);B.inv.copy(o.matrixWorld).invert();B.r.setFromMatrix4(B.inv);B.c.copy(cc);B.h.copy(hh);B.s=o.matrixWorld.getMaxScaleOnAxis();_bq.copy(hip).applyMatrix4(B.inv).sub(B.c);B.ox=Math.abs(_bq.x)>B.h.x*.5?(_bq.x>0?-1:1):0;}   /* côté extérieur = à l'opposé du bassin (aucun pour le boîtier central, au milieu) */
+  for(const bx of c.boxes){if(!bx[3]||nc>=_caps.length)continue;const o=bx[0],cc=bx[1],hh=bx[2];if(!o.visible||(o.parent&&!o.parent.visible))continue;const lx=hh.x>=hh.y,e=Math.max(0,(lx?hh.x:hh.y)-hh.z);   // boîtiers du bas du dos : la cape est repoussée vers l'arrière et drape par-dessus (rien ne la traverse)
+    cap(o.localToWorld(_cbA.set(cc.x-(lx?e:0),cc.y-(lx?0:e),cc.z)),o.localToWorld(_cbB.set(cc.x+(lx?e:0),cc.y+(lx?0:e),cc.z)),hh.z+.022,1);}
   const P=c.P,seg=CHANG/(CH-1-CR)*PS,gy=groundY(p.pos.x,p.pos.z)+.02,pt=new V3();
   for(let i=0;i<CW;i++){
     const tp=c.top[i];
@@ -5058,6 +5060,10 @@ function rackSpear(){const m=new THREE.Mesh(rackSpearGeo,spearMat);m.castShadow=
 
 /* ----- équipement modernisé : mécanismes en haut du dos, lanceurs aux épaules, râteliers de lances aux cuisses ----- */
 let gearC=null,gearM=null;const spearRack=[],handSpears=[],gearMAtt=[],handGuns=[];
+// surface du dos au niveau de la poitrine (repère du soldat), mesurée sur le modèle, plus l'épaisseur de la veste posée ensuite
+function mk2BackZ(cy){let z=9;try{const ms=[],v=new V3();vrm.scene.traverse(o=>{if(!o.isSkinnedMesh||o.name==='vrmColliderSphere')return;const n=[].concat(o.material).map(m=>m.name||'').join('|');if(/HAIR|Hair|Face|Eye/i.test(n))return;ms.push(o);});
+    pTrick.updateMatrixWorld(true);for(const m of ms){m.skeleton.update();const pos=m.geometry.attributes.position;for(let i=0;i<pos.count;i++){v.fromBufferAttribute(pos,i);m.boneTransform(i,v);v.applyMatrix4(m.matrixWorld);pTrick.worldToLocal(v);if(Math.abs(v.x)<.07&&Math.abs(v.y-cy)<.09&&v.z<z)z=v.z;}}}catch(e){}
+  return z<8?z-.016:-.12;}
 function buildModern(bn,H,chestB,chest,neck){
   const P=b=>pTrick.worldToLocal(b.getWorldPosition(new V3()));
   const uaL=P(bn(H.LeftUpperArm)),uaR=P(bn(H.RightUpperArm)),yS=(uaL.y+uaR.y)/2,rx=Math.max(Math.abs(uaL.x),Math.abs(uaR.x));
@@ -5087,6 +5093,21 @@ function buildModern(bn,H,chestB,chest,neck){
       ul.attach(g);gearMAtt.push(g);if(cloth)cloth.boxes.push([g,new V3(0,0,0),new V3(.02,L*.42,.05)]);
       ring(H[s+'UpperLeg'],H[s+'LowerLeg'],.1,.2,GM.leather,.013);}
     }
+  // équipement Mk2 dans le dos, comme la réplique de l'œuvre : bonbonne verticale entre les omoplates, deux tambours de câble aux épaules,
+  // deux autres en bas du dos de part et d'autre du boîtier central ; plaqué contre le dos (5 à 6 cm au plus) : la cape tombe dessus sans bosse ni rien qui dépasse
+  {const bz=mk2BackZ(chest.y)-.004,hy=P(bn(H.Hips)).y,dk=tm(0x2a2c2e),brn=tm(0x5a4330);
+    const drum=(par,x,y,z,r,d,sd)=>{const g=new THREE.Group();g.position.set(x,y,z);g.rotation.set(Math.PI/2,0,sd*.55);par.add(g);   // tambour : noyau brun entre deux cercles d'acier, tourné vers l'arrière et l'extérieur
+      gmesh(cylG8,brn,g,0,0,0,r*.86,d,r*.86,0,0,0,0);for(const yy of [-d/2,d/2]){const t=new THREE.Mesh(new THREE.TorusGeometry(r,r*.11,5,18),GX.stl);t.rotation.x=Math.PI/2;t.position.y=yy;t.castShadow=true;g.add(t);}
+      for(let k=0;k<3;k++){const a=k/3*TAU;gmesh(cylG8,GX.stl,g,Math.cos(a)*r*.93,0,Math.sin(a)*r*.93,.005,d,.005,0,0,0,0);}return g;};
+    const U=new THREE.Group();U.position.set(0,chest.y-.06,bz);pTrick.add(U);
+    gmesh(rbox(.15,.15,.01,.004),dk,U,0,-.01,-.005);   // plaque du harnais
+    gmesh(capG(.024,.16),GX.tank,U,0,0,-.034,1,1,1,0,0,0);for(const y of [-.035,.04])gmesh(cylG8,dk,U,0,y,-.034,.027,.012,.027,0,0,0,0);gmesh(cylG8,GX.stl,U,0,-.105,-.034,.009,.03,.009,0,0,0,0);   // bonbonne cerclée, valve en bas
+    for(const sd of [-1,1])drum(U,sd*.074,-.005,-.02,.029,.018,sd);   /* tambours sous la ligne des épaules : la cape y est plaquée, rien ne doit la percer */
+    for(const sd of [-1,1])gmesh(boxGeo,GM.leather,U,sd*.065,-.13,-.004,.022,.13,.008,0,0,sd*.35,0);   // sangles vers la ceinture
+    chestB.attach(U);gearMAtt.push(U);if(cloth)cloth.boxes.push([U,new V3(0,-.02,-.024),new V3(.11,.1,.026),1]);   // la cape glisse dessus
+    const Lw=new THREE.Group();Lw.position.set(0,hy-.012,-.15);pTrick.add(Lw);   /* sous l'ourlet de la cape (comme les porte-lames) : rien ne la traverse */
+    for(const sd of [-1,1])drum(Lw,sd*.112,0,.012,.032,.022,sd);
+    bn(H.Hips).attach(Lw);gearMAtt.push(Lw);if(cloth)cloth.boxes.push([Lw,new V3(0,0,0),new V3(.15,.04,.04),1]);}
   if(handSpears.length)return;   // poignées et vue à la première personne : communes à tous les corps
   // lance montée sur chaque poignée (visible en mode lances)
   for(const k of ['L','R']){const bl=bladeGroups[k];if(!bl)continue;const s=spearMesh();s.rotation.x=Math.PI/2;s.position.set(0,-.1,0);bl.add(s);handSpears.push(s);}
@@ -6131,7 +6152,7 @@ function updOrigSpikes(dt){const O=ORIG;for(let i=O.spikes.length-1;i>=0;i--){co
 /* ================= PERSONNALISATION DU SOLDAT ================= */
 const LK_FMOD=[['shino','Shino'],['shibu','Shibu'],['fm','Sakurada']];
 const LK_MMOD=[['m','Sakurada'],['m2','Kazuto'],['m3','Haruki']];
-const LOOK_DEF={suit:'bataillon',fmod:'shino',mmod:'m',sex:'m',height:1.8,skin:1,hair:'court',hairCol:2,eyes:0,face:'neutre',jacket:0,shirt:0,pants:0,boots:0,cape:'vert',emblem:'ailes',neck:'aucun'};
+const LOOK_DEF={suit:'bataillon',veste:'aucune',fmod:'shino',mmod:'m',sex:'m',height:1.8,skin:1,hair:'court',hairCol:2,eyes:0,face:'neutre',jacket:0,shirt:0,pants:0,boots:0,cape:'vert',emblem:'ailes',neck:'aucun'};
 const LK_SEX=[['m','Homme'],['f','Femme']];
 const LK_HEIGHT=[[1.6,'1,60 m'],[1.7,'1,70 m'],[1.8,'1,80 m'],[1.9,'1,90 m']];
 const LK_SKIN=[['Porcelaine',[.97,.8,.71],[.76,.55,.5],'#f6dccb'],['Clair',[.9,.68,.56],[.66,.42,.37],'#eec3a6'],['Doré',[.72,.5,.34],[.5,.31,.2],'#dcae84'],['Hâlé',[.5,.32,.2],[.33,.19,.12],'#bf8c62'],['Brun',[.3,.175,.105],[.19,.1,.06],'#94643f'],['Ébène',[.165,.092,.058],[.1,.052,.034],'#63402c']];
@@ -6399,6 +6420,9 @@ function buildJacket(v){if(!LK.jk)return;let tops=null,body=null,bodyN=0;
   const BB=wBind(body);wShell(body,wTris(body,/Body_00_SKIN/).filter(t=>t.every(k=>{const p=BB(k),ax=Math.abs(p.x);return ax>=armX0&&ax<=wristX&&p.y>=shY-.2;})),{off:p=>.016+.026*clamp((topX+.03-Math.abs(p.x))/.08,0,1),mat,list:meshes});
   if(!meshes.length)return;
   LK.jkS=meshes;LK.jk.m.visible=false;LK.jk.f.visible=false;
+  // combinaison moulante de la tenue noire : manches ajustées sur la peau des bras, jusqu'aux poignets (la chemise noire fait le torse)
+  {LK.suitM=new THREE.MeshToonMaterial({color:0x161618,gradientMap:gearGrad,map:TXR.fabric(),bumpMap:TXR.fabricBump(),bumpScale:.03});const S=[],B2=wBind(body);
+    wShell(body,wTris(body,/Body_00_SKIN/).filter(t=>t.every(k=>{const p=B2(k),ax=Math.abs(p.x);return ax>=armX0-.01&&ax<=wristX+.01&&p.y>=shY-.2;})),{off:()=>.006,mat:LK.suitM,list:S});for(const m of S)m.visible=false;LK.suitS=S;}
   // écusson du dos : posé sur la veste elle-même (coordonnées de texture à plat sur le dos)
   if(LK.patch){const y0=shY-.205,y1=shY-.045,hw=.07;
     const pm=wShell(SRC,ST.filter(t=>{const c=cenS(t);return c.z>.02&&Math.abs(c.x)<hw+.025&&c.y>y0-.025&&c.y<y1+.025&&c.lo>=hem;}),{off:p=>jOff(p)+.0025,orient,mat:LK.patch.material,out:false,uv:p=>[.5+p.x/(2*hw),(p.y-y0)/(y1-y0)]});
@@ -6511,14 +6535,15 @@ function applyLook(){if(!LK.ready)return;const l=getLook(),fem=l.sex==='f',fake=
 }
   // tenue
   try{if(typeof player!=='undefined'&&player&&LK.ready)setTimeout(()=>{try{applyEquipVisual();}catch(_){}},0);}catch(_){}   /* la tenue noire change aussi l'équipement affiché */
-  {const nr=l.suit==='noire',jc=lin(LK_JACKET[nr?3:l.jacket][1]);   /* tenue noire (équipement Mk2) : veste, chemise, pantalon et bottes noirs */GM.jacket.color.copy(jc).multiplyScalar(.4);GM.jacketD.color.copy(jc).multiplyScalar(.4);PM.jacket.color.copy(jc);
+  {const nr=l.suit==='noire',vb=nr&&l.veste==='brune',jOn=!nr||vb,jc=lin(LK_JACKET[nr?(vb?0:3):l.jacket][1]);   /* tenue noire : combinaison moulante noire (manches ajustées, chemise noire) ; veste brune par-dessus en option */GM.jacket.color.copy(jc).multiplyScalar(.4);GM.jacketD.color.copy(jc).multiplyScalar(.4);PM.jacket.color.copy(jOn?jc:lin(0x161618));
+    for(const m of LK.jkS||[])m.visible=jOn;for(const m of LK.suitS||[])m.visible=!jOn;if(LK.wrapM){const u=LK.wrapM.userData;if(typeof u.c0!=='number')u.c0=0x2c130d;LK.wrapM.color.set(nr?0x1b1411:u.c0);}   /* pagne brun-noir sous la ceinture avec la tenue noire */
     const sc=LK_SHIRT[nr?5:l.shirt][1];for(const m of LK.tops)setCol(m,sc,[sc[0]*.8,sc[1]*.76,sc[2]*.8]);if(LK.shirtM)LK.shirtM.color.setRGB(sc[0]*1.2,sc[1]*1.2,sc[2]*1.2);if(LK.bustM)LK.bustM.color.setRGB(sc[0]*1.25,sc[1]*1.25,sc[2]*1.25).convertSRGBToLinear();
     const pc=LK_PANTS[nr?3:l.pants][1];for(const m of LK.bottoms)setCol(m,pc,[pc[0]*.97,pc[1]*.81,pc[2]*.86]);if(LK.pantsM)LK.pantsM.color.setRGB(pc[0]*1.5,pc[1]*1.5,pc[2]*1.5);
     const bi=nr?2:l.boots,bc=lin(LK_BOOTS[bi][1]);GM.boot.color.copy(bc).multiplyScalar(.55);{const q=new THREE.Color(LK_BOOTS[bi][1]),v2=[q.r*1.25,q.g*1.25,q.b*1.25];for(const m of LK.shoes)setCol(m,v2,[v2[0]*.8,v2[1]*.75,v2[2]*.75]);}
     const cp=LK_CAPE.find(o=>o[0]===l.cape)||LK_CAPE[0];LK.capeOn=cp[0]!=='aucune';
     if(LK.capeOn){GM.cape.color.copy(lin(cp[4]));const key=cp[0]+'|'+l.emblem;if(cloth&&LK.capeKey!==key){LK.capeKey=key;const mt=cloth.mesh.material;if(mt.map)mt.map.dispose();mt.map=capeTex(cp[2],cp[3],l.emblem);mt.needsUpdate=true;}}
     if(LK.hood)LK.hood.visible=false;if(LK.capeBtn)LK.capeBtn.visible=LK.capeOn;if(cloth)cloth.mesh.visible=LK.capeOn&&pModel.visible;
-    if(LK.patch){LK.patch.visible=l.emblem!=='aucun';if(LK.patchKey!==l.emblem){LK.patchKey=l.emblem;const mt=LK.patch.material;if(mt.map)mt.map.dispose();mt.map=patchTex(l.emblem);mt.needsUpdate=true;}}
+    if(LK.patch){LK.patch.visible=l.emblem!=='aucun'&&l.suit!=='noire';   /* tenue noire : l'équipement dans le dos, pas d'écusson */if(LK.patchKey!==l.emblem){LK.patchKey=l.emblem;const mt=LK.patch.material;if(mt.map)mt.map.dispose();mt.map=patchTex(l.emblem);mt.needsUpdate=true;}}
     for(const hk of ['long','tresse','queuebasse'])if(LK.hairX[hk]){const ch=LK.hairX[hk].children;if(ch[0])ch[0].visible=LK.capeOn;if(ch[1])ch[1].visible=!LK.capeOn;}
     if(LK.scarf)LK.scarf.visible=l.neck==='echarpe';for(const o of LK.neckMeshes||[])o.visible=l.neck==='cravate';}
   gearGlow();{const k=save.night?.2:0;if(LK.patch){const m=LK.patch.material;if(m.emissiveMap!==m.map){m.emissiveMap=m.map;m.needsUpdate=true;}m.emissive.setScalar(k);}
@@ -6623,6 +6648,7 @@ function renderLook(){const css=c=>'rgb('+c.map(x=>Math.round(Math.min(1,Math.po
   h+='<div class="lk-s">Yeux</div><div class="lk-r">'+LK_EYES.map((o,i)=>lookSwatch('eyes',i,o[2],o[0])).join('')+'</div>';
   h+='<div class="lk-s">Expression</div><div class="lk-r">'+LK_FACE.map(o=>lookBtn('face',o[0],o[1])).join('')+'</div>';
   h+='<div class="lk-s">Tenue</div><div class="lk-r">'+lookBtn('suit','bataillon','Bataillon')+lookBtn('suit','noire','Noire · équipement Mk2')+'</div>';
+  if(getLook().suit==='noire')h+='<div class="lk-s">Veste avec la tenue noire</div><div class="lk-r">'+lookBtn('veste','aucune','Sans veste (moulante)')+lookBtn('veste','brune','Veste brune par-dessus')+'</div>';
   h+='<div class="lk-s">Veste</div><div class="lk-r">'+LK_JACKET.map((o,i)=>lookSwatch('jacket',i,hex(o[1]),o[0])).join('')+'</div>';
   h+='<div class="lk-s">Chemise</div><div class="lk-r">'+LK_SHIRT.map((o,i)=>lookSwatch('shirt',i,css(o[1]),o[0])).join('')+'</div>';
   h+='<div class="lk-s">Pantalon</div><div class="lk-r">'+LK_PANTS.map((o,i)=>lookSwatch('pants',i,css(o[1]),o[0])).join('')+'</div>';
@@ -6795,7 +6821,7 @@ function netApplyLook(inst,look){const l0=save.look,keep={},l=Object.assign({},L
   if(inst.cloth){scene.remove(inst.cloth.mesh);inst.cloth.geo.dispose();if(inst.cloth.mesh.material.map)inst.cloth.mesh.material.map.dispose();inst.cloth.mesh.material.dispose();inst.cloth=null;}
   if(cp[0]!=='aucune'&&cloth){const c=cloth,m2=o=>inst.s2c.get(o)||o,geo=c.geo.clone(),mat=c.mesh.material.clone();mat.map=capeTex(cp[2],cp[3],lv.emblem);mat.emissiveMap=kN?mat.map:null;mat.emissive.setScalar(kN*.85);mat.needsUpdate=true;
     const mesh=new THREE.Mesh(geo,mat);mesh.castShadow=true;mesh.frustumCulled=false;scene.add(mesh);
-    inst.cloth={mesh,geo,chestB:m2(c.chestB),hipsB:m2(c.hipsB),arms:c.arms.map(a=>a.map(m2)),top:c.top,out:c.out,rest:c.rest,lenK:c.lenK,fwMax:c.fwMax,ref:c.ref,torsoR:c.torsoR,boxes:c.boxes.map(([o,a,b])=>[m2(o),a,b]),P:new Float32Array(CW*CH*3),h1:new V3(0,-1,0),v1:new V3(),h2:new V3(0,-1,0),v2:new V3(),trick:inst.trick,bg:inst.bg,racks:[...new Set(spearRack.map(s=>s.parent))].map(r=>inst.s2c.get(r)).filter(Boolean)};}}
+    inst.cloth={mesh,geo,chestB:m2(c.chestB),hipsB:m2(c.hipsB),arms:c.arms.map(a=>a.map(m2)),top:c.top,out:c.out,rest:c.rest,lenK:c.lenK,fwMax:c.fwMax,ref:c.ref,torsoR:c.torsoR,boxes:c.boxes.map(([o,a,b,k])=>[m2(o),a,b,k]),P:new Float32Array(CW*CH*3),h1:new V3(0,-1,0),v1:new V3(),h2:new V3(0,-1,0),v2:new V3(),trick:inst.trick,bg:inst.bg,racks:[...new Set(spearRack.map(s=>s.parent))].map(r=>inst.s2c.get(r)).filter(Boolean)};}}
 // fait tourner la simulation de cape du jeu pour un coéquipier : ses os, sa vitesse, sa position
 function netCape(av,dt){if(!av.cloth)return;const c0=cloth,p=player,pv=p.vel,pp=p.pos,keep=Object.assign({},vrmBones);
   try{cloth=av.cloth;Object.assign(vrmBones,av.B);p.vel=av.vel;p.pos=av.g.position;updCape(dt);}finally{cloth=c0;for(const k in vrmBones)delete vrmBones[k];Object.assign(vrmBones,keep);p.vel=pv;p.pos=pp;}}

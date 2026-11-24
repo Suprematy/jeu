@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261123212913">
+<meta name="build" content="20261123213828">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -3576,7 +3576,7 @@ class Titan{
     this.legLoss=(this.sev.leg[0]>4?1:0)+(this.sev.leg[1]>4?1:0);
   }
   die(oneShot){
-    if(grab&&grab.t===this)releaseGrab();this.state='dead';this.deadT=0;save.kills++;carnetKill(this);
+    if(grab&&grab.t===this)releaseGrab();this.state='dead';this.deadT=0;save.kills++;carnetKill(this);cineKill(this);
     const base=this.cfg.boss||this.cfg.fixedH?this.cfg.xp:2.2*Math.pow(this.H,1.2)*(this.type==='abnormal'?1.15:1);   /* titans ordinaires : plus il est grand, plus il rapporte ; un déviant un peu plus qu'un titan normal de même taille */
     let xp=base*(1+.1*(wave-1));if(oneShot)xp*=1.5;xp=Math.round(xp*combo);
     addStyle('Nuque',.5,true);
@@ -4085,7 +4085,7 @@ function cycleCam(){
 function setCamMode(m){
   const prev=save.camMode;save.camMode=m;persist();
   if(m==='lock'&&(!lockT||lockT.gone||lockT.state==='dead'))pickLock(false);
-  if(m==='libre'||m==='fps'||m==='cine'){noLock=false;lockPointer();}if(m==='cine')CINE.shot=-1;
+  if(m==='libre'||m==='fps'||m==='cine'){noLock=false;lockPointer();}if(m==='cine'){CINE.shot='';CINE.last.length=0;}
   toast('Caméra : '+CAM_NAMES[m]);
 }
 function lockCandidates(){return titans.filter(t=>t.state!=='dead'&&!t.gone&&t.root.position.distanceTo(player.pos)<220);}
@@ -4462,31 +4462,85 @@ function updTitans(dt){
     if(d<m){const k=(m-d)/2/d;pa.x-=dx*k;pa.z-=dz*k;pb.x+=dx*k;pb.z+=dz*k;}}
   if(NET.on)NET.afterTitans();
 }
-/* ----- caméra cinématique (5) : plans changeants façon anime — poursuite, contre-plongée, travelling, plongée, par-dessus l'épaule du titan, orbite, plan serré penché. On vise toujours à la souris, comme en Libre. ----- */
-const CINE={shot:-1,t:0,dur:3,side:1,a:0,blk:0,cls:false,pos:new V3(),look:new V3(),fov:50,roll:0,cut:true,tg:null};
-const _ciF=new V3(),_ciR=new V3(),_ciP=new V3(),_ciL=new V3(),_ciU=new V3(0,1,0),_ciH=new V3();
-function cineNearT(){let b=null,bd=45;for(const t of titans){if(t.state==='dead'||t.gone)continue;const d=t.root.position.distanceTo(player.pos);if(d<bd){bd=d;b=t;}}return b;}
-function cineNext(){let k,n=0;const tt=cineNearT();do{k=Math.floor(Math.random()*7);n++;}while(n<12&&(k===CINE.shot||(k===4&&!tt)));
-  CINE.shot=k;CINE.t=0;CINE.dur=2.3+Math.random()*2.6;CINE.side=Math.random()<.5?-1:1;CINE.a=Math.random()*TAU;CINE.cut=true;CINE.blk=0;CINE.tg=k===4?tt:null;}
-function cineWant(out,look){const p=player,pc=p.center,hs=Math.hypot(p.vel.x,p.vel.z),S=CINE.side;
-  if(hs>3)_ciF.set(p.vel.x/hs,0,p.vel.z/hs);else _ciF.set(-Math.sin(yaw),0,-Math.cos(yaw));_ciR.set(-_ciF.z,0,_ciF.x);
+/* ----- caméra cinématique (5) : mise en scène façon anime (combats au grappin de L'Attaque des Titans, combats en 3D des anime récents).
+   Les plans sont choisis selon l'action, avec des coupes franches comme au montage :
+   en vol — poursuite à ressort qui s'incline dans les virages, travelling latéral grand angle, caméra posée que le soldat frôle en passant, plan depuis l'ancre du grappin, vue à hauteur des yeux ;
+   près d'un titan — contre-plongée à ses pieds qui montre l'échelle, plan par-dessus son épaule, zoom brutal sur son visage quand il surgit ;
+   sur une nuque tranchée — rotation autour du soldat au ralenti, puis plan large du titan qui s'effondre dans la vapeur ;
+   au sol — contre-plongée héroïque qui se rapproche, grue qui s'élève, orbite lente. Caméra portée légère partout. On vise toujours à la souris, comme en Libre. ----- */
+const CINE={shot:'',t:0,dur:3,side:1,a:0,blk:0,cls:false,pos:new V3(),look:new V3(),off:new V3(),lo:new V3(),fix:new V3(),fov:60,fovT:60,roll:0,rollT:0,cut:true,tg:null,last:[],next:'',seen:new WeakSet(),lag:new V3(),lagOK:false,lat:0,hand:.006,dt:1/60,e:{}};
+const _ciF=new V3(),_ciR=new V3(),_ciP=new V3(),_ciL=new V3(),_ciU=new V3(0,1,0),_ciH=new V3(),_ciA=new V3(),_ciB=new V3();
+function cineNearT(maxD){let b=null,bd=maxD||60;for(const t of titans){if(t.state==='dead'||t.gone)continue;const d=t.root.position.distanceTo(player.pos);if(d<bd){bd=d;b=t;}}return b;}
+function cineAxes(){const p=player,hs=Math.hypot(p.vel.x,p.vel.z);if(hs>3)_ciF.set(p.vel.x/hs,0,p.vel.z/hs);else _ciF.set(-Math.sin(yaw),0,-Math.cos(yaw));_ciR.set(-_ciF.z,0,_ciF.x);}
+function cinePick(){const p=player,sp=p.vel.length(),air=!p.grounded,T=cineNearT(70),H=hooks.find(h=>h.state==='att'),W=[];
+  const add=(k,w)=>{if(w>0&&CINE.last.indexOf(k)<0)W.push([k,w]);};   // jamais deux fois le même plan de suite (ni l'avant-dernier)
+  if(grab&&grab.t){add('titan',4);add('hero',1);}
+  else if(air&&sp>14){add('chase',3);add('dolly',3);add('flyby',2.6);if(H)add('anchor',2.2);add('pov',1.2);if(T){add('scale',1.6);add('titan',1.2);}}
+  else if(air){add('chase',2);add('hero',1.4);add('crane',1);add('flyby',1);if(T){add('titan',1.8);add('scale',1.6);}}
+  else{add('hero',2);add('crane',1.6);add('orbit',1.2);add('chase',.8);if(T){add('scale',2.4);add('titan',1.6);}}
+  if(T&&!CINE.seen.has(T)&&T.root.position.distanceTo(p.pos)<55&&CINE.last.indexOf('reveal')<0)W.push(['reveal',5]);   // un titan surgit : zoom brutal sur son visage
+  if(!W.length)W.push(['chase',1]);let r=Math.random()*W.reduce((a,w)=>a+w[1],0);for(const [k,w] of W){r-=w;if(r<=0)return k;}return W[0][0];}
+function cineStart(k,tg){const p=player,pc=p.center,S=CINE.side=Math.random()<.5?-1:1;cineAxes();
+  CINE.shot=k;CINE.t=0;CINE.cut=true;CINE.blk=0;CINE.a=Math.random()*TAU;CINE.tg=tg||cineNearT(70);CINE.lagOK=false;CINE.e={};
+  CINE.last.unshift(k);CINE.last.length=Math.min(CINE.last.length,2);
+  const T=CINE.tg,sp=p.vel.length();
+  switch(k){
+    case 'chase':CINE.dur=2.2+Math.random()*1.4;CINE.hand=.007;break;
+    case 'dolly':CINE.dur=1.8+Math.random()*1;CINE.hand=.005;break;
+    case 'pov':CINE.dur=1.3+Math.random()*.7;CINE.hand=.004;break;
+    case 'flyby':{const lead=clamp(sp*.6,6,20);CINE.fix.copy(pc).addScaledVector(p.vel.lengthSq()>4?_ciA.copy(p.vel).normalize():_ciF,lead).addScaledVector(_ciR,S*3.2);CINE.fix.y+=.8;CINE.dur=clamp(lead/Math.max(sp,6)+1.1,1.4,3);CINE.hand=.004;break;}   // caméra posée sur la trajectoire : le soldat la frôle
+    case 'anchor':{const H=hooks.find(h=>h.state==='att');if(!H){cineStart('chase');return;}CINE.fix.copy(H.point).addScaledVector(_ciA.subVectors(pc,H.point).normalize(),1.4).addScaledVector(_ciR,S*.9);CINE.fix.y+=.5;CINE.dur=1.5+Math.random()*.6;CINE.hand=.003;break;}
+    case 'scale':{if(!T){cineStart('hero');return;}const tp=T.root.position,d=_ciA.subVectors(p.pos,tp).setY(0).normalize().applyAxisAngle(_ciU,S*(.7+Math.random()*.5));CINE.fix.copy(tp).addScaledVector(d,1.9*T.s+2.5);CINE.fix.y=groundY(CINE.fix.x,CINE.fix.z)+.5;CINE.dur=2.6+Math.random()*1.2;CINE.hand=.003;break;}   // au pied du titan, en contre-plongée
+    case 'titan':{if(!T){cineStart('chase');return;}CINE.dur=2.2+Math.random()*1;CINE.hand=.006;break;}
+    case 'reveal':{if(!T){cineStart('chase');return;}CINE.seen.add(T);CINE.dur=1.6;CINE.hand=.009;break;}
+    case 'hero':CINE.dur=2.6+Math.random()*1.2;CINE.hand=.005;break;
+    case 'crane':CINE.dur=3+Math.random()*1.2;CINE.hand=.002;break;
+    case 'orbit':CINE.dur=3.4+Math.random()*1.2;CINE.hand=.003;break;
+    case 'kill':CINE.dur=1.15;CINE.hand=.004;CINE.next='after';break;   // nuque tranchée : rotation autour du soldat (le jeu est déjà au ralenti)
+    case 'after':{if(!T){cineStart('hero');return;}const tp=T.root.position,d=_ciA.subVectors(p.pos,tp).setY(0).normalize().applyAxisAngle(_ciU,S*1.35);CINE.fix.copy(tp).addScaledVector(d,T.H*1.15+6);CINE.fix.y=groundY(CINE.fix.x,CINE.fix.z)+T.H*.32+1.5;CINE.dur=2.4;CINE.hand=.004;break;}   // plan large : le titan s'effondre dans la vapeur
+    default:CINE.shot='chase';CINE.dur=2.5;}}
+function cineKill(t){try{if(save.camMode!=='cine'||state!=='play'||(NET&&NET.replay)||!t||!t.nape)return;if(t.nape.getWorldPosition(_ciB).distanceTo(player.center)>8+2*t.s)return;cineStart('kill',t);}catch(e){}}
+// où doit être la caméra pour ce plan, et où regarder
+function cineWant(out,look){const p=player,pc=p.center,S=CINE.side,T=CINE.tg,u=clamp(CINE.t/CINE.dur,0,1),e=u*u*(3-2*u),sp=p.vel.length();cineAxes();CINE.rollT=0;
   switch(CINE.shot){
-    case 0:out.copy(pc).addScaledVector(_ciF,-8.5).addScaledVector(_ciR,S*1.6).y+=2.4;look.copy(pc).addScaledVector(_ciF,6);CINE.fov=46;CINE.rollT=0;break;   // poursuite
-    case 1:out.copy(pc).addScaledVector(_ciF,4.6).addScaledVector(_ciR,S*1.8).y-=.9;look.copy(pc).y+=.6;CINE.fov=52;CINE.rollT=S*.05;break;   // contre-plongée devant lui
-    case 2:out.copy(pc).addScaledVector(_ciR,S*7).addScaledVector(_ciF,-1).y+=.7;look.copy(pc).addScaledVector(_ciF,2.2);CINE.fov=44;CINE.rollT=0;break;   // travelling latéral
-    case 3:out.copy(pc).addScaledVector(_ciF,-3.5).y+=8.5;look.copy(pc).addScaledVector(_ciF,1.5);CINE.fov=50;CINE.rollT=0;break;   // plongée
-    case 4:{const t=CINE.tg;if(!t||t.state==='dead'||t.gone){CINE.t=CINE.dur;out.copy(pc);look.copy(pc);break;}const h=t.headG.getWorldPosition(_ciH),d=_ciL.subVectors(h,pc).normalize();out.copy(h).addScaledVector(d,2.2*t.s).addScaledVector(_ciR,S*2.6*t.s).y+=1.9*t.s;look.copy(pc);CINE.fov=44;CINE.rollT=0;break;}   // par-dessus l'épaule du titan
-    case 5:CINE.a+=.45*CINE.dt;out.set(pc.x+Math.cos(CINE.a)*4.8,pc.y+1.3,pc.z+Math.sin(CINE.a)*4.8);look.copy(pc);CINE.fov=52;CINE.rollT=0;break;   // orbite lente
-    default:out.copy(pc).addScaledVector(_ciF,-2.6).addScaledVector(_ciR,S*.95).y+=.55;look.copy(pc).addScaledVector(_ciF,10).y+=.4;CINE.fov=62;CINE.rollT=S*.2;}   // plan serré, cadre penché
-  const gy=groundY(out.x,out.z)+.45;if(out.y<gy)out.y=gy;}
-function updCamCine(rdt){const p=player;CINE.dt=rdt;CINE.t+=rdt;if(CINE.shot<0||CINE.t>=CINE.dur)cineNext();
+    case 'chase':{_ciP.copy(pc).addScaledVector(_ciF,-4-clamp(sp*.035,0,1.6)).addScaledVector(_ciR,S*.8);_ciP.y+=1.1;   // poursuite : la caméra suit avec un temps de retard et s'incline dans les virages
+      out.copy(_ciP);look.copy(pc).addScaledVector(_ciF,8);look.y+=.4;
+      CINE.fovT=66+clamp(sp*.45,0,22);CINE.rollT=clamp(-CINE.lat/45,-1,1)*.32;break;}
+    case 'dolly':out.copy(pc).addScaledVector(_ciR,S*4).addScaledVector(_ciF,-.5+e*1.2);out.y+=.3;look.copy(pc).addScaledVector(_ciF,1.6);CINE.fovT=80;CINE.rollT=S*.04;break;   // travelling latéral grand angle
+    case 'pov':out.copy(pc).addScaledVector(_ciF,-1.5).addScaledVector(_ciR,S*.35);out.y+=1.05;look.copy(out).addScaledVector(p.vel.lengthSq()>4?_ciA.copy(p.vel).normalize():_ciF,20);CINE.fovT=92;CINE.rollT=clamp(-CINE.lat/40,-1,1)*.4;break;   // à hauteur des yeux, juste derrière la tête
+    case 'flyby':out.copy(CINE.fix);look.copy(pc);CINE.fovT=72;if(CINE.t>.5&&_ciA.subVectors(pc,CINE.fix).dot(p.vel)>0&&pc.distanceTo(CINE.fix)>22)CINE.t=CINE.dur;break;
+    case 'anchor':out.copy(CINE.fix);look.copy(pc);CINE.fovT=62;break;
+    case 'scale':{const h=T&&!T.gone?T.headG.getWorldPosition(_ciH):_ciH.copy(pc);out.copy(CINE.fix);look.copy(pc).lerp(h,.45);   // le titan et le soldat dans le même cadre
+      const a1=_ciA.subVectors(h,out).normalize(),a2=_ciB.subVectors(pc,out).normalize();CINE.fovT=clamp(THREE.MathUtils.radToDeg(Math.acos(clamp(a1.dot(a2),-1,1)))*1.3+8,32,80);CINE.rollT=S*.05;break;}
+    case 'titan':{if(!T||T.gone||T.state==='dead'){CINE.t=CINE.dur;out.copy(CINE.pos);look.copy(pc);break;}const h=T.headG.getWorldPosition(_ciH),d=_ciA.subVectors(h,pc).normalize();   // par-dessus l'épaule du titan, qui cherche le soldat
+      out.copy(h).addScaledVector(d,1.9*T.s).addScaledVector(_ciR.set(-d.z,0,d.x).normalize(),S*2.2*T.s);out.y+=1.1*T.s;look.copy(pc);CINE.fovT=46;break;}
+    case 'reveal':{if(!T||T.gone){CINE.t=CINE.dur;out.copy(CINE.pos);look.copy(pc);break;}const face=T.eyePos?T.eyePos(_ciH):T.headG.getWorldPosition(_ciH);   // zoom brutal sur le visage du titan, par-dessus l'épaule du soldat
+      const d=_ciA.subVectors(face,pc).normalize();out.copy(pc).addScaledVector(d,-2.4).addScaledVector(_ciR.set(-d.z,0,d.x).normalize(),S*.75);out.y+=.55;look.copy(face);
+      const z=clamp((CINE.t-.25)/.28,0,1),fd=out.distanceTo(face),fz=THREE.MathUtils.radToDeg(2*Math.atan(1.6*T.s/fd));CINE.fovT=lerp(66,clamp(fz,6,40),z*z*(3-2*z));if(z>0&&!CINE.e.z){CINE.e.z=1;shake=Math.max(shake,.25);}break;}
+    case 'hero':out.copy(pc).addScaledVector(_ciF,lerp(4.2,2.8,e)).addScaledVector(_ciR,S*1.3);out.y-=.65;look.copy(pc);look.y+=.55;CINE.fovT=48;CINE.rollT=S*.06;break;   // contre-plongée devant le soldat, qui se rapproche
+    case 'crane':out.copy(pc).addScaledVector(_ciF,-lerp(4,9,e)).addScaledVector(_ciR,S*lerp(2,4,e));out.y+=lerp(1.2,9,e);look.copy(pc);CINE.fovT=52;break;   // grue qui s'élève
+    case 'orbit':CINE.a+=.35*CINE.dt;out.set(pc.x+Math.cos(CINE.a)*4.6,pc.y+1.1,pc.z+Math.sin(CINE.a)*4.6);look.copy(pc);CINE.fovT=50;break;
+    case 'kill':{const np=T&&T.nape?T.nape.getWorldPosition(_ciH):_ciH.copy(pc),c=_ciB.copy(pc).lerp(np,.35),ang=CINE.a+S*e*3.6;   // tour autour du soldat et de la nuque
+      out.set(c.x+Math.cos(ang)*3.1,c.y+.9-e*.4,c.z+Math.sin(ang)*3.1);look.copy(c);CINE.fovT=56;CINE.rollT=S*.12*(1-e);break;}
+    case 'after':{if(!T){CINE.t=CINE.dur;out.copy(CINE.pos);look.copy(pc);break;}out.copy(CINE.fix);look.copy(T.root.position);look.y+=T.H*.35;CINE.fovT=44;break;}
+    default:out.copy(pc).addScaledVector(_ciF,-6);out.y+=2;look.copy(pc);CINE.fovT=60;}
+  const gy=groundY(out.x,out.z)+.4;if(out.y<gy)out.y=gy;}
+function updCamCine(rdt){const p=player;CINE.dt=rdt;CINE.t+=rdt;
+  {const lat=p.vel.x*_ciR.x+p.vel.z*_ciR.z;CINE.lat=lerp(CINE.lat,lat,1-Math.exp(-5*rdt));}
+  if(!CINE.shot||CINE.shot===-1||CINE.t>=CINE.dur){const n=CINE.next;CINE.next='';cineStart(n||cinePick(),n?CINE.tg:null);}
   cineWant(_ciP,_ciL);
-  if(pointBlocked(_ciP.x,_ciP.y,_ciP.z)||pointBlocked((_ciP.x+p.center.x)/2,(_ciP.y+p.center.y)/2,(_ciP.z+p.center.z)/2)){CINE.blk+=rdt;if(CINE.cut||CINE.blk>.25){cineNext();cineWant(_ciP,_ciL);if(pointBlocked(_ciP.x,_ciP.y,_ciP.z)){CINE.shot=0;cineWant(_ciP,_ciL);}}}else CINE.blk=0;   // pas de plan dans un mur
-  if(CINE.cut){CINE.pos.copy(_ciP);CINE.look.copy(_ciL);CINE.roll=CINE.rollT||0;CINE.cut=false;}   // coupe franche, comme au montage
-  else{const k=1-Math.exp(-7*rdt);CINE.pos.lerp(_ciP,k);CINE.look.lerp(_ciL,1-Math.exp(-9*rdt));CINE.roll=lerp(CINE.roll,CINE.rollT||0,k);}
-  shake=Math.max(0,shake-rdt*2.2);const sh=shake*shake*.6;
-  camera.position.set(CINE.pos.x+(Math.random()-.5)*sh,CINE.pos.y+(Math.random()-.5)*sh,CINE.pos.z+(Math.random()-.5)*sh);camera.lookAt(CINE.look);camera.rotateZ(CINE.roll);
-  const sp=p.vel.length();camera.fov=lerp(camera.fov,CINE.fov+clamp((sp-12)*.4,0,16)+speedFX.kick*SPEEDFX.kickFov,1-Math.exp(-6*rdt));camera.updateProjectionMatrix();
+  const blocked=()=>pointBlocked(_ciP.x,_ciP.y,_ciP.z)||pointBlocked((_ciP.x+p.center.x)/2,(_ciP.y+p.center.y)/2,(_ciP.z+p.center.z)/2);
+  if(blocked()){CINE.blk+=rdt;if(CINE.cut||CINE.blk>.2){for(let i=0;i<4;i++){cineStart(cinePick());cineWant(_ciP,_ciL);if(!blocked())break;}if(blocked()){cineStart('pov');cineWant(_ciP,_ciL);}}}else CINE.blk=0;   // pas de plan dans un mur : on coupe ailleurs
+  const pc=p.center,fixed=CINE.shot==='flyby'||CINE.shot==='anchor'||CINE.shot==='scale'||CINE.shot==='after'||CINE.shot==='titan'||CINE.shot==='reveal';
+  if(CINE.cut){CINE.pos.copy(_ciP);CINE.look.copy(_ciL);CINE.off.subVectors(_ciP,pc);CINE.lo.subVectors(_ciL,pc);CINE.roll=CINE.rollT;CINE.fov=CINE.fovT;CINE.cut=false;}   // coupe franche
+  else{   /* plans qui suivent le soldat : on lisse l'écart caméra-soldat (pas de retard dû à la vitesse) ; la poursuite le lisse plus lentement, comme un ressort dans les virages */
+    if(fixed){CINE.pos.copy(_ciP);CINE.look.lerp(_ciL,1-Math.exp(-7*rdt));}
+    else{const k=1-Math.exp(-(CINE.shot==='chase'?4:10)*rdt);CINE.off.lerp(_ciA.subVectors(_ciP,pc),k);CINE.lo.lerp(_ciB.subVectors(_ciL,pc),1-Math.exp(-12*rdt));CINE.pos.copy(pc).add(CINE.off);CINE.look.copy(pc).add(CINE.lo);
+      const gy=groundY(CINE.pos.x,CINE.pos.z)+.4;if(CINE.pos.y<gy)CINE.pos.y=gy;}CINE.roll=lerp(CINE.roll,CINE.rollT,1-Math.exp(-5*rdt));CINE.fov=lerp(CINE.fov,CINE.fovT,1-Math.exp(-(CINE.shot==='reveal'?18:5)*rdt));}
+  shake=Math.max(0,shake-rdt*2.2);const sh=shake*shake*.5,tt=performance.now()/1000,H=CINE.hand*(1+Math.min(1,p.vel.length()/30));
+  camera.position.set(CINE.pos.x+(Math.random()-.5)*sh,CINE.pos.y+(Math.random()-.5)*sh,CINE.pos.z+(Math.random()-.5)*sh);camera.lookAt(CINE.look);
+  camera.rotateY((Math.sin(tt*1.3)+Math.sin(tt*2.9+1.7)*.5)*H);camera.rotateX((Math.sin(tt*1.1+.6)+Math.sin(tt*3.3)*.45)*H);camera.rotateZ(CINE.roll);   // caméra portée
+  camera.fov=CINE.fov+speedFX.kick*SPEEDFX.kickFov;camera.updateProjectionMatrix();
   camTgt.copy(p.pos);skyDome.position.copy(camera.position);sunAt(p.pos);lantern.position.set(p.pos.x,p.pos.y+2.4,p.pos.z);}
 function updCam(rdt){
   if(CUS.open){camCustom(rdt);return;}

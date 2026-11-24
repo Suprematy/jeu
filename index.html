@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124144731">
+<meta name="build" content="20261124145053">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -2748,7 +2748,7 @@ var CROC_G={ax:-2.5,az:-1.95,ex:-2.3,bx:.5,hx:.5};   /* pose de garde (ajustée 
 function crocDown(t){return t.type==='croc'&&t.state!=='dead'&&(t.blindT>0||t.tend[0]>0||t.tend[1]>0);}
 function crocArmFree(t,i){return !(t.armT&&t.armT[i]>0)&&!(t.sev.arm[i]>0)&&!(t.armOff[i]>0);}
 function crocGuarding(t){return crocDown(t)&&(crocArmFree(t,0)||crocArmFree(t,1));}
-function crocCutArm(t,i){if(!t.armT)t.armT=[0,0];if(!crocArmFree(t,i))return;t.armT[i]=30;t.armOff[i]=Math.max(t.armOff[i],.3);t.flinchT=.35;
+function crocCutArm(t,i){if(!t.armT)t.armT=[0,0];if(!crocArmFree(t,i))return;t.armT[i]=10;t.armOff[i]=Math.max(t.armOff[i],.3);t.flinchT=.35;
   const p=t.elbows[i].getWorldPosition(new V3());spray(p,tD.subVectors(p,player.center).setY(.5).normalize().clone(),14,9,.5,Math.min(1,.3+t.s*.15));steamBurst(p,2,t.s*.4);sfx.hit();popNum(p,'Tendon','');
   const two=!crocArmFree(t,1-i);feed(two?'Ses deux bras tombent : sa nuque est à découvert !':'Tendon du bras tranché : encore l\'autre bras','gold');addStyle('Tendon',.35);addXP(4);if(two)elanFlash&&elanFlash();}
 function bossDamage(t,dmg,limb){const k=t.type,sp=dmgSrc==='spear';
@@ -3588,7 +3588,7 @@ class Titan{
   }
   regrow(dt){
     this.limbHit-=dt;
-    if(this.armT)for(let i=0;i<2;i++)if(this.armT[i]>0){this.armT[i]-=dt;this.armOff[i]=Math.max(this.armOff[i],.3);   /* 30 s sans ce bras : il ne frappe plus de ce côté ; sans les deux, il ne peut que mordre */if(Math.random()<dt*5)emit(this.elbows[i].getWorldPosition(tC),tD.set(0,3,0).clone(),2,.7*this.s,2*this.s,0xf4f4f2,.45,-1,.6);}   // tendons des bras du Croc : ils se réparent dans la vapeur
+    if(this.armT)for(let i=0;i<2;i++)if(this.armT[i]>0){this.armT[i]-=dt;this.armOff[i]=Math.max(this.armOff[i],.3);   /* 10 s sans ce bras : il ne frappe plus de ce côté ; sans les deux, il ne peut que mordre */if(Math.random()<dt*5)emit(this.elbows[i].getWorldPosition(tC),tD.set(0,3,0).clone(),2,.7*this.s,2*this.s,0xf4f4f2,.45,-1,.6);}   // tendons des bras du Croc : ils se réparent dans la vapeur
     for(let i=0;i<2;i++)if(this.tend[i]>0){this.tend[i]-=dt;if(Math.random()<dt*6)emit(this.knees[i].getWorldPosition(tC),tD.set(0,3,0).clone(),2,.8*this.s,2.4*this.s,0xf4f4f2,.45,-1,.6);}   // le tendon se répare dans la vapeur
     for(const kind of ['arm','leg'])for(let i=0;i<2;i++){let r=this.sev[kind][i];if(r<=0)continue;r-=dt*(this.type==='assaillant'?1.8:1);this.sev[kind][i]=r;const g=kind==='leg'?this.knees[i]:this.elbows[i];
       if(kind==='arm')this.armOff[i]=Math.max(this.armOff[i],.3);

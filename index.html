@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124185059">
+<meta name="build" content="20261124185300">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -5287,7 +5287,8 @@ function updSpears(dt){
     if(s.stuck){const o=s.stuck.obj,t=o&&o.userData.titan;
       if(t&&(t.gone||t.state==='dead')){if(s.mk1){mk1Inert(s);continue;}s.fuse=0;}else if(o)s.m.position.copy(o.localToWorld(s.stuck.local.clone()));
       if(s.mk1&&s.cable){const pc=player.center,d=pc.distanceTo(s.m.position),L=s.len||(s.len=Math.min(MK1_RANGE,d+6));   /* câble relié : petite résistance quand on s'éloigne au-delà de sa longueur */
-        if(d>L){const n=tA.subVectors(s.m.position,pc).divideScalar(d),out=-player.vel.dot(n);if(out>0)player.vel.addScaledVector(n,out*(1-Math.exp(-4*dt)));player.vel.addScaledVector(n,Math.min(30,(d-L)*5)*dt);if(d-L>1.5&&Math.random()<dt*6)sfx.burst(1400,.05,.08,'bandpass',3);}
+        {let k=clamp((d-(L-3))/25,0,1);k=k*k*(3-2*k);   /* tension graduelle : presque rien au début, de plus en plus forte jusqu'à la rupture */
+          if(k>0){const n=tA.subVectors(s.m.position,pc).divideScalar(d),out=-player.vel.dot(n);if(out>0)player.vel.addScaledVector(n,out*(1-Math.exp(-7*k*dt)));player.vel.addScaledVector(n,28*k*dt);if(Math.random()<dt*10*k)sfx.burst(1200+800*k,.05,.04+.1*k,'bandpass',3);}}
         if(d>L+25)mk1Inert(s,'Le câble a cédé');}
       if(s.inert)continue;
       if(!s.mk1)s.fuse-=dt;if(Math.random()<dt*20)emit(s.m.position,rv(1).clone(),.3,.15,.5,s.mk1?0xffe2a0:0xffb060,.8);

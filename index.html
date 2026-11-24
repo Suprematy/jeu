@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124171739">
+<meta name="build" content="20261124184834">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -387,7 +387,7 @@ button:disabled{opacity:.35;cursor:not-allowed;filter:none;}
           <div><kbd>ZQSD</kbd> / <kbd>WASD</kbd> se diriger</div>
           <div><kbd>G</kbd> ranger / sortir les lames</div>
           <div><kbd>C</kbd> salto · <kbd>X</kbd> vrille (maintenir : vrille continue)</div>
-          <div><kbd>F</kbd> tourbillon · tirer les lances Mk1</div>
+          <div><kbd>F</kbd> tourbillon</div>
           <div><kbd>B</kbd> lames / lances / pistolets (PvP)</div>
           <div><kbd>V</kbd> ou <kbd>1</kbd>–<kbd>4</kbd> caméra · <kbd>5</kbd> vue bonus</div>
           <div><kbd>T</kbd> / <kbd>Clic molette</kbd> verrouiller un titan</div>
@@ -508,7 +508,7 @@ const ABIL=[   // uniquement ce qu'un soldat apprend par l'entraînement ou l'ex
   {k:'acier2',name:'Maîtrise des lames II',cost:6,req:'acier',desc:'Maîtrise parfaite du tranchant : encore −25 % d\'usure, soit des lames qui s\'usent 2 fois moins vite (−50 % en tout).'},
   {k:'agilite',name:'Agilité',cost:3,desc:'Entraînement acrobatique : courir sur les murs, sauter de mur en mur et de toit en toit (bond plus haut), saltos (C) et vrilles (X ; maintenu : tu vrilles sans t\'arrêter). La vrille sert à se déplacer : elle ne blesse pas.'},
   {k:'spirale',name:'Coupe spirale',cost:3,req:'agilite',desc:'Ta vrille devient une attaque : pendant que tu vrilles (X, ou maintenu pour vriller sans t\'arrêter), tes lames tranchent tout ce que tu frôles. Comme le tourbillon, elle use une demi-paire de lames si elle touche.'},
-  {k:'lances1',name:'Lances Mk1',cost:0,auto:true,desc:'Remises après la vague 10 : 2 lances reliées à tes poignées par un câble. Clic gauche : tu plantes les deux à la fois. F : tu tires le câble et elles explosent.'},
+  {k:'lances1',name:'Lances Mk1',cost:0,auto:true,desc:'Remises après la vague 10 : 2 lances reliées à tes poignées par un câble. Clic gauche : tu plantes une lance (câble de 60 m). Maintiens le clic gauche : celles plantées dans un titan explosent. Une lance ratée est perdue.'},
   {k:'lances2',name:'Lances Mk2 · 4',cost:3,req:'lances1',desc:'Équipement tridimensionnel anti-personnel amélioré : lanceurs à un seul actionneur (la lance explose toute seule une fois plantée) et 4 lances portées le long du corps. Ton soldat s\'équipe de l\'équipement Mk2.'},
   {k:'lances3',name:'Lances Mk2 · 8',cost:6,req:'lances2',desc:'Maîtrise complète de l\'équipement Mk2 : 8 lances portées, le maximum.'}];
 const BASE_KIT=['agilite','tourbillon','charge'],GEAR=['ruee','pivot'];   // équipement de base : grappin simple et ruée, toujours disponibles
@@ -2466,7 +2466,7 @@ Object.assign(TT,{
   colosse:{h:60,fixedH:60,hp:5200,spd:1.4,xp:900,name:'Le Colosse',boss:true,bald:true,skin:0x9a3326,grin:.72,lt:1,at:1,atk:2.6,dmg:.75,desc:'Un géant de 60 m. Au sol, il cherche à te piétiner ; en l\'air, sa vapeur brûlante te ronge lentement.'},
   bete:{h:17,hp:1800,spd:3.5,xp:700,name:'La Bête',boss:true,dmg:.9,skin:0xb08a74,hair:0x7a4428,longHair:true,hairStyle:'mane',al:1.6,at:.95,lean:.5,desc:'Couverte de fourrure, elle te lance des rochers.'},
   cuirasse:{h:15,hp:1100,spd:5,xp:750,name:'Le Cuirassé',boss:true,lt:1,at:1.08,skin:0xa63c2b,hair:0xe9e4d4,shortHair:true,hairStyle:'swept',spearOnly:4800,dmg:1.6,atk:.8,desc:'Invincible aux lames : seules les lances foudroyantes le blessent (touche B).'},
-  agile:{h:14,hp:800,spd:5.25,xp:750,name:'L\'Écorcheuse',boss:true,skin:0xd99a80,hair:0xd8b46a,longHair:true,lt:.62,at:.6,desc:'Très rapide, elle se bat en art martial. Enragée, sa nuque se cristallise : seules les lances foudroyantes la percent.'},
+  agile:{h:14,hp:1600,spd:5.25,xp:750,name:'L\'Écorcheuse',boss:true,skin:0xd99a80,hair:0xd8b46a,longHair:true,lt:.62,at:.6,desc:'Très rapide, elle se bat en art martial. Enragée, sa nuque se cristallise : seules les lances foudroyantes la percent.'},
   croc:{h:5.5,hp:1000,spd:11.7,xp:650,name:'Le Croc',boss:true,hair:0x4a3524,shortHair:true,grin:.7,lean:.6,lt:.7,at:.7,desc:'Petit et très rapide, il bondit sur toi griffes en avant.'},
   forgeron:{h:15,hp:1000,spd:2.6,xp:800,name:'Le Forgeron',boss:true,skin:0xbf7a62,hair:0xe8e6e0,desc:'Il encaisse très bien les lames et fait jaillir des pics de son corps quand on le frappe : les lances foudroyantes sont bien plus efficaces.'}
 });
@@ -2744,15 +2744,16 @@ function forgeSpikes(t){if(t.spikeT>=0||t.state==='dead')return;t.spikeT=0;t.spi
 // armure : invincible aux lames ; les lances foudroyantes la percent mais font 2 fois moins de dégâts que sur un titan sans armure
 function armored(t){const k=t.type;return k==='cuirasse'||(k==='agile'&&t.enraged);}
 /* ----- le Croc immobilisé (aveuglé ou à genoux) protège sa nuque de ses deux mains : il faut d'abord trancher les tendons de ses bras ----- */
-var CROC_G={ax:-2.5,az:-1.95,ex:-2.3,bx:.5,hx:.5};   /* pose de garde (ajustée sur le squelette) */
-function crocDown(t){return t.type==='croc'&&t.state!=='dead'&&(t.blindT>0||t.tend[0]>0||t.tend[1]>0);}
+var CROC_G={ax:-2.5,az:-1.95,ex:-2.3,bx:.5,hx:.5},CROC_GT={bete:{ax:-2.2,az:-1.8,ex:-2.3,bx:.3,hx:.5}};   /* la Bête a d'autres proportions */   /* pose de garde (ajustée sur le squelette) */
+const GUARD_BOSS={croc:1,bete:1,agile:1,forgeron:1,assaillant:1};   /* boss qui protègent leur nuque une fois aveuglés ou à genoux (pas le Colosse, l'Originel ni le Cuirassé) */
+function crocDown(t){return !!GUARD_BOSS[t.type]&&!t.army&&t.state!=='dead'&&(t.blindT>0||t.tend[0]>0||t.tend[1]>0);}
 function crocArmFree(t,i){return !(t.armT&&t.armT[i]>0)&&!(t.sev.arm[i]>0)&&!(t.armOff[i]>0);}
 function crocGuarding(t){return crocDown(t)&&(crocArmFree(t,0)||crocArmFree(t,1));}
 function crocCutArm(t,i){if(!t.armT)t.armT=[0,0];if(!crocArmFree(t,i))return;t.armT[i]=10;t.armOff[i]=Math.max(t.armOff[i],.3);t.flinchT=.35;
   const p=t.elbows[i].getWorldPosition(new V3());spray(p,tD.subVectors(p,player.center).setY(.5).normalize().clone(),14,9,.5,Math.min(1,.3+t.s*.15));steamBurst(p,2,t.s*.4);sfx.hit();popNum(p,'Tendon','');
   const two=!crocArmFree(t,1-i);feed(two?'Ses deux bras tombent : sa nuque est à découvert !':'Tendon du bras tranché : encore l\'autre bras','gold');addStyle('Tendon',.35);addXP(4);if(two)elanFlash&&elanFlash();}
 function bossDamage(t,dmg,limb){const k=t.type,sp=dmgSrc==='spear';
-  if(k==='croc'&&!limb&&crocGuarding(t)){sfx.hit();toast('Il protège sa nuque de ses mains : tranche les tendons de ses bras');dmg*=sp?.35:.08;}
+  if(GUARD_BOSS[k]&&!limb&&crocGuarding(t)){sfx.hit();toastT=0;toast('Ses mains protègent sa nuque : tranche d\'abord les tendons de ses bras');dmg*=sp?.05:.08;}   /* les lances ne passent pas tant que les mains couvrent la nuque */
   if(k!=='assaillant'&&!limb&&t.state==='guard'&&t.guardUp){sfx.hit();toast('Sa main protège sa nuque');dmg*=sp?.6:.15;}
   if(k==='agile'&&t.state==='walk'&&!(t.hopT>0)&&Math.random()<.4)t.hopT=.45;   // elle esquive en reculant
   if(k==='assaillant'){t.lastHitT=0;if(!sp)forgeSpikes(t);
@@ -3420,13 +3421,13 @@ class Titan{
       this.tilt.position.y=lerp(this.tilt.position.y,-2.2,k);
       for(const l of this.legs)l.rotation.x=lerp(l.rotation.x,-.25,k);
       for(const kn of this.knees)kn.rotation.x=lerp(kn.rotation.x,1.6,k);
-      const cd=crocDown(this);if(cd&&this.blindT>0)this.blindT-=dt;   /* à genoux, les yeux du Croc se reforment au même rythme */
+      const cd=crocDown(this),cg=CROC_GT[this.type]||CROC_G;if(cd&&this.blindT>0)this.blindT-=dt;   /* à genoux, les yeux du Croc se reforment au même rythme */
       for(let i=0;i<2;i++){if(cd&&!(this.sev.arm[i]>0)){const sd=i?1:-1;
-          if(crocArmFree(this,i)){const w=Math.sin(performance.now()/90+i)*.03;this.arms[i].rotation.x=lerp(this.arms[i].rotation.x,CROC_G.ax+w,k);this.arms[i].rotation.z=lerp(this.arms[i].rotation.z,sd*CROC_G.az,k);this.elbows[i].rotation.x=lerp(this.elbows[i].rotation.x,CROC_G.ex,k);}   // mains croisées sur la nuque
+          if(crocArmFree(this,i)){const w=Math.sin(performance.now()/90+i)*.03;this.arms[i].rotation.x=lerp(this.arms[i].rotation.x,cg.ax+w,k);this.arms[i].rotation.z=lerp(this.arms[i].rotation.z,sd*cg.az,k);this.elbows[i].rotation.x=lerp(this.elbows[i].rotation.x,cg.ex,k);}   // mains croisées sur la nuque
           else{this.arms[i].rotation.x=lerp(this.arms[i].rotation.x,.15,k);this.arms[i].rotation.z=lerp(this.arms[i].rotation.z,sd*.05,k);this.elbows[i].rotation.x=lerp(this.elbows[i].rotation.x,-.05,k);}   // bras inerte, tendon tranché
           continue;}
         this.arms[i].rotation.x=lerp(this.arms[i].rotation.x,-.35,k);this.elbows[i].rotation.x=lerp(this.elbows[i].rotation.x,-.5,k);}
-      this.body.rotation.x=lerp(this.body.rotation.x,cd?CROC_G.bx:.4,k);if(cd)this.headG.rotation.x=lerp(this.headG.rotation.x,CROC_G.hx,k);
+      this.body.rotation.x=lerp(this.body.rotation.x,cd?cg.bx:.4,k);if(cd)this.headG.rotation.x=lerp(this.headG.rotation.x,cg.hx,k);
       if(this.state==='attack')this.state='walk';
       if(this.state==='kick'){this.state='walk';if(this.kSpin)this.root.rotation.y=this.kBase;}
       if(this.state==='stomp')this.endStomp();
@@ -3546,11 +3547,11 @@ class Titan{
   eyePos(out){const eb=this.eyeballs;if(eb&&eb.length){out.set(0,0,0);for(const e of eb)out.add(e.getWorldPosition(_eyT));return out.multiplyScalar(1/eb.length);}   // entre les deux yeux
     this.headG.getWorldPosition(out);out.x+=Math.sin(this.root.rotation.y)*.8*this.s;out.z+=Math.cos(this.root.rotation.y)*.8*this.s;return out;}
   // tendon tranché derrière le genou : il tombe à genoux (la nuque est à portée), le temps que ça se répare
-  cutTendon(i){if(this.state==='dead'||this.tend[i]>0||this.sev.leg[i]>0)return;const two=this.tend[1-i]>0,d=this.type==='croc'?6:this.cfg.boss?2.2:two?7:5;this.tend[i]=d;this.stagger=Math.max(this.stagger,d);
+  cutTendon(i){if(this.state==='dead'||this.tend[i]>0||this.sev.leg[i]>0)return;const two=this.tend[1-i]>0,d=GUARD_BOSS[this.type]&&!this.army?6:this.cfg.boss?2.2:two?7:5;this.tend[i]=d;this.stagger=Math.max(this.stagger,d);
     const kp=this.knees[i].getWorldPosition(new V3());spray(kp,tD.subVectors(kp,player.center).setY(.4).normalize().clone(),14,9,.5,Math.min(1,.3+this.s*.15));steamBurst(kp,2,this.s*.4);sfx.hit();popNum(kp,'Tendon','');
     feed(two?'Tendons tranchés : il ne se relève plus de sitôt':'Tendon tranché : le titan tombe à genoux','gold');addStyle('Tendon',.35);addXP(4);carnetEv('tendon');}
   // yeux tranchés : aveuglé quelques secondes, il frappe au hasard et se frotte les yeux
-  blindEyes(){if(this.state==='dead')return;const boss=!!this.cfg.boss,cr=this.type==='croc';this.blindT=cr?6:boss?3:7.5;this.rubT=cr?0:boss?1:2.2;this.flailT=.9;this.blindDir=this.root.rotation.y;this.stagger=Math.max(this.stagger,cr?6:.6);   /* le Croc aveuglé se recroqueville à genoux, les mains sur la nuque */
+  blindEyes(){if(this.state==='dead')return;const boss=!!this.cfg.boss,cr=!!GUARD_BOSS[this.type]&&!this.army;this.blindT=cr?6:boss?3:7.5;this.rubT=cr?0:boss?1:2.2;this.flailT=.9;this.blindDir=this.root.rotation.y;this.stagger=Math.max(this.stagger,cr?6:.6);   /* le Croc aveuglé se recroqueville à genoux, les mains sur la nuque */
     const E=this.eyePos(new V3());slashBlood(E,this.s*.5,false);steamBurst(E,2,this.s*.35);sfx.hit();popNum(E,'Aveuglé','');
     feed('Yeux tranchés : il frappe à l\'aveugle','gold');addStyle('Aveuglé',.35);addXP(4);carnetEv('blind');}
   hurt(dmg){
@@ -3707,7 +3708,7 @@ function bladeHit(range,mult,kind){if(gameMode==='pvp')return pvMyMelee(range,mu
     if(t.state==='dead')continue;
     const np=t.nape.getWorldPosition(tA);
     if(np.distanceTo(pc)<range+1.05*t.s){
-      if(t.type==='croc'&&crocGuarding(t)){let bi=-1,bd2=1e9;for(let i=0;i<2;i++){if(!crocArmFree(t,i))continue;const d=t.elbows[i].getWorldPosition(tC).distanceTo(pc);if(d<bd2){bd2=d;bi=i;}}   /* les mains couvrent la nuque : la lame tranche le tendon du bras le plus proche */
+      if(crocGuarding(t)){let bi=-1,bd2=1e9;for(let i=0;i<2;i++){if(!crocArmFree(t,i))continue;const d=t.elbows[i].getWorldPosition(tC).distanceTo(pc);if(d<bd2){bd2=d;bi=i;}}   /* les mains couvrent la nuque : la lame tranche le tendon du bras le plus proche */
         if(bi>=0){t.cutArmTendon(bi);if(kind!=='spin'&&kind!=='charge'&&kind!=='spiral')wearBlades(CFG.bladeWearLimb);any=true;continue;}}
       if(isBehind(t,np,pc)){const perf=elanK()>=.9&&kind!=='spiral';t.hurt(ST.dmg*mult*spf*(perf?1.25:1));if(perf){addStyle('Coupe parfaite',.45);elanFlash();carnetEv('perfect');}   /* coupe parfaite : nuque tranchée à pleine vitesse */if(kind!=='spin'&&kind!=='charge'&&kind!=='spiral')wearBlades(CFG.bladeWearNape);any=true;continue;}   /* tourbillon et coupe chargée : leur coût fixe remplace l'usure */
       else if(kind==='slash')toast('De face ! Passe derrière pour viser la nuque');
@@ -3718,7 +3719,7 @@ function bladeHit(range,mult,kind){if(gameMode==='pvp')return pvMyMelee(range,mu
     let tnd=false;if(best&&best.userData.limb==='leg'&&t.type!=='rumble'){const li=t.legs.findIndex(h=>isDesc(best,h));   // derrière le genou : le tendon
       if(li>=0&&!(t.tend[li]>0)&&!(t.sev.leg[li]>0)&&t.knees[li].visible){const kp=t.knees[li].getWorldPosition(tC),fx=Math.sin(t.root.rotation.y),fz=Math.cos(t.root.rotation.y);
         if(kp.distanceTo(pc)<range+1.1*t.s&&(pc.x-kp.x)*fx+(pc.z-kp.z)*fz<-.3*t.s){t.cutTendon(li);tnd=true;}}}
-    if(best&&best.userData.limb==='arm'&&t.type==='croc'&&crocDown(t)){let g=best.parent;while(g&&g.userData.side===undefined)g=g.parent;const ai=(g?g.userData.side:1)>0?1:0;if(crocArmFree(t,ai)){t.cutArmTendon(ai);if(kind!=='spin'&&kind!=='charge'&&kind!=='spiral')wearBlades(CFG.bladeWearLimb);any=true;continue;}}   /* Croc immobilisé : le bras se tranche facilement */
+    if(best&&best.userData.limb==='arm'&&crocDown(t)){let g=best.parent;while(g&&g.userData.side===undefined)g=g.parent;const ai=(g?g.userData.side:1)>0?1:0;if(crocArmFree(t,ai)){t.cutArmTendon(ai);if(kind!=='spin'&&kind!=='charge'&&kind!=='spiral')wearBlades(CFG.bladeWearLimb);any=true;continue;}}   /* Croc immobilisé : le bras se tranche facilement */
     if(best){t.hitLimb(best,ST.dmg*mult*spf*ST.limbMult*(tnd?.5:1));if(kind!=='spin'&&kind!=='charge'&&kind!=='spiral')wearBlades(CFG.bladeWearLimb);any=true;}
   }
   return any;
@@ -4057,7 +4058,7 @@ addEventListener('keydown',e=>{
     case'KeyE':if(HAS('pivot'))fireHook(hooks[1]);else lockedMsg('pivot');break;
     case'KeyC':trick('flip');break;
     case'KeyX':trick('roll');break;
-    case'KeyF':if(grab){if(HAS('tourbillon'))escapeGrab();else struggleGrab();}else if(mk1Pending())pullCords();else spinAttack();break;   // lances Mk1 en place : F tire le câble
+    case'KeyF':if(grab){if(HAS('tourbillon'))escapeGrab();else struggleGrab();}else spinAttack();break;   // F ne fait jamais exploser les lances : seul le clic gauche maintenu le fait
     case'KeyB':toggleWeapon();break;
     case'Digit1':setCamMode('libre');break;case'Digit2':setCamMode('lock');break;case'Digit3':setCamMode('auto');break;case'Digit4':setCamMode('fps');break;case'Digit5':setCamMode('cine');break;   // rangée de chiffres : même choix de caméra que le pavé numérique
     case'KeyV':cycleCam();break;
@@ -5041,9 +5042,9 @@ const CFG={
   spearSpeed:95,         // vitesse de la lance foudroyante (m/s)
   spearGravity:5,        // chute de la lance en vol
   spearFuse:.55,         // délai entre l'impact et la détonation (s)
-  spearDamage:420,       // dégâts de base sur la nuque au centre de l'explosion
+  spearDamage:483,   /* +15 % */       // dégâts de base sur la nuque au centre de l'explosion
   spearNapeMult:1.6,     // bonus quand la lance explose sur la nuque
-  spearLimbDamage:900,   // dégâts sur un membre proche de l'explosion
+  spearLimbDamage:1035,   /* +15 % */   // dégâts sur un membre proche de l'explosion
   spearRadius:7,         // rayon d'explosion (m)
   spearSelfRadius:6.5,   // trop près : le soldat est blessé
   spearCooldown:.9,      // temps entre deux tirs (s)
@@ -5061,7 +5062,7 @@ const EQUIP_NAMES={classic:'Équipement classique',modern:'Équipement modernis�
 function spearsOK(){if(gameMode==='pvp')return PV.cfg.spears!==false;if(gameMode==='train')return !!TRN.cfg.spears;if(gameMode==='tuto')return false;return gameMode==='rpg'?HAS('lances1'):gameMode==='normal'?wave>10:(save.modern||gameMode==='boss'||gameMode==='final'||gameMode==='pvp');}
 // jeu normal : 2 lances après la vague 10, 2 de plus toutes les 10 vagues, jusqu'à 6 ; les autres modes en ont toujours 6
 function spearMax(){return gameMode==='train'?(TRN.cfg.spears?8:0):gameMode==='tuto'?0:gameMode==='rpg'?(!HAS('lances1')?0:HAS('lances3')?8:HAS('lances2')?4:2):gameMode==='normal'?(wave>30?8:wave>20?4:wave>10?2:0):gameMode==='pvp'?4:gameMode==='boss'?8:CFG.spearCount;}   /* vague de boss : 8 lances */   /* PvP : lances Mk2 (4) */
-// Mk1 : deux actionneurs, lances reliées aux poignées par un câble (F pour tirer) ; Mk2 : un actionneur, la lance explose seule une fois plantée
+// Mk1 : deux actionneurs, lances reliées aux poignées par un câble (clic gauche maintenu pour tirer) ; Mk2 : un actionneur, la lance explose seule une fois plantée
 function spearMk(){return gameMode==='rpg'?(HAS('lances2')?2:1):gameMode==='normal'?(wave>20?2:1):2;}
 
 /* ----- usure et remplacement des lames ----- */
@@ -5254,6 +5255,9 @@ function fireSpear(tg){
   if(!tgt&&save.aimAssist!==false){const eye=camera.position,aim=aimDir(0,0,new V3());let ba=1e9;   // aide à la visée (désactivable) : la lance file vers la nuque, ou l'adversaire, le plus proche du viseur
     for(const t of titans){if(t.state==='dead'||t.gone||!t.nape)continue;const to=t.nape.getWorldPosition(new V3()).sub(eye),d=to.length();if(d>CFG.aimRange||d<4)continue;const a=to.normalize().angleTo(aim);if(a<Math.max(.06,Math.atan(2.4/d))&&a<ba){ba=a;tgt={t};}}
     if(gameMode==='pvp')for(const f of PV.enemiesOf(PV.myTeam())){if(f.kind==='me'||!f.center)continue;const to=f.center.clone().sub(eye),d=to.length();if(d>CFG.aimRange||d<2)continue;const a=to.normalize().angleTo(aim);if(a<Math.max(.045,Math.atan(1.3/d))&&a<ba&&pvLos(eye,f.center)){ba=a;tgt=null;ast=f;}}}
+  if(mk1){const eye=camera.position,ad=aimDir(0,0,new V3());_sr.set(eye,ad);_sr.far=MK1_RANGE+60;const h=_sr.intersectObjects(hookables,false).find(x=>shown(x.object));   /* Mk1 : le câble fait MK1_RANGE m, on ne tire que sur ce qui est à portée */
+    const dT=tgt?tgt.t.nape.getWorldPosition(new V3()).distanceTo(p.center):h?h.point.distanceTo(p.center):1e9;
+    if(dT>MK1_RANGE){toastT=0;toast(dT>1e8?'Rien à portée du câble ('+MK1_RANGE+' m)':'Trop loin : le câble des lances Mk1 fait '+MK1_RANGE+' m');return;}}
   spearCd=CFG.spearCooldown;p.spears-=n;applyEquipVisual();let dir=null;
   for(let i=0;i<n;i++){const side=mk1?(p.mk1Side=p.mk1Side==='R'?'L':'R'):'R',bg=bladeGroups[side],hand=bg?bg.getWorldPosition(new V3()):spearOrigin(new V3());dir=tgt?solveAim(hand,tgt,new V3()):ast?aimPt(hand,ast.center,ast.vel,new V3()):aimDir(0,0,new V3());
     const m=mk1?spearMesh():mk2Proj();m.position.copy(hand).addScaledVector(dir,.6);scene.add(m);   // Mk2 : lance fine, comme celles portées aux avant-bras
@@ -5262,20 +5266,29 @@ function fireSpear(tg){
     spears.push(s);
     for(let j=0;j<10;j++)emit(m.position,rv(4).clone().addScaledVector(dir,-6),.6,.5,2,0xdedad2,.5);for(let j=0;j<8;j++)emit(hand,rv(5).clone().addScaledVector(dir,4),.12,.25,.7,j%2?0xffd080:0xff8a30,.95);}
   p.vel.addScaledVector(dir,-3*n);shake=Math.max(shake,.25);sfx.launch();p.spearT=.45;for(const g of fpRig.children)if(g.userData.sd===1||n===2)g.userData.kick=.2;
-  if(mk1&&!save.mk1Tip2){save.mk1Tip2=1;persist();setTimeout(()=>{toastT=0;toast('Lances Mk1 : maintiens le clic gauche un instant (ou F) pour tirer les câbles et les faire exploser');},600);}
+  if(mk1&&!save.mk1Tip3){save.mk1Tip3=1;persist();setTimeout(()=>{toastT=0;toast('Lances Mk1 : un clic plante une lance, maintiens le clic gauche pour faire exploser celles plantées dans un titan');},600);}
 }
-function mk1Pending(){return spears.some(s=>s.mk1);}
-function pullCords(){let n=0;for(const s of spears){if(!s.mk1)continue;if(s.stuck){s.mk1=false;s.fuse=.04;n++;}else s.pull=true;}   // on tire sur le câble : les lances plantées explosent, celles en vol exploseront à l'impact
+const MK1_RANGE=60;   /* longueur du câble des lances Mk1 (m) */
+function mk1Armed(s){return s.mk1&&s.stuck&&s.stuck.obj&&s.stuck.obj.userData.titan&&s.cable;}   /* plantée dans un titan et toujours reliée au soldat */
+function mk1Pending(){return spears.some(mk1Armed);}
+function mk1Inert(s,msg){s.mk1=false;s.inert=true;s.fuse=1e9;s.dead=s.t+6;if(s.cable){scene.remove(s.cable);s.cable.geometry.dispose();s.cable=null;}if(msg){toastT=0;toast(msg);}}   /* câble décroché : la lance ne peut plus exploser */
+function pullCords(){let n=0;for(const s of spears){if(!mk1Armed(s))continue;s.mk1=false;s.fuse=.04;n++;}   // on tire sur le câble : seules les lances plantées dans un titan explosent (celles en vol ne sont jamais déclenchées)
   sfx.burst(900,.12,.3,'bandpass',2);sfx.burst(2600,.06,.2,'highpass',1);for(const g of fpRig.children)if(g.userData.sd!==undefined)g.userData.kick=.15;return n;}
 function dropSpear(i){const s=spears[i];if(s.cable){scene.remove(s.cable);s.cable.geometry.dispose();}scene.remove(s.m);spears.splice(i,1);}
 const _sr=new THREE.Raycaster(),_zf=new V3(0,0,1);
 function updSpears(dt){
   spearCd-=dt;
   for(let i=spears.length-1;i>=0;i--){const s=spears[i];s.t+=dt;
+    if(s.inert){if(s.t>s.dead)dropSpear(i);else if(s.stuck&&s.stuck.obj)s.m.position.copy(s.stuck.obj.localToWorld(s.stuck.local.clone()));continue;}   /* lance ratée : reste plantée sans exploser, puis disparaît */
     if(s.cable){const bg=bladeGroups[s.side]||bladeGroups.R,h=bg?bg.getWorldPosition(tD):player.center,a=s.cable.geometry.attributes.position;a.setXYZ(0,h.x,h.y,h.z);a.setXYZ(1,s.m.position.x,s.m.position.y,s.m.position.z);a.needsUpdate=true;
-      if(s.mk1&&h.distanceTo(s.m.position)>95){s.mk1=false;s.fuse=.04;}}   // trop loin : le câble se tend et déclenche la lance
+      if(s.mk1&&!s.stuck&&h.distanceTo(s.m.position)>MK1_RANGE){mk1Inert(s,'Câble à bout : la lance Mk1 est perdue');}}   // en vol, le câble arrive à bout
+    if(s.inert)continue;
     if(s.stuck){const o=s.stuck.obj,t=o&&o.userData.titan;
-      if(t&&(t.gone||t.state==='dead'))s.fuse=0;else if(o)s.m.position.copy(o.localToWorld(s.stuck.local.clone()));
+      if(t&&(t.gone||t.state==='dead')){if(s.mk1){mk1Inert(s);continue;}s.fuse=0;}else if(o)s.m.position.copy(o.localToWorld(s.stuck.local.clone()));
+      if(s.mk1&&s.cable&&t){const pc=player.center,d=pc.distanceTo(s.m.position),L=s.len||(s.len=Math.min(MK1_RANGE,d+6));   /* câble relié : petite résistance quand on s'éloigne au-delà de sa longueur */
+        if(d>L){const n=tA.subVectors(s.m.position,pc).divideScalar(d),out=-player.vel.dot(n);if(out>0)player.vel.addScaledVector(n,out*(1-Math.exp(-4*dt)));player.vel.addScaledVector(n,Math.min(30,(d-L)*5)*dt);if(d-L>1.5&&Math.random()<dt*6)sfx.burst(1400,.05,.08,'bandpass',3);}
+        if(d>L+25)mk1Inert(s,'Le câble a cédé');}
+      if(s.inert)continue;
       if(!s.mk1)s.fuse-=dt;if(Math.random()<dt*20)emit(s.m.position,rv(1).clone(),.3,.15,.5,s.mk1?0xffe2a0:0xffb060,.8);
       if(!s.mk1&&s.fuse<=0){spearExplode(s.m.position.clone(),t||null);dropSpear(i);}continue;}
     const prev=s.m.position.clone();s.v.y-=CFG.spearGravity*dt;s.m.position.addScaledVector(s.v,dt);
@@ -5284,8 +5297,8 @@ function updSpears(dt){
     if(Math.random()<.8)emit(prev,rv(1).clone(),.6,.25,1.1,0xd8d4cc,.45);emit(prev,rv(.5).clone(),.12,.3,.08,0xffb050,.9);
     const seg=tC.subVectors(s.m.position,prev),L=seg.length();_sr.set(prev,seg.divideScalar(L||1));_sr.far=L+.3;
     const hit=_sr.intersectObjects(hookables,false).find(h=>shown(h.object));
-    if(hit){s.m.position.copy(hit.point);s.stuck={obj:hit.object,local:hit.object.worldToLocal(hit.point.clone())};s.fuse=s.pull?.04:CFG.spearFuse;if(s.pull)s.mk1=false;sfx.stick();continue;}
-    if(s.t>CFG.spearLife||s.m.position.y<groundY(s.m.position.x,s.m.position.z)){if(s.mk1&&!s.pull){s.stuck={obj:null};s.m.position.y=Math.max(s.m.position.y,groundY(s.m.position.x,s.m.position.z));continue;}spearExplode(s.m.position.clone(),null);dropSpear(i);}
+    if(hit){s.m.position.copy(hit.point);s.stuck={obj:hit.object,local:hit.object.worldToLocal(hit.point.clone())};s.fuse=CFG.spearFuse;sfx.stick();if(s.mk1&&!hit.object.userData.titan)mk1Inert(s);continue;}   /* Mk1 : seule une lance plantée dans un titan reste reliée et peut exploser */
+    if(s.t>CFG.spearLife||s.m.position.y<groundY(s.m.position.x,s.m.position.z)){if(s.mk1){s.stuck={obj:null};s.m.position.y=Math.max(s.m.position.y,groundY(s.m.position.x,s.m.position.z));mk1Inert(s);continue;}spearExplode(s.m.position.clone(),null);dropSpear(i);}
   }
   for(let i=explFx.length-1;i>=0;i--){const f=explFx[i];f.t+=dt;const k=f.t/f.life;
     if(f.ring){f.ring.scale.setScalar(.5+f.R*2.2*ease(Math.min(1,k)));f.ring.material.opacity=.8*(1-k);if(f.flat)f.ring.rotation.set(-Math.PI/2,0,0);else f.ring.quaternion.copy(camera.quaternion);}
@@ -5400,7 +5413,7 @@ const _ao=new V3(),_ad=new V3(),_ap=new V3(),_av=new V3(),_at=new V3();
 function spearMode(){return spearsOK()&&save.weapon==='spear';}
 function spearOrigin(out){return bladeGroups.R?bladeGroups.R.getWorldPosition(out):out.copy(player.center);}
 function beginAim(){const p=player;if(grab||spAim||state!=='play')return;if(bladesAway()){drawBlades();return;}
-  if(p.spears<=0&&!(spearMk()===1&&spears.some(s=>s.mk1&&s.stuck))){toast('Plus de lances : trouve une bouteille pour te réapprovisionner');return;}   /* plus de lances mais des lances Mk1 plantées : on peut encore maintenir pour les faire exploser */
+  if(p.spears<=0&&!(spearMk()===1&&mk1Pending())){toast('Plus de lances : trouve une bouteille pour te réapprovisionner');return;}   /* plus de lances mais des lances Mk1 plantées : on peut encore maintenir pour les faire exploser */
   spAim={t:0,tg:null,lk:0};sfx.aimIn();}
 function cancelAim(){spAim=null;aimLine.visible=false;const L=$('aimL'),V=$('aimV');if(L)L.hidden=true;if(V)V.hidden=true;}
 function releaseAim(){const a=spAim;cancelAim();if(a&&state==='play'&&spearMode()){if(spearCd<.35)spearCd=0;fireSpear(a.tg);}}
@@ -5422,10 +5435,10 @@ function solveAim(from,tg,out){const t=tg.t,v=CFG.spearSpeed,g=CFG.spearGravity,
   return out.normalize();}
 // lances Mk1 plantées : maintenir le clic gauche 1 seconde (ou F) tire les câbles ; anneau de progression et rappel sous le viseur
 const MK1H={t:0,ring:document.createElement('div'),hint:document.createElement('div')};MK1H.ring.style.cssText=chgRing.style.cssText;MK1H.ring.style.opacity=0;$('crossW').appendChild(MK1H.ring);
-MK1H.hint.className='mk1Hint';MK1H.hint.textContent='Maintiens le clic gauche (ou F) : faire exploser';$('crossW').appendChild(MK1H.hint);
+MK1H.hint.className='mk1Hint';MK1H.hint.textContent='Maintiens le clic gauche : faire exploser';$('crossW').appendChild(MK1H.hint);
 function updSpearAim(dt,rdt){const p=player;p.spearT=Math.max(0,(p.spearT||0)-dt);spearCd-=rdt-dt; // recharge en temps réel, même au ralenti
   const sp=spearMode(),ready=sp&&p.spears>0&&spearCd<.3;
-  {const st=spearMk()===1&&spears.some(s=>s.mk1&&s.stuck),show=sp&&state==='play'&&spears.some(s=>s.mk1);MK1H.hint.style.opacity=show?1:0;
+  {const st=spearMk()===1&&mk1Pending(),show=sp&&state==='play'&&st;MK1H.hint.style.opacity=show?1:0;
     if(spAim&&st&&sp){MK1H.t+=rdt;const HT=1/3;MK1H.ring.style.opacity=1;MK1H.ring.style.background=`conic-gradient(rgba(255,150,70,.95) ${Math.min(1,MK1H.t/HT)*360}deg,rgba(255,255,255,.14) 0)`;   /* maintien d'un tiers de seconde */
       if(MK1H.t>=HT){MK1H.t=0;cancelAim();pullCords();MK1H.ring.style.opacity=0;}}
     else{MK1H.t=0;MK1H.ring.style.opacity=0;}}

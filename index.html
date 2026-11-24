@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124102910">
+<meta name="build" content="20261124105531">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -475,7 +475,7 @@ const SPECS={
   tempete:{name:'Tempête',desc:'Tourbillon ×2 et le combo monte 50 % plus vite.'}
 };
 const STATDEFS=[
-  {k:'speed',name:'Vitesse',desc:'Traction, vitesse max et boost : de la recrue hésitante au vétéran d\'élite'},
+  {k:'speed',name:'Vitesse',desc:'Traction, vitesse max et boost : de la recrue hésitante au vétéran d\'élite. Au sol, chaque point accélère aussi la course de 5 % (la marche ne change presque pas)'},
   {k:'power',name:'Puissance',desc:'+28 % de dégâts de lame par point'},
   {k:'gas',name:'Gestion du gaz',desc:'Tu gaspilles moins de gaz : environ -10 % de consommation par point'},
   {k:'vit',name:'Vitalité',desc:'+25 PV max ; la régénération suit : la barre se remplit toujours aussi vite'},
@@ -1798,8 +1798,8 @@ function animPlayer(dt){
       pose('thL',-s*a);pose('thR',s*a);
       pose('shL',.2+Math.max(0,c)*1.2*a);pose('shR',.2+Math.max(0,-c)*1.2*a);
       if(wr)armsPose(.9,.4,-.3);
-      else if(arm){const C=CARRY,N=C.n,stl=(save.gfx&&save.gfx.runStyle)||'auto',wv=p.walkV||5.5,rv=p.runV||9,acc=clamp((hs-wv*1.1)/Math.max(.5,rv*.95-wv*1.1),0,1),base=stl==='ninja'?1:stl==='real'?0:clamp(((p.runK||1)-1.1)/.3,0,1);   // course lames en main : réaliste à faible vitesse, de plus en plus « ninja » avec les améliorations de vitesse
-        p.ninK=lerp(p.ninK||0,base*acc,1-Math.exp(-2.5*dt));const e=p.ninK*p.ninK*(3-2*p.ninK),bob=Math.abs(c),k=Math.min(1,hs/10);p.bAlT=1;p.bNin=e;   // transition progressive, jamais brusque
+      else if(arm){const C=CARRY,N=C.n,stl=(save.gfx&&save.gfx.runStyle)||'auto',wv=p.walkV||5.5,rv=p.runV||9,acc=clamp((hs-wv*1.1)/Math.max(.5,rv*.95-wv*1.1),0,1),au=stl!=='ninja'&&stl!=='real',base=stl==='ninja'?1:stl==='real'?0:(p.autoNin=hs>(p.autoNin?11.6:12.4)?1:0);   // course lames en main : garde basse ou ninja, jamais un mélange ; en automatique, bascule franche passé 12,6 m/s (vers 8 points de vitesse)
+        p.ninK=lerp(p.ninK||0,base*(acc>.04?1:0),1-Math.exp(-(au?20:7)*dt));p.ninU=lerp(p.ninU||0,base?(au?clamp((hs-12.4)/5.6,0,1):acc*(.4+.6*clamp(((p.runK||1)-1.4)/.6,0,1))):0,1-Math.exp(-3*dt));const e=p.ninK*p.ninK*(3-2*p.ninK),bob=Math.abs(c),k=Math.min(1,hs/10);p.bAlT=1;p.bNin=e;   // ninja : lames d'abord assez basses, de plus en plus hautes avec la vitesse et les améliorations
         const lean=lerp(C.rsp+k*.1,N.sp,e);pose('spine',lean+bob*.03,s*lerp(.11,.08,e));pose('head',-lean*.7);   // torse : légère rotation gauche-droite à chaque foulée
         const uu=lerp(C.ru,N.u,e),zz=lerp(C.rz,N.z,e),ff=lerp(C.rf,N.f,e),sw=lerp(C.rs,N.s,e)*a;   // bras en V ouvert, un peu vers l'arrière ; petite oscillation avant-arrière qui suit l'épaule
         pose('uaL',uu+s*sw,0,-zz-bob*.025);pose('uaR',uu-s*sw,0,zz+bob*.025);pose('faL',ff-bob*.1-Math.max(0,-s)*.05);pose('faR',ff-bob*.1-Math.max(0,s)*.05);}   // coudes qui amortissent le rebond de chaque appui
@@ -2241,16 +2241,18 @@ function kitBlades(){const K=KITS[KIT_CUR];if(K&&!K.bl)K.bl={};
     h.add(bl);bl.position.copy(g.p);bl.quaternion.copy(g.q);bl.userData.qk=g.q;bl.scale.copy(g.s);kitFist(h);}}
 // course ninja : les lames se mettent dans l'axe des avant-bras (comme un poignet qui s'aligne), progressivement
 const _abQ=new THREE.Quaternion(),_abQ2=new THREE.Quaternion(),_abQ3=new THREE.Quaternion(),_abV=new V3(),_abV2=new V3(),_abV3=new V3();
-function alignBlades(dt){const p=player;p.bAl=(p.bAl||0)+((p.bAlT||0)-(p.bAl||0))*(1-Math.exp(-8*Math.min(dt,.05)));alignBladeSet(bladeGroups,vrmBones,gunMode()||spearMode()?0:p.bAl,p.bNin||0,pOri.quaternion);alignGuns();}
+function alignBlades(dt){const p=player;p.bAl=(p.bAl||0)+((p.bAlT||0)-(p.bAl||0))*(1-Math.exp(-8*Math.min(dt,.05)));alignBladeSet(bladeGroups,vrmBones,gunMode()||spearMode()?0:p.bAl,p.bNin||0,pOri.quaternion,p.ninU||0);alignGuns();}
 // pistolets : chaque canon pointe vers le viseur
 function alignGuns(){if(!handGuns.length||!gunMode())return;const aim=aimDir(0,0,new V3());for(const g of handGuns){const bl=g.parent;if(!bl||!g.visible)continue;bl.updateWorldMatrix(true,false);const pq=bl.getWorldQuaternion(new THREE.Quaternion());g.quaternion.copy(pq.invert().multiply(new THREE.Quaternion().setFromUnitVectors(new V3(0,-1,0),aim)));}}
 const _abV4=new V3(),_abV5=new V3(),_abV6=new V3(),_abV7=new V3(),_abV8=new V3();
 // aussi pour les soldats des autres joueurs (poids reçu par le réseau)
-function alignBladeSet(G,BN,w,e=1,oq=null){   // lames : vers l'extérieur et un peu vers l'arrière (course réaliste), dans l'axe des bras (ninja)
+const _abV9=new V3();
+function alignBladeSet(G,BN,w,e=1,oq=null,u=0){   // lames : vers l'extérieur et un peu vers l'arrière (course réaliste), dans l'axe des bras (ninja)
   for(const k of ['L','R']){const bl=G[k],h=BN['h'+k],fa=BN['fa'+k],q0=bl&&bl.userData.qk;if(!bl||!h||!fa||!q0||bl.parent!==h)continue;bl.quaternion.copy(q0);if(w<.01)continue;
     h.updateWorldMatrix(true,false);const hq=h.getWorldQuaternion(_abQ),bd=_abV.set(0,-1,0).applyQuaternion(_abQ2.copy(hq).multiply(q0)),H=h.getWorldPosition(_abV4),fd=_abV2.subVectors(H,fa.getWorldPosition(_abV3)).normalize();let T=fd;
     if(oq&&BN.hips&&e<.999){const F=_abV5.set(0,0,1).applyQuaternion(oq);F.y=0;if(F.lengthSq()<1e-6)F.set(0,0,1);F.normalize();const O=_abV6.subVectors(H,BN.hips.getWorldPosition(_abV3));O.y=0;O.addScaledVector(F,-O.dot(F));if(O.lengthSq()<1e-6)O.set(F.z,0,-F.x);O.normalize();
       const D=_abV7.copy(O).multiplyScalar(.32).addScaledVector(F,.88);D.y-=.26;D.normalize();   /* réaliste : lames vers l'avant, légèrement écartées et un peu vers le bas */const sw=Math.sin(Math.PI*e);T=_abV8.copy(D).multiplyScalar(1-e).addScaledVector(fd,e).addScaledVector(O,sw*1.1);T.y+=sw*.35;T.normalize();}   /* passage de l'avant à l'arrière par l'extérieur : les lames ne piquent jamais vers le sol */
+    if(e>.5){T=_abV9.copy(T);T.y+=lerp(-.3,.85,u)*e;T.normalize();}   /* ninja : lames basses au départ, qui se relèvent avec la vitesse */
     _abQ3.setFromUnitVectors(bd.normalize(),T);_abQ2.identity().slerp(_abQ3,w);bl.quaternion.copy(_abQ.clone().invert().multiply(_abQ2).multiply(_abQ).multiply(q0));}}
 // doigts repliés autour de la poignée (chaque phalange plie vers la paume)
 function kitFist(h){if(h.userData.fist)return;h.userData.fist=1;const dn=new V3(0,-1,0),ax=new V3(),dir=new V3();
@@ -4236,7 +4238,7 @@ $('retryBtn').onclick=()=>{if(gameMode==='pvp'){PV.replay();return;}if(NET.on){i
 /* ================= MENU ================= */
 let resetArm=false;
 let menuTab='up';
-const GFX_DEF=()=>({runStyle:'auto',fps:60,pr:Math.min(window.devicePixelRatio||1,1.5),shadowQ:4096,shadowFar:1024,shaders:0,view:900,blur:true,lines:true,decals:true,grass:'mid',fp:FP_DEF()});
+const GFX_DEF=()=>({runStyle:'real',fps:60,pr:Math.min(window.devicePixelRatio||1,1.5),shadowQ:4096,shadowFar:1024,shaders:0,view:900,blur:true,lines:true,decals:true,grass:'mid',fp:FP_DEF()});
 function applyGfx(){const g=save.gfx;renderer.setPixelRatio(g.pr*(typeof DYN!=='undefined'?DYN.k:1));renderer.setSize(innerWidth,innerHeight);
   if(!(g.shadowQ>=2048))g.shadowQ=2048;const fq=g.shadowFar===undefined?1024:+g.shadowFar,sq=Math.min(g.shadowQ,renderer.capabilities.maxTextureSize||4096),hi=g.shadowQ>=8192,ext=fq?60:hi?150:120,C=sun.shadow.camera;   // avec la carte lointaine, la carte proche se concentre sur 60 m : beaucoup plus fine
   sunFar.castShadow=fq>0;if(fq&&sunFar.shadow.mapSize.x!==fq){sunFar.shadow.mapSize.set(fq,fq);if(sunFar.shadow.map){sunFar.shadow.map.dispose();sunFar.shadow.map=null;}}
@@ -4280,7 +4282,7 @@ function renderMenu(){
     h+=chk('shadows','Ombres',save.shadows)+sel('g_sq','Ombres proches',[[2048,'Basses'],[4096,'Moyennes'],[8192,'Hautes']],g.shadowQ)+sel('g_sf','Ombres lointaines',[[0,'Désactivées'],[1024,'Basses'],[2048,'Moyennes'],[4096,'Hautes']],g.shadowFar===undefined?1024:g.shadowFar)+'</div>';
     h+='<div class="sect">Effets</div><div class="opts">';
     h+=sel('g_grass','Herbe',[['off','Désactivée'],['low','Légère'],['mid','Normale'],['high','Dense']],g.grass||'mid');
-    h+=sel('g_run','Course lames en main',[['auto','Automatique : garde basse, puis ninja avec la vitesse'],['real','Garde basse : lames basses vers l\'avant'],['ninja','Ninja : lames tenues derrière']],g.runStyle||'auto');
+    h+=sel('g_run','Course lames en main',[['real','Garde basse : lames basses vers l\'avant (par défaut)'],['auto','Automatique : garde basse, puis ninja d\'un coup passé une certaine vitesse'],['ninja','Ninja : lames tenues derrière, de plus en plus hautes avec la vitesse']],g.runStyle||'auto');
     h+=chk('g_blur','Flou de mouvement',g.blur)+chk('g_lines','Traits de vitesse',g.lines)+chk('g_decals','Marques de sang au sol et sur les murs',g.decals)+chk('g_chgGlow','Halo d\'écran pendant la coupe chargée',g.chgGlow!==false)+'</div>';
     {const O=FPO(),rng=(id,label,mn,mx,st,val,un)=>`<label for="fp_${id}">${label} <input id="fp_${id}" type="range" min="${mn}" max="${mx}" step="${st}" value="${val}"> <b id="fpv_${id}">${val}${un}</b></label>`;
       h+='<div class="sect">Première personne</div><div class="opts">';
@@ -4379,7 +4381,7 @@ function updPlayer(dt,rdt){
   if(att>0&&!p.wall)p.vel.y+=GRAV*.25*dt;
   p.sprint=false;
   if(p.wall){}
-  else if(p.grounded&&att===0){const sk=1+.025*save.stats.speed,sh=!!(keys.ShiftLeft||keys.ShiftRight)&&wl>0,run=(sh?9:5.5)*sk,k=1-Math.exp(-10*dt);p.walkV=5.5*sk;p.runV=9*sk;p.runK=sk;   /* Vitesse : +2,5 % par point au sol, environ 2,5 fois moins que dans les airs */p.sprint=sh;p.vel.x=lerp(p.vel.x,wx*run,k);p.vel.z=lerp(p.vel.z,wz*run,k);}   // au sol : marche rapide, ou course en maintenant Shift (avec ou sans gaz)
+  else if(p.grounded&&att===0){const sk=1+.0025*save.stats.speed,sr=1+.05*save.stats.speed,sh=!!(keys.ShiftLeft||keys.ShiftRight)&&wl>0,run=sh?9*sr:5.5*sk,k=1-Math.exp(-10*dt);p.walkV=5.5*sk;p.runV=9*sr;p.runK=sr;   /* Vitesse au sol : la course (avec ou sans gaz) gagne 5 % par point, deux fois plus qu'avant ; la marche presque rien (0,25 %) */p.sprint=sh;p.vel.x=lerp(p.vel.x,wx*run,k);p.vel.z=lerp(p.vel.z,wz*run,k);}   // au sol : marche rapide, ou course en maintenant Shift (avec ou sans gaz)
   else{const ac=att>0?24:16;p.vel.x+=wx*ac*dt;p.vel.z+=wz*ac*dt;}
   p.boosting=false;
   if(keys.Space&&!p.grounded&&!p.wall&&p.gas>0){drawIfAway();p.vel.addScaledVector(fwd,ST.boost*dt);p.vel.y+=ST.boost*.2*dt;gasUse+=4.7;p.boosting=true;p.boostTime+=dt;if(p.boostTime>.5)tut(1);}
@@ -7000,7 +7002,7 @@ var NET={mode:'normal',on:false,host:false,lobby:false,started:false,welcomed:fa
   // ----- état des soldats -----
   myState(){const a=new Float32Array(N_PSN),p=player,q=pOri.quaternion,r=pTrick.rotation;a[0]=p.pos.x;a[1]=p.pos.y;a[2]=p.pos.z;a[3]=p.vel.x;a[4]=p.vel.y;a[5]=p.vel.z;a[6]=q.x;a[7]=q.y;a[8]=q.z;a[9]=q.w;a[10]=pLean.rotation.x;a[11]=r.x;a[12]=r.y;a[13]=r.z;
     for(let i=0;i<10;i++){const e=J[N_JN[i]].rotation;a[14+i*3]=e.x;a[15+i*3]=e.y;a[16+i*3]=e.z;}
-    a[44]=(p.grounded?1:0)|(p.spinT>0?2:0)|(p.slashT>0?4:0)|(this.dead?8:0)|(spAim?16:0)|(p.boosting?32:0)|(spearMode()?64:0)|(timeScale<.9?128:0)|(bladesShown()?0:256)|(Math.round(clamp(p.bAl||0,0,1)*7)<<9)|(Math.round(clamp(p.bNin||0,0,1)*7)<<12)|(gearM&&gearM.visible?32768:0)|(Math.min(15,p.spears|0)<<16)|(gunMode()?1048576:0)|(p.saluteT>0?2097152:0);   /* 32768 : équipement Mk2 ; bits 16-19 : lances portées ; 1048576 : pistolets */a[45]=Math.max(0,p.hp);a[46]=ST.hpMax;a[47]=this.dead||state!=='play'?5:p.inv;
+    a[44]=(p.grounded?1:0)|(p.spinT>0?2:0)|(p.slashT>0?4:0)|(this.dead?8:0)|(spAim?16:0)|(p.boosting?32:0)|(spearMode()?64:0)|(timeScale<.9?128:0)|(bladesShown()?0:256)|(Math.round(clamp(p.bAl||0,0,1)*7)<<9)|(((p.bNin||0)>.5?1+Math.round(clamp(p.ninU||0,0,1)*6):0)<<12)|(gearM&&gearM.visible?32768:0)|(Math.min(15,p.spears|0)<<16)|(gunMode()?1048576:0)|(p.saluteT>0?2097152:0);   /* 32768 : équipement Mk2 ; bits 16-19 : lances portées ; 1048576 : pistolets */a[45]=Math.max(0,p.hp);a[46]=ST.hpMax;a[47]=this.dead||state!=='play'?5:p.inv;
     for(let i=0;i<2;i++){const h=hooks[i],v=h.state==='att'?h.point:h.tip;a[48+i*4]=h.state==='none'?0:h.state==='att'?1:2;a[49+i*4]=v.x;a[50+i*4]=v.y;a[51+i*4]=v.z;}a[56]=this.deadT;a[57]=save.level;a[58]=gameMode==='pvp'?PV.myTeam():0;return a;},
   pState(R,a){R.prev=R.cur;R.cur={a,at:performance.now()};R.pos.set(a[0],a[1],a[2]);R.center.set(a[0],a[1]+1,a[2]);R.vel.set(a[3],a[4],a[5]);const f=a[44]|0;R.fl=f;R.grounded=!!(f&1);R.spinT=f&2?1:0;R.dead=!!(f&8);R.hp=a[45];R.hpMax=a[46]||100;R.inv=a[47];R.deadT=a[56];R.lv=a[57]|0;},
   remotes(){const now=performance.now(),W=innerWidth,H=innerHeight;for(const R of this.rem.values())this.drawR(R,now,W,H);},
@@ -7010,7 +7012,7 @@ var NET={mode:'normal',on:false,host:false,lobby:false,started:false,welcomed:fa
       av.g.position.set(L(0),L(1),L(2));_nq1.set(A[6],A[7],A[8],A[9]);_nq2.set(B[6],B[7],B[8],B[9]);av.ori.quaternion.copy(_nq1).slerp(_nq2,Math.min(1,u)).normalize();av.lean.rotation.x=L(10);av.trick.rotation.set(L(11),L(12),L(13));av.trick.position.y=dead?-.8:0;
       for(let i=0;i<10;i++)av.j[N_JN[i]].rotation.set(L(14+i*3),L(15+i*3),L(16+i*3));
       if(av.cape)av.cape.rotation.x=.06+clamp(Math.hypot(B[3],B[4],B[5])/28,0,1)*1.15+Math.sin(now/1000*9+R.id)*.05*clamp(Math.hypot(B[3],B[4],B[5])/20,0,1);
-      {const sh=!!(f&256);if(av.full){netSyncInst(av);av.salW=(av.salW||0)+((f&2097152?1:0)-(av.salW||0))*Math.min(1,(R.sdt||1/60)*7);applyFist(av.fist,av.salW,av.fistSt);   /* salut des autres joueurs : poing fermé */if(av.bg){av.bAl=lerp(av.bAl||0,((f>>9)&7)/7,.25);av.bNin=lerp(av.bNin||0,((f>>12)&7)/7,.25);alignBladeSet(av.bg,av.B,av.bAl,av.bNin,av.ori.quaternion);}
+      {const sh=!!(f&256);if(av.full){netSyncInst(av);av.salW=(av.salW||0)+((f&2097152?1:0)-(av.salW||0))*Math.min(1,(R.sdt||1/60)*7);applyFist(av.fist,av.salW,av.fistSt);   /* salut des autres joueurs : poing fermé */if(av.bg){av.bAl=lerp(av.bAl||0,((f>>9)&7)/7,.25);{const v=(f>>12)&7;av.bNin=lerp(av.bNin||0,v?1:0,.25);av.ninU=lerp(av.ninU||0,v?(v-1)/6:0,.2);}alignBladeSet(av.bg,av.B,av.bAl,av.bNin,av.ori.quaternion,av.ninU);}
         if(av.rack){const m2=!!(f&32768),n=(f>>16)&15;if(av.gearM)av.gearM.visible=m2;for(const m of av.gearMAtt)m.visible=m2;if(av.scab)for(const o of av.scab)o.visible=!m2;if(av.tanks)for(const o of av.tanks)o.visible=!m2;RACK_ORD.forEach((ix,rk)=>{const s=av.rack[ix];if(!s)return;s.visible=m2&&rk<n;if(s.parent)s.parent.visible=m2;});}   /* équipement Mk2 des autres joueurs */   /* lames de course ninja dans l'axe des bras, comme chez le joueur */const gn=!!(f&1048576);const s2=!!(f&32768)||gameMode==='pvp';const bM=av.mats&&av.mats.get(PM.blade);for(const b of av.blN)b.visible=(!(f&64)||s2&&b.material!==bM)&&!gn&&!sh;for(const b of av.blS)b.visible=!!(f&64)&&!s2&&!sh;   /* Mk2 : pas de lance en main, elles partent des avant-bras */for(const b of av.blG||[])b.visible=gn&&!sh;}else for(const b of av.bl)b.visible=!(f&64)&&!sh;}   // 256 : lames rangées
       av.g.updateMatrixWorld(true);R.far=camera.position.distanceTo(av.g.position)>85;if(av.full&&!R.far)netHair(av,R.sdt||1/60,B[3],B[4],B[5]);   /* cheveux des autres joueurs */netLod(av,R);if(av.cloth)av.cloth.mesh.visible=!R.far&&av.g.visible;R.cf=(R.cf||0)+1;const cd=camera.position.distanceTo(av.g.position);if(av.full&&!R.far&&(cd<35||(R.cf&1))){av.vel.set(B[3],B[4],B[5]);netCape(av,Math.min(.06,R.sdt?R.sdt*(cd<35?1:2):(now-(av.capeAt||now))/1000));av.capeAt=now;}   /* de près : cape simulée à chaque image (sinon elle se décolle à grande vitesse) ; de loin : une image sur deux */
       for(let i=0;i<2;i++){const ln=av.lines[i],st=B[48+i*4];ln.visible=st>0&&!dead;if(ln.visible){const p=ln.geometry.attributes.position;av.trick.localToWorld(tA.set((i?1:-1)*.24,-.02,.06));p.setXYZ(0,tA.x,tA.y,tA.z);p.setXYZ(1,L(49+i*4),L(50+i*4),L(51+i*4));p.needsUpdate=true;}}
@@ -7716,6 +7718,6 @@ function loop(now){
 for(let i=0;i<4;i++){const a=i*1.6+.5;const t=new Titan(['small','medium','large','abnormal'][i],Math.sin(a)*70,Math.cos(a)*70+20);titans.push(t);t.marker.style.display='none';}
 const origStart=startGame;
 startGame=function(w,m,c){for(const t of titans)t.marker.style.display='';origStart(w,m,c);};   // c (« reprendre ») transmis : sans lui, Reprendre repartait d'un profil vierge
-prewarmTitans();loadTick();if(!save.camLibre){save.camLibre=1;if(save.camMode==='auto')save.camMode='libre';}if(!save.gfx||save.gfx._low){const lo=!!(save.gfx&&save.gfx._low);save.gfx=GFX_DEF();if(lo)Object.assign(save.gfx,LOW_GFX);}save.gfx.fp=Object.assign(FP_DEF(),save.gfx.fp||{});if(!save.gfx._d102b){save.gfx._d102b=1;save.gfx.runStyle='auto';}if(!save.gfx._d102){save.gfx._d102=1;save.gfx.shaders=0;save.gfx.shadowQ=GPU_WEAK?2048:4096;save.gfx.shadowFar=GPU_WEAK?0:1024;persist();}   /* v102 : nouveaux réglages par défaut (shaders désactivés, ombres proches moyennes, lointaines basses) */applyGfx();if(save.bestWave>10)save.modern=true;if(!(player.spears>=0))player.spears=CFG.spearCount;if(save.stats.hook){save.points+=save.stats.hook;save.stats.hook=0;persist();}rumbLabel();save.equip='classic';
+prewarmTitans();loadTick();if(!save.camLibre){save.camLibre=1;if(save.camMode==='auto')save.camMode='libre';}if(!save.gfx||save.gfx._low){const lo=!!(save.gfx&&save.gfx._low);save.gfx=GFX_DEF();if(lo)Object.assign(save.gfx,LOW_GFX);}save.gfx.fp=Object.assign(FP_DEF(),save.gfx.fp||{});if(!save.gfx._d102b){save.gfx._d102b=1;save.gfx.runStyle='real';}if(!save.gfx._d103r){save.gfx._d103r=1;save.gfx.runStyle='real';}   /* garde basse par défaut */if(!save.gfx._d102){save.gfx._d102=1;save.gfx.shaders=0;save.gfx.shadowQ=GPU_WEAK?2048:4096;save.gfx.shadowFar=GPU_WEAK?0:1024;persist();}   /* v102 : nouveaux réglages par défaut (shaders désactivés, ombres proches moyennes, lointaines basses) */applyGfx();if(save.bestWave>10)save.modern=true;if(!(player.spears>=0))player.spears=CFG.spearCount;if(save.stats.hook){save.points+=save.stats.hook;save.stats.hook=0;persist();}rumbLabel();save.equip='classic';
 requestAnimationFrame(loop);
 </script>

@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124105531">
+<meta name="build" content="20261124142211">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -5193,7 +5193,7 @@ function fireSpear(tg){
     spears.push(s);
     for(let j=0;j<10;j++)emit(m.position,rv(4).clone().addScaledVector(dir,-6),.6,.5,2,0xdedad2,.5);for(let j=0;j<8;j++)emit(hand,rv(5).clone().addScaledVector(dir,4),.12,.25,.7,j%2?0xffd080:0xff8a30,.95);}
   p.vel.addScaledVector(dir,-3*n);shake=Math.max(shake,.25);sfx.launch();p.spearT=.45;for(const g of fpRig.children)if(g.userData.sd===1||n===2)g.userData.kick=.2;
-  if(mk1&&!save.mk1Tip2){save.mk1Tip2=1;persist();setTimeout(()=>{toastT=0;toast('Lances Mk1 : maintiens le clic gauche 1 seconde (ou F) pour tirer les câbles et les faire exploser');},600);}
+  if(mk1&&!save.mk1Tip2){save.mk1Tip2=1;persist();setTimeout(()=>{toastT=0;toast('Lances Mk1 : maintiens le clic gauche un instant (ou F) pour tirer les câbles et les faire exploser');},600);}
 }
 function mk1Pending(){return spears.some(s=>s.mk1);}
 function pullCords(){let n=0;for(const s of spears){if(!s.mk1)continue;if(s.stuck){s.mk1=false;s.fuse=.04;n++;}else s.pull=true;}   // on tire sur le câble : les lances plantées explosent, celles en vol exploseront à l'impact
@@ -5351,12 +5351,12 @@ function solveAim(from,tg,out){const t=tg.t,v=CFG.spearSpeed,g=CFG.spearGravity,
   return out.normalize();}
 // lances Mk1 plantées : maintenir le clic gauche 1 seconde (ou F) tire les câbles ; anneau de progression et rappel sous le viseur
 const MK1H={t:0,ring:document.createElement('div'),hint:document.createElement('div')};MK1H.ring.style.cssText=chgRing.style.cssText;MK1H.ring.style.opacity=0;$('crossW').appendChild(MK1H.ring);
-MK1H.hint.className='mk1Hint';MK1H.hint.textContent='Maintiens le clic gauche 1 s (ou F) : faire exploser';$('crossW').appendChild(MK1H.hint);
+MK1H.hint.className='mk1Hint';MK1H.hint.textContent='Maintiens le clic gauche (ou F) : faire exploser';$('crossW').appendChild(MK1H.hint);
 function updSpearAim(dt,rdt){const p=player;p.spearT=Math.max(0,(p.spearT||0)-dt);spearCd-=rdt-dt; // recharge en temps réel, même au ralenti
   const sp=spearMode(),ready=sp&&p.spears>0&&spearCd<.3;
   {const st=spearMk()===1&&spears.some(s=>s.mk1&&s.stuck),show=sp&&state==='play'&&spears.some(s=>s.mk1);MK1H.hint.style.opacity=show?1:0;
-    if(spAim&&st&&sp){MK1H.t+=rdt;MK1H.ring.style.opacity=1;MK1H.ring.style.background=`conic-gradient(rgba(255,150,70,.95) ${Math.min(1,MK1H.t)*360}deg,rgba(255,255,255,.14) 0)`;
-      if(MK1H.t>=1){MK1H.t=0;cancelAim();pullCords();MK1H.ring.style.opacity=0;}}
+    if(spAim&&st&&sp){MK1H.t+=rdt;const HT=1/3;MK1H.ring.style.opacity=1;MK1H.ring.style.background=`conic-gradient(rgba(255,150,70,.95) ${Math.min(1,MK1H.t/HT)*360}deg,rgba(255,255,255,.14) 0)`;   /* maintien d'un tiers de seconde */
+      if(MK1H.t>=HT){MK1H.t=0;cancelAim();pullCords();MK1H.ring.style.opacity=0;}}
     else{MK1H.t=0;MK1H.ring.style.opacity=0;}}
   for(const s of handSpears)s.visible=ready&&spearMk()===1;
   for(const g of fpRig.children){if(g.userData.sd===undefined)continue;for(const c of g.children)if(c.userData.fpSpear)c.visible=ready&&spearMk()===1;}

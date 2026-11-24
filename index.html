@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124184834">
+<meta name="build" content="20261124185059">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -508,7 +508,7 @@ const ABIL=[   // uniquement ce qu'un soldat apprend par l'entraînement ou l'ex
   {k:'acier2',name:'Maîtrise des lames II',cost:6,req:'acier',desc:'Maîtrise parfaite du tranchant : encore −25 % d\'usure, soit des lames qui s\'usent 2 fois moins vite (−50 % en tout).'},
   {k:'agilite',name:'Agilité',cost:3,desc:'Entraînement acrobatique : courir sur les murs, sauter de mur en mur et de toit en toit (bond plus haut), saltos (C) et vrilles (X ; maintenu : tu vrilles sans t\'arrêter). La vrille sert à se déplacer : elle ne blesse pas.'},
   {k:'spirale',name:'Coupe spirale',cost:3,req:'agilite',desc:'Ta vrille devient une attaque : pendant que tu vrilles (X, ou maintenu pour vriller sans t\'arrêter), tes lames tranchent tout ce que tu frôles. Comme le tourbillon, elle use une demi-paire de lames si elle touche.'},
-  {k:'lances1',name:'Lances Mk1',cost:0,auto:true,desc:'Remises après la vague 10 : 2 lances reliées à tes poignées par un câble. Clic gauche : tu plantes une lance (câble de 60 m). Maintiens le clic gauche : celles plantées dans un titan explosent. Une lance ratée est perdue.'},
+  {k:'lances1',name:'Lances Mk1',cost:0,auto:true,desc:'Remises après la vague 10 : 2 lances reliées à tes poignées par un câble. Clic gauche : tu plantes une lance (câble de 60 m). Maintiens le clic gauche : celles plantées (titan, mur ou sol) explosent. Une lance qui ne touche rien en l\'air est perdue.'},
   {k:'lances2',name:'Lances Mk2 · 4',cost:3,req:'lances1',desc:'Équipement tridimensionnel anti-personnel amélioré : lanceurs à un seul actionneur (la lance explose toute seule une fois plantée) et 4 lances portées le long du corps. Ton soldat s\'équipe de l\'équipement Mk2.'},
   {k:'lances3',name:'Lances Mk2 · 8',cost:6,req:'lances2',desc:'Maîtrise complète de l\'équipement Mk2 : 8 lances portées, le maximum.'}];
 const BASE_KIT=['agilite','tourbillon','charge'],GEAR=['ruee','pivot'];   // équipement de base : grappin simple et ruée, toujours disponibles
@@ -5266,10 +5266,10 @@ function fireSpear(tg){
     spears.push(s);
     for(let j=0;j<10;j++)emit(m.position,rv(4).clone().addScaledVector(dir,-6),.6,.5,2,0xdedad2,.5);for(let j=0;j<8;j++)emit(hand,rv(5).clone().addScaledVector(dir,4),.12,.25,.7,j%2?0xffd080:0xff8a30,.95);}
   p.vel.addScaledVector(dir,-3*n);shake=Math.max(shake,.25);sfx.launch();p.spearT=.45;for(const g of fpRig.children)if(g.userData.sd===1||n===2)g.userData.kick=.2;
-  if(mk1&&!save.mk1Tip3){save.mk1Tip3=1;persist();setTimeout(()=>{toastT=0;toast('Lances Mk1 : un clic plante une lance, maintiens le clic gauche pour faire exploser celles plantées dans un titan');},600);}
+  if(mk1&&!save.mk1Tip3){save.mk1Tip3=1;persist();setTimeout(()=>{toastT=0;toast('Lances Mk1 : un clic plante une lance, maintiens le clic gauche pour faire exploser celles qui sont plantées');},600);}
 }
 const MK1_RANGE=60;   /* longueur du câble des lances Mk1 (m) */
-function mk1Armed(s){return s.mk1&&s.stuck&&s.stuck.obj&&s.stuck.obj.userData.titan&&s.cable;}   /* plantée dans un titan et toujours reliée au soldat */
+function mk1Armed(s){return s.mk1&&s.stuck&&s.cable;}   /* plantée (titan, mur ou sol) et toujours reliée au soldat */
 function mk1Pending(){return spears.some(mk1Armed);}
 function mk1Inert(s,msg){s.mk1=false;s.inert=true;s.fuse=1e9;s.dead=s.t+6;if(s.cable){scene.remove(s.cable);s.cable.geometry.dispose();s.cable=null;}if(msg){toastT=0;toast(msg);}}   /* câble décroché : la lance ne peut plus exploser */
 function pullCords(){let n=0;for(const s of spears){if(!mk1Armed(s))continue;s.mk1=false;s.fuse=.04;n++;}   // on tire sur le câble : seules les lances plantées dans un titan explosent (celles en vol ne sont jamais déclenchées)
@@ -5279,13 +5279,14 @@ const _sr=new THREE.Raycaster(),_zf=new V3(0,0,1);
 function updSpears(dt){
   spearCd-=dt;
   for(let i=spears.length-1;i>=0;i--){const s=spears[i];s.t+=dt;
-    if(s.inert){if(s.t>s.dead)dropSpear(i);else if(s.stuck&&s.stuck.obj)s.m.position.copy(s.stuck.obj.localToWorld(s.stuck.local.clone()));continue;}   /* lance ratée : reste plantée sans exploser, puis disparaît */
+    if(s.inert){if(s.t>s.dead){dropSpear(i);continue;}if(s.stuck){if(s.stuck.obj)s.m.position.copy(s.stuck.obj.localToWorld(s.stuck.local.clone()));continue;}   /* lance ratée en l'air : sans câble, elle retombe et ne peut plus exploser, puis disparaît */
+      s.v.y-=CFG.spearGravity*dt;s.m.position.addScaledVector(s.v,dt);s.m.quaternion.setFromUnitVectors(_zf,tB.copy(s.v).normalize());const gy=groundY(s.m.position.x,s.m.position.z);if(s.m.position.y<=gy){s.m.position.y=gy;s.stuck={obj:null};}continue;}
     if(s.cable){const bg=bladeGroups[s.side]||bladeGroups.R,h=bg?bg.getWorldPosition(tD):player.center,a=s.cable.geometry.attributes.position;a.setXYZ(0,h.x,h.y,h.z);a.setXYZ(1,s.m.position.x,s.m.position.y,s.m.position.z);a.needsUpdate=true;
       if(s.mk1&&!s.stuck&&h.distanceTo(s.m.position)>MK1_RANGE){mk1Inert(s,'Câble à bout : la lance Mk1 est perdue');}}   // en vol, le câble arrive à bout
     if(s.inert)continue;
     if(s.stuck){const o=s.stuck.obj,t=o&&o.userData.titan;
       if(t&&(t.gone||t.state==='dead')){if(s.mk1){mk1Inert(s);continue;}s.fuse=0;}else if(o)s.m.position.copy(o.localToWorld(s.stuck.local.clone()));
-      if(s.mk1&&s.cable&&t){const pc=player.center,d=pc.distanceTo(s.m.position),L=s.len||(s.len=Math.min(MK1_RANGE,d+6));   /* câble relié : petite résistance quand on s'éloigne au-delà de sa longueur */
+      if(s.mk1&&s.cable){const pc=player.center,d=pc.distanceTo(s.m.position),L=s.len||(s.len=Math.min(MK1_RANGE,d+6));   /* câble relié : petite résistance quand on s'éloigne au-delà de sa longueur */
         if(d>L){const n=tA.subVectors(s.m.position,pc).divideScalar(d),out=-player.vel.dot(n);if(out>0)player.vel.addScaledVector(n,out*(1-Math.exp(-4*dt)));player.vel.addScaledVector(n,Math.min(30,(d-L)*5)*dt);if(d-L>1.5&&Math.random()<dt*6)sfx.burst(1400,.05,.08,'bandpass',3);}
         if(d>L+25)mk1Inert(s,'Le câble a cédé');}
       if(s.inert)continue;
@@ -5297,8 +5298,9 @@ function updSpears(dt){
     if(Math.random()<.8)emit(prev,rv(1).clone(),.6,.25,1.1,0xd8d4cc,.45);emit(prev,rv(.5).clone(),.12,.3,.08,0xffb050,.9);
     const seg=tC.subVectors(s.m.position,prev),L=seg.length();_sr.set(prev,seg.divideScalar(L||1));_sr.far=L+.3;
     const hit=_sr.intersectObjects(hookables,false).find(h=>shown(h.object));
-    if(hit){s.m.position.copy(hit.point);s.stuck={obj:hit.object,local:hit.object.worldToLocal(hit.point.clone())};s.fuse=CFG.spearFuse;sfx.stick();if(s.mk1&&!hit.object.userData.titan)mk1Inert(s);continue;}   /* Mk1 : seule une lance plantée dans un titan reste reliée et peut exploser */
-    if(s.t>CFG.spearLife||s.m.position.y<groundY(s.m.position.x,s.m.position.z)){if(s.mk1){s.stuck={obj:null};s.m.position.y=Math.max(s.m.position.y,groundY(s.m.position.x,s.m.position.z));mk1Inert(s);continue;}spearExplode(s.m.position.clone(),null);dropSpear(i);}
+    if(hit){s.m.position.copy(hit.point);s.stuck={obj:hit.object,local:hit.object.worldToLocal(hit.point.clone())};s.fuse=CFG.spearFuse;sfx.stick();continue;}   /* Mk1 : plantée dans un titan, un mur ou le sol, elle reste reliée et peut exploser */
+    if(s.m.position.y<groundY(s.m.position.x,s.m.position.z)){if(s.mk1){s.stuck={obj:null};s.m.position.y=groundY(s.m.position.x,s.m.position.z);sfx.stick();continue;}spearExplode(s.m.position.clone(),null);dropSpear(i);continue;}
+    if(s.t>CFG.spearLife){if(s.mk1){mk1Inert(s,'Lance Mk1 perdue en l\'air');continue;}spearExplode(s.m.position.clone(),null);dropSpear(i);}
   }
   for(let i=explFx.length-1;i>=0;i--){const f=explFx[i];f.t+=dt;const k=f.t/f.life;
     if(f.ring){f.ring.scale.setScalar(.5+f.R*2.2*ease(Math.min(1,k)));f.ring.material.opacity=.8*(1-k);if(f.flat)f.ring.rotation.set(-Math.PI/2,0,0);else f.ring.quaternion.copy(camera.quaternion);}

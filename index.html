@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124143937">
+<meta name="build" content="20261124144731">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -2743,7 +2743,16 @@ var dmgSrc='';
 function forgeSpikes(t){if(t.spikeT>=0||t.state==='dead')return;t.spikeT=0;t.spikeHit=false;t.spikeCd=t.enraged?2.4:3.4;sfx.crystal();if(!t.spikeWarned){t.spikeWarned=true;toast('Recule ! Des pics vont jaillir de son corps');}}
 // armure : invincible aux lames ; les lances foudroyantes la percent mais font 2 fois moins de dégâts que sur un titan sans armure
 function armored(t){const k=t.type;return k==='cuirasse'||(k==='agile'&&t.enraged);}
+/* ----- le Croc immobilisé (aveuglé ou à genoux) protège sa nuque de ses deux mains : il faut d'abord trancher les tendons de ses bras ----- */
+var CROC_G={ax:-2.5,az:-1.95,ex:-2.3,bx:.5,hx:.5};   /* pose de garde (ajustée sur le squelette) */
+function crocDown(t){return t.type==='croc'&&t.state!=='dead'&&(t.blindT>0||t.tend[0]>0||t.tend[1]>0);}
+function crocArmFree(t,i){return !(t.armT&&t.armT[i]>0)&&!(t.sev.arm[i]>0)&&!(t.armOff[i]>0);}
+function crocGuarding(t){return crocDown(t)&&(crocArmFree(t,0)||crocArmFree(t,1));}
+function crocCutArm(t,i){if(!t.armT)t.armT=[0,0];if(!crocArmFree(t,i))return;t.armT[i]=30;t.armOff[i]=Math.max(t.armOff[i],.3);t.flinchT=.35;
+  const p=t.elbows[i].getWorldPosition(new V3());spray(p,tD.subVectors(p,player.center).setY(.5).normalize().clone(),14,9,.5,Math.min(1,.3+t.s*.15));steamBurst(p,2,t.s*.4);sfx.hit();popNum(p,'Tendon','');
+  const two=!crocArmFree(t,1-i);feed(two?'Ses deux bras tombent : sa nuque est à découvert !':'Tendon du bras tranché : encore l\'autre bras','gold');addStyle('Tendon',.35);addXP(4);if(two)elanFlash&&elanFlash();}
 function bossDamage(t,dmg,limb){const k=t.type,sp=dmgSrc==='spear';
+  if(k==='croc'&&!limb&&crocGuarding(t)){sfx.hit();toast('Il protège sa nuque de ses mains : tranche les tendons de ses bras');dmg*=sp?.35:.08;}
   if(k!=='assaillant'&&!limb&&t.state==='guard'&&t.guardUp){sfx.hit();toast('Sa main protège sa nuque');dmg*=sp?.6:.15;}
   if(k==='agile'&&t.state==='walk'&&!(t.hopT>0)&&Math.random()<.4)t.hopT=.45;   // elle esquive en reculant
   if(k==='assaillant'){t.lastHitT=0;if(!sp)forgeSpikes(t);
@@ -3411,8 +3420,13 @@ class Titan{
       this.tilt.position.y=lerp(this.tilt.position.y,-2.2,k);
       for(const l of this.legs)l.rotation.x=lerp(l.rotation.x,-.25,k);
       for(const kn of this.knees)kn.rotation.x=lerp(kn.rotation.x,1.6,k);
-      for(let i=0;i<2;i++){this.arms[i].rotation.x=lerp(this.arms[i].rotation.x,-.35,k);this.elbows[i].rotation.x=lerp(this.elbows[i].rotation.x,-.5,k);}
-      this.body.rotation.x=lerp(this.body.rotation.x,.4,k);
+      const cd=crocDown(this);if(cd&&this.blindT>0)this.blindT-=dt;   /* à genoux, les yeux du Croc se reforment au même rythme */
+      for(let i=0;i<2;i++){if(cd&&!(this.sev.arm[i]>0)){const sd=i?1:-1;
+          if(crocArmFree(this,i)){const w=Math.sin(performance.now()/90+i)*.03;this.arms[i].rotation.x=lerp(this.arms[i].rotation.x,CROC_G.ax+w,k);this.arms[i].rotation.z=lerp(this.arms[i].rotation.z,sd*CROC_G.az,k);this.elbows[i].rotation.x=lerp(this.elbows[i].rotation.x,CROC_G.ex,k);}   // mains croisées sur la nuque
+          else{this.arms[i].rotation.x=lerp(this.arms[i].rotation.x,.15,k);this.arms[i].rotation.z=lerp(this.arms[i].rotation.z,sd*.05,k);this.elbows[i].rotation.x=lerp(this.elbows[i].rotation.x,-.05,k);}   // bras inerte, tendon tranché
+          continue;}
+        this.arms[i].rotation.x=lerp(this.arms[i].rotation.x,-.35,k);this.elbows[i].rotation.x=lerp(this.elbows[i].rotation.x,-.5,k);}
+      this.body.rotation.x=lerp(this.body.rotation.x,cd?CROC_G.bx:.4,k);if(cd)this.headG.rotation.x=lerp(this.headG.rotation.x,CROC_G.hx,k);
       if(this.state==='attack')this.state='walk';
       if(this.state==='kick'){this.state='walk';if(this.kSpin)this.root.rotation.y=this.kBase;}
       if(this.state==='stomp')this.endStomp();
@@ -3448,7 +3462,7 @@ class Titan{
           const sp=this.speed*.55;r.position.x-=Math.sin(r.rotation.y)*sp*dt;r.position.z-=Math.cos(r.rotation.y)*sp*dt;this.phase-=dt*sp/(this.s*1.5);moving=true;}
         else if(ag?!ag.hold:(dist>(this.type==='bete'?(dist<40?reach*.55:62):reach*.55)||(this.type==='rumble'&&dist>2))){   // les colossaux avancent sans s'arrêter : ils piétinent tout
           const fw=this.type==='rumble'?1:ab?clamp((2.4-err)/1.4,.15,1):clamp((1.3-err)/.9,0,1);   // les colossaux du Rumbling marchent droit devant eux   // il se tourne d'abord, puis avance : plus de grands cercles autour du soldat
-          const sp=this.speed*fw*(ab&&dist>40?1.25:1)*(this.legLoss===1?.35:this.legLoss===2?.14:1)*(1-.1*((this.sev.arm[0]>0?1:0)+(this.sev.arm[1]>0?1:0))*(this.legLoss?2.2:1))*(this.fallT>0?0:1)*(this.prepT>0||this.recoverT>0||this.hopT>0?0:1)*armySpeed(this)*(this.blindT>0?.45:1);
+          const sp=this.speed*fw*(ab&&dist>40?1.25:1)*(this.legLoss===1?.35:this.legLoss===2?.14:1)*(1-.1*((this.sev.arm[0]>0||(this.armT&&this.armT[0]>0)?1:0)+(this.sev.arm[1]>0||(this.armT&&this.armT[1]>0)?1:0))*(this.legLoss?2.2:1))*(this.fallT>0?0:1)*(this.prepT>0||this.recoverT>0||this.hopT>0?0:1)*armySpeed(this)*(this.blindT>0?.45:1);
           r.position.x+=Math.sin(r.rotation.y)*sp*dt;r.position.z+=Math.cos(r.rotation.y)*sp*dt;
           this.phase+=dt*sp/(this.s*1.5);moving=sp>.05;const sg=Math.sin(this.phase)>0;
           if(sg!==this.lastSg){this.lastSg=sg;if(moving&&dist<140){sfx.stomp(clamp(1-dist/140,0,1)*.22*Math.min(2.5,this.s));
@@ -3531,11 +3545,11 @@ class Titan{
   eyePos(out){const eb=this.eyeballs;if(eb&&eb.length){out.set(0,0,0);for(const e of eb)out.add(e.getWorldPosition(_eyT));return out.multiplyScalar(1/eb.length);}   // entre les deux yeux
     this.headG.getWorldPosition(out);out.x+=Math.sin(this.root.rotation.y)*.8*this.s;out.z+=Math.cos(this.root.rotation.y)*.8*this.s;return out;}
   // tendon tranché derrière le genou : il tombe à genoux (la nuque est à portée), le temps que ça se répare
-  cutTendon(i){if(this.state==='dead'||this.tend[i]>0||this.sev.leg[i]>0)return;const two=this.tend[1-i]>0,d=this.cfg.boss?2.2:two?7:5;this.tend[i]=d;this.stagger=Math.max(this.stagger,d);
+  cutTendon(i){if(this.state==='dead'||this.tend[i]>0||this.sev.leg[i]>0)return;const two=this.tend[1-i]>0,d=this.type==='croc'?6:this.cfg.boss?2.2:two?7:5;this.tend[i]=d;this.stagger=Math.max(this.stagger,d);
     const kp=this.knees[i].getWorldPosition(new V3());spray(kp,tD.subVectors(kp,player.center).setY(.4).normalize().clone(),14,9,.5,Math.min(1,.3+this.s*.15));steamBurst(kp,2,this.s*.4);sfx.hit();popNum(kp,'Tendon','');
     feed(two?'Tendons tranchés : il ne se relève plus de sitôt':'Tendon tranché : le titan tombe à genoux','gold');addStyle('Tendon',.35);addXP(4);carnetEv('tendon');}
   // yeux tranchés : aveuglé quelques secondes, il frappe au hasard et se frotte les yeux
-  blindEyes(){if(this.state==='dead')return;const boss=!!this.cfg.boss;this.blindT=boss?3:7.5;this.rubT=boss?1:2.2;this.flailT=.9;this.blindDir=this.root.rotation.y;this.stagger=Math.max(this.stagger,.6);
+  blindEyes(){if(this.state==='dead')return;const boss=!!this.cfg.boss,cr=this.type==='croc';this.blindT=cr?6:boss?3:7.5;this.rubT=cr?0:boss?1:2.2;this.flailT=.9;this.blindDir=this.root.rotation.y;this.stagger=Math.max(this.stagger,cr?6:.6);   /* le Croc aveuglé se recroqueville à genoux, les mains sur la nuque */
     const E=this.eyePos(new V3());slashBlood(E,this.s*.5,false);steamBurst(E,2,this.s*.35);sfx.hit();popNum(E,'Aveuglé','');
     feed('Yeux tranchés : il frappe à l\'aveugle','gold');addStyle('Aveuglé',.35);addXP(4);carnetEv('blind');}
   hurt(dmg){
@@ -3549,6 +3563,7 @@ class Titan{
     if(this.hp<=0)this.die(crit);else{this.firstHit=false;this.stagger=Math.max(this.stagger,.5);}
     tut(2);
   }
+  cutArmTendon(i){if(this.state==='dead')return;ACH.atk=ACH.gt;crocCutArm(this,i);}
   hitLimb(m,dmg){ACH.atk=ACH.gt;
     if(this.cfg.boss){dmg=bossDamage(this,dmg,true);if(dmg<=0)return;}
     this.flinchT=.35;const lb=m.userData.limb,p=m.getWorldPosition(new V3());let kind,i;
@@ -3573,6 +3588,7 @@ class Titan{
   }
   regrow(dt){
     this.limbHit-=dt;
+    if(this.armT)for(let i=0;i<2;i++)if(this.armT[i]>0){this.armT[i]-=dt;this.armOff[i]=Math.max(this.armOff[i],.3);   /* 30 s sans ce bras : il ne frappe plus de ce côté ; sans les deux, il ne peut que mordre */if(Math.random()<dt*5)emit(this.elbows[i].getWorldPosition(tC),tD.set(0,3,0).clone(),2,.7*this.s,2*this.s,0xf4f4f2,.45,-1,.6);}   // tendons des bras du Croc : ils se réparent dans la vapeur
     for(let i=0;i<2;i++)if(this.tend[i]>0){this.tend[i]-=dt;if(Math.random()<dt*6)emit(this.knees[i].getWorldPosition(tC),tD.set(0,3,0).clone(),2,.8*this.s,2.4*this.s,0xf4f4f2,.45,-1,.6);}   // le tendon se répare dans la vapeur
     for(const kind of ['arm','leg'])for(let i=0;i<2;i++){let r=this.sev[kind][i];if(r<=0)continue;r-=dt*(this.type==='assaillant'?1.8:1);this.sev[kind][i]=r;const g=kind==='leg'?this.knees[i]:this.elbows[i];
       if(kind==='arm')this.armOff[i]=Math.max(this.armOff[i],.3);
@@ -3690,6 +3706,8 @@ function bladeHit(range,mult,kind){if(gameMode==='pvp')return pvMyMelee(range,mu
     if(t.state==='dead')continue;
     const np=t.nape.getWorldPosition(tA);
     if(np.distanceTo(pc)<range+1.05*t.s){
+      if(t.type==='croc'&&crocGuarding(t)){let bi=-1,bd2=1e9;for(let i=0;i<2;i++){if(!crocArmFree(t,i))continue;const d=t.elbows[i].getWorldPosition(tC).distanceTo(pc);if(d<bd2){bd2=d;bi=i;}}   /* les mains couvrent la nuque : la lame tranche le tendon du bras le plus proche */
+        if(bi>=0){t.cutArmTendon(bi);if(kind!=='spin'&&kind!=='charge'&&kind!=='spiral')wearBlades(CFG.bladeWearLimb);any=true;continue;}}
       if(isBehind(t,np,pc)){const perf=elanK()>=.9&&kind!=='spiral';t.hurt(ST.dmg*mult*spf*(perf?1.25:1));if(perf){addStyle('Coupe parfaite',.45);elanFlash();carnetEv('perfect');}   /* coupe parfaite : nuque tranchée à pleine vitesse */if(kind!=='spin'&&kind!=='charge'&&kind!=='spiral')wearBlades(CFG.bladeWearNape);any=true;continue;}   /* tourbillon et coupe chargée : leur coût fixe remplace l'usure */
       else if(kind==='slash')toast('De face ! Passe derrière pour viser la nuque');
     }
@@ -3699,6 +3717,7 @@ function bladeHit(range,mult,kind){if(gameMode==='pvp')return pvMyMelee(range,mu
     let tnd=false;if(best&&best.userData.limb==='leg'&&t.type!=='rumble'){const li=t.legs.findIndex(h=>isDesc(best,h));   // derrière le genou : le tendon
       if(li>=0&&!(t.tend[li]>0)&&!(t.sev.leg[li]>0)&&t.knees[li].visible){const kp=t.knees[li].getWorldPosition(tC),fx=Math.sin(t.root.rotation.y),fz=Math.cos(t.root.rotation.y);
         if(kp.distanceTo(pc)<range+1.1*t.s&&(pc.x-kp.x)*fx+(pc.z-kp.z)*fz<-.3*t.s){t.cutTendon(li);tnd=true;}}}
+    if(best&&best.userData.limb==='arm'&&t.type==='croc'&&crocDown(t)){let g=best.parent;while(g&&g.userData.side===undefined)g=g.parent;const ai=(g?g.userData.side:1)>0?1:0;if(crocArmFree(t,ai)){t.cutArmTendon(ai);if(kind!=='spin'&&kind!=='charge'&&kind!=='spiral')wearBlades(CFG.bladeWearLimb);any=true;continue;}}   /* Croc immobilisé : le bras se tranche facilement */
     if(best){t.hitLimb(best,ST.dmg*mult*spf*ST.limbMult*(tnd?.5:1));if(kind!=='spin'&&kind!=='charge'&&kind!=='spiral')wearBlades(CFG.bladeWearLimb);any=true;}
   }
   return any;
@@ -4180,7 +4199,7 @@ const MEDALS=[['nuque1','Première nuque','trancher sa première nuque'],['cent'
   ['asec','Réservoir vide','trancher une nuque sans une goutte de gaz','d',1],
   ['amuse','Amuse-gueule','se faire dévorer par un titan','c'],['sauna','Sauna','mourir dans la vapeur d\'un titan','c'],['gaffe','Gaffe','mourir dès la première vague','c'],['cimet','Abonné au cimetière','mourir 50 fois','c'],
   ['platjour','Plat du jour','se faire attraper 25 fois','c'],['assiette','Pas dans mon assiette','se libérer d\'une saisie','c'],['panne','Panne sèche','tomber à court de gaz','c'],
-  ['acrobate','Acrobate','trancher une nuque en plein salto ou en pleine vrille','c',1],['politesse','Politesse','faire le salut militaire à moins de 20 m d\'un titan','c',1],['nostalgie','Nostalgique','taper un vieux code bien connu (↑↑↓↓←→←→BA) au menu principal','c',1],['realisateur','Réalisateur','passer 60 s dans la vue bonus','c',1],['plan','Plan-séquence','abattre 25 titans dans la vue bonus','d',1],
+  ['acrobate','Acrobate','trancher une nuque en plein salto ou en pleine vrille','c',1],['politesse','Politesse','faire le salut militaire à moins de 20 m d\'un titan','c',1],['nostalgie','Nostalgique','taper un vieux code bien connu (↑↑↓↓←→←→BA) au menu principal','c',1],['realisateur','Réalisateur','passer 60 s dans la vue bonus','c',1],['plan1','Premier plan','abattre un titan dans la vue bonus','c',1],['plan5','Travelling','abattre 5 titans dans la vue bonus','d',1],['plan10','Plan-séquence','abattre 10 titans dans la vue bonus','d',1],['plan','Grand écran','abattre 25 titans dans la vue bonus','d',1],
   ['kamikaze','Kamikaze','mourir de sa propre lance foudroyante','a'],['feu','Feu d\'artifice','faire exploser 4 lances d\'affilée sans toucher un seul titan','a'],['deserteur','Déserteur','quitter une partie en pleine vague','a'],
   ['sieste','Sieste','ne toucher à rien pendant 60 s en pleine vague','a',1],['objecteur','Objecteur de conscience','survivre 3 minutes dans une vague sans toucher un seul titan','a',1]];
 const MEDAL_CAT=[['','Médailles'],['d','Exploits'],['c','Pour rire'],['a','Anti-jeu']];
@@ -4201,7 +4220,7 @@ function achTick(dt,rdt){try{if(state!=='play'||cnOff())return;const p=player,A=
 function achKill(t){const p=player,A=ACH;A.kt.push(A.gt);A.kt=A.kt.filter(x=>A.gt-x<10);if(A.kt.length>=5)medal('massacre');if(save.totK>=10000)medal('fleau');
   if(dmgSrc==='spear')A.spk++;else{if(p.flipT>0||p.rollT>0)medal('acrobate');if(p.gas<=0)medal('asec');}
   if(A.esc===t&&A.gt-A.escT<5)medal('retour');
-  if(save.camMode==='cine'){save.cineK=(save.cineK||0)+1;if(save.cineK>=25)medal('plan');}}
+  if(save.camMode==='cine'){const c=save.cineK=(save.cineK||0)+1;medal('plan1');if(c>=5)medal('plan5');if(c>=10)medal('plan10');if(c>=25)medal('plan');}}
 function achWaveClear(){try{if(cnOff())return;const p=player;if(ACH.hitW)ACH.noHit=0;else if(++ACH.noHit>=10)medal('intouch');ACH.hitW=false;if(p.hp>0&&p.hp<ST.hpMax*.05)medal('cheveu');}catch(e){}}
 function achDeath(){try{if(cnOff()||state!=='play'||(NET&&NET.on&&NET.dead))return;save.deaths=(save.deaths||0)+1;if(save.deaths>=50)medal('cimet');
   if(DC==='lance')medal('kamikaze');else if(DC==='mange')medal('amuse');else if(DC==='vapeur')medal('sauna');
@@ -7003,7 +7022,7 @@ var NET={mode:'normal',on:false,host:false,lobby:false,started:false,welcomed:fa
     if(!R)return;
     if(m.k==='st'){const a=nF32(m.a);if(a.length>=N_PSN)this.pState(R,a);}
     else if(m.k==='gs'){if(Array.isArray(m.a)&&Array.isArray(m.b)&&m.a.length===3&&m.b.length===3){gunFx(new V3(+m.a[0],+m.a[1],+m.a[2]),new V3(+m.b[0],+m.b[1],+m.b[2]),false);for(const o of this.rem.values())if(o!==R)this.toP(o,m);}}   // tir de pistolet : traçante et son chez tout le monde
-    else if(m.k==='hit'||m.k==='limb'||m.k==='boom'||m.k==='xp'||m.k==='tend'||m.k==='blind'){this.onEv(m,R.id);m.by=R.id;
+    else if(m.k==='hit'||m.k==='limb'||m.k==='boom'||m.k==='xp'||m.k==='tend'||m.k==='atend'||m.k==='blind'){this.onEv(m,R.id);m.by=R.id;
       if(m.k==='hit'&&!m.kill){const t=this.tmap.get(m.id);if(t&&t.state==='dead'&&t.cfg.boss){m.kill=1;this.toP(R,{k:'dead',id:m.id});}}for(const o of this.rem.values())if(o!==R)this.toP(o,m);}
     else if(m.k==='ohit'||m.k==='opl'||m.k==='oplb'||m.k==='ostag')this.origMsg(m);
     else if(m.k==='rel'){if(R.grab)this.withP(R,()=>endGrab());}
@@ -7024,7 +7043,7 @@ var NET={mode:'normal',on:false,host:false,lobby:false,started:false,welcomed:fa
     case'pend':if(this.on&&gameMode==='pvp'){if(Array.isArray(m.s))PV.score=[m.s[0]|0,m.s[1]|0];const sc=PV.score;PV.showEnd(sc[0]===sc[1]?-1:sc[0]>sc[1]?0:1);}break;
     case'prs':if(this.on&&gameMode==='pvp')PV.restart();break;
     case's':if(this.on)this.onSnap(m);break;
-    case'hit':case'limb':case'boom':case'xp':case'tend':case'blind':if(this.on)this.onEv(m,m.by|0);break;
+    case'hit':case'limb':case'boom':case'xp':case'tend':case'atend':case'blind':if(this.on)this.onEv(m,m.by|0);break;
     case'hurtP':case'grabP':this.q.push({at:performance.now()+this.debt*1000,m});break;
     case'relP':if(grab){this.fromHost=true;try{releaseGrab();}finally{this.fromHost=false;}}break;
     case'biteP':if(grab){this.fromHost=true;try{biteGrab();}finally{this.fromHost=false;}}break;
@@ -7190,6 +7209,7 @@ var NET={mode:'normal',on:false,host:false,lobby:false,started:false,welcomed:fa
         this.quietly(()=>{if(soft)t.hp=1e9;N_HURT.call(t,+m.d||0);if(soft)t.hp=Math.max(1,h0-(1e9-t.hp));if(m.kill&&t.state!=='dead'){t.hp=0;t.die(false);}});if(t.state==='dead')this.killed(t,pid);}
       else if(m.k==='limb'){const p=t.parts[m.pi];if(p){if(this.host)this.noteHit(t,pid);this.quietly(()=>N_LIMB.call(t,p,+m.d||0));}}
       else if(m.k==='tend'){if(this.host)this.noteHit(t,pid);this.quietly(()=>N_TEND.call(t,m.i?1:0));}
+      else if(m.k==='atend'){if(this.host)this.noteHit(t,pid);this.quietly(()=>N_ATEND.call(t,m.i?1:0));}
       if((m.k==='hit'||m.k==='limb')&&m.src!=='spear'){const H=this.rem.get(pid);if(H&&H.av&&H.av.full&&H.av.B&&!H.far){const src=m.k==='hit'?t.nape.getWorldPosition(new V3()):(t.parts[m.pi]?t.parts[m.pi].getWorldPosition(new V3()):null);if(src)bloodSplat(H.av.B,src,bloodCount(src,H.av.g.position.clone().add(_bsD.set(0,1,0)),m.k==='hit'?.7:.3,t.s));}}   /* le sang éclabousse aussi les coéquipiers */
       else if(m.k==='blind'){if(this.host)this.noteHit(t,pid);this.quietly(()=>N_BLIND.call(t));}}finally{dmgSrc=d0;}},
   killed(t,pid){if(pid!==this.id)feed(this.nm(pid)+' a abattu '+t.cfg.name,'');
@@ -7283,7 +7303,8 @@ Titan.prototype.hurt=function(dmg){if(!NET.on||NET.replay||this.nid===undefined)
   if(!NET.host&&this.cfg.boss){const h0=this.hp;this.hp=1e9;N_HURT.call(this,dmg);this.hp=Math.max(1,h0-(1e9-this.hp));NET.ev({k:'hit',id:this.nid,d:Math.round(dmg*10)/10,src:dmgSrc,kill:0});return;}
   const alive=this.state!=='dead';if(NET.host)NET.noteHit(this,0);N_HURT.call(this,dmg);const kill=alive&&this.state==='dead';
   NET.ev({k:'hit',id:this.nid,d:Math.round(dmg*10)/10,src:dmgSrc,kill:kill?1:0});if(kill)NET.killed(this,NET.id);};
-const N_TEND=Titan.prototype.cutTendon,N_BLIND=Titan.prototype.blindEyes;
+const N_TEND=Titan.prototype.cutTendon,N_BLIND=Titan.prototype.blindEyes,N_ATEND=Titan.prototype.cutArmTendon;
+Titan.prototype.cutArmTendon=function(i){if(!NET.on||NET.replay||this.nid===undefined)return N_ATEND.call(this,i);if(NET.host)NET.noteHit(this,0);N_ATEND.call(this,i);NET.ev({k:'atend',id:this.nid,i:i?1:0});};
 Titan.prototype.cutTendon=function(i){if(!NET.on||NET.replay||this.nid===undefined)return N_TEND.call(this,i);if(NET.host)NET.noteHit(this,0);N_TEND.call(this,i);NET.ev({k:'tend',id:this.nid,i:i?1:0});};
 Titan.prototype.blindEyes=function(){if(!NET.on||NET.replay||this.nid===undefined)return N_BLIND.call(this);if(NET.host)NET.noteHit(this,0);N_BLIND.call(this);NET.ev({k:'blind',id:this.nid});};
 Titan.prototype.hitLimb=function(m,dmg){if(!NET.on||NET.replay||this.nid===undefined)return N_LIMB.call(this,m,dmg);

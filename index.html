@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124102405">
+<meta name="build" content="20261124102910">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -5099,9 +5099,9 @@ function buildModern(bn,H,chestB,chest,neck){
   // équipement Mk2 : lances foudroyantes fixées sur le dessus de chaque avant-bras (deux par bras, pointe vers l'avant), comme dans l'œuvre ; rien sur le dos, sous la cape
   for(const s of ['Left','Right']){const la=bn(H[s+'LowerArm']),hd=bn(H[s+'Hand']);if(!la||!hd)continue;const A=P(la),B=P(hd),d=new V3().subVectors(B,A),L=d.length();if(L<1e-4)continue;d.normalize();
     const rk=new THREE.Group();rk.position.copy(A).addScaledVector(d,L*.45);rk.quaternion.setFromUnitVectors(new V3(0,-1,0),d);pTrick.add(rk);
-    const up=new V3(0,1,0).applyQuaternion(rk.quaternion.clone().invert());   // dessus de l'avant-bras (bras en croix, paumes vers le bas)
-    for(let i=0;i<2;i++){const sp=rackSpear();sp.scale.setScalar(.7);sp.position.copy(up).multiplyScalar(.046+.026*i);sp.position.y+=L*.45-.01;rk.add(sp);spearRack.push(sp);}   /* du coude vers l'avant : la pointe dépasse le poing, rien ne dépasse derrière le coude */
-    {const c=gmesh(boxGeo,GX.stl,rk,0,0,0,.05,.05,.05,0,0,0,0);c.position.copy(up).multiplyScalar(.05);c.userData.keep=true;}
+    const up=new V3(s==='Left'?1:-1,0,0);   // côté extérieur de l'avant-bras (mesuré : bras ballants comme en mode lances, la lance est du côté opposé au corps)
+    for(let i=0;i<4;i++){const sp=rackSpear();sp.scale.setScalar(.95);const a=(i%2?.33:-.33),r=i<2?.047:.074;const r2=i<2?.05:.074,zz=i%2?.0125:-.0125;sp.position.set(up.x*r2,L*.45+.05,zz);rk.add(sp);spearRack.push(sp);}   /* serrées les unes contre les autres sur l'extérieur de l'avant-bras, du coude vers l'avant : 2 côte à côte, puis 2 autres par-dessus (8 lances) */
+    for(const y of [L*.45-.045,-L*.55+.05]){const c=gmesh(boxGeo,GX.stl,rk,up.x*.06,y,0,.055,.022,.056,0,0,0,0);c.userData.keep=true;}   // deux colliers d'acier (coude et poignet) qui tiennent le faisceau
     la.attach(rk);}
   // pièces portées par-dessus la tenue : plastron de métal, bracelets aux bras, sangles blanches aux jambes (visibles avec l'équipement Mk2)
   {const strapM=tm(0xe6e6e1),ring=(a,b,r,f,mat,w)=>{const ba=bn(a),bb=bn(b);if(!ba||!bb)return;const A=P(ba),B=P(bb),d=new V3().subVectors(B,A),L=d.length();if(L<1e-4)return;d.normalize();
@@ -5159,7 +5159,7 @@ function alignHandSpears(){const V=THREE.Vector3,Q=THREE.Quaternion;
     const pw=bl.getWorldQuaternion(new Q());s.quaternion.copy(pw.invert().multiply(new Q().setFromUnitVectors(sd,d).multiply(sw)));
     const g=bl.getWorldPosition(new V());s.position.copy(bl.worldToLocal(g.clone().addScaledVector(up,.045)));
     s.userData.p0=s.position.clone();s.userData.fw=bl.worldToLocal(g.clone().add(d)).sub(bl.worldToLocal(g.clone()));});}
-const RACK_ORD=[0,2,1,3];   /* deux lances par avant-bras (les autres sont en réserve) */   // les lances de rechange s'affichent une à une, en alternant les côtés
+const RACK_ORD=[0,4,1,5,2,6,3,7];   /* 4 lances : 2 par bras ; 8 lances : 4 par bras */   // les lances de rechange s'affichent une à une, en alternant les côtés
 function applyEquipVisual(){
   const sp=spearsOK()&&save.weapon==='spear',online=!!(NET&&NET.on)||gameMode==='pvp',mk2=gameMode!=='tuto'&&(getLook().suit==='noire'||online&&(spearMk()===2&&spearMax()>0||gunsOK()));   // équipement Mk2 : en solo seulement avec la tenue noire (sinon on garde le Mk1), en ligne dès que les lances Mk2 ou les pistolets sont là
   if(LK.hairCol&&LK.gearCols&&LK.gearCols.length){const gc=LK.gearCols;for(const a of LK.hairCol.arr){const has=a.indexOf(gc[0])>=0;if(mk2&&!has)a.push(...gc);else if(!mk2&&has)for(const m of gc){const k=a.indexOf(m);if(k>=0)a.splice(k,1);}}}

@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124101335">
+<meta name="build" content="20261124101951">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -5074,6 +5074,7 @@ function spearMesh(){const m=new THREE.Mesh(spearGeo,spearMat);m.castShadow=true
 const rackSpearGeo=(()=>{const parts=[],cyl=(r0,r1,y0,y1,n=10)=>{const g=new THREE.CylinderGeometry(r1,r0,y1-y0,n);g.translate(0,(y0+y1)/2,0);parts.push(g);};
   cyl(.017,.017,-.86,0);cyl(.022,.022,-.03,.02);cyl(.021,.021,-.5,-.47);cyl(.017,.004,-.95,-.86,8);
   return THREE.BufferGeometryUtils?THREE.BufferGeometryUtils.mergeBufferGeometries(parts.map(g=>g.index?g.toNonIndexed():g)):parts[0];})();
+function mk2Proj(){const g=new THREE.Group(),m=new THREE.Mesh(rackSpearGeo,spearMat);m.castShadow=true;m.rotation.x=-Math.PI/2;m.position.z=-.45;g.add(m);g.scale.setScalar(.85);return g;}   // projectile Mk2 : pointe vers l'avant
 function rackSpear(){const m=new THREE.Mesh(rackSpearGeo,spearMat);m.castShadow=true;m.userData.keep=true;return m;}
 
 /* ----- équipement modernisé : mécanismes en haut du dos, lanceurs aux épaules, râteliers de lances aux cuisses ----- */
@@ -5164,8 +5165,9 @@ function applyEquipVisual(){
   if(LK.hairCol&&LK.gearCols&&LK.gearCols.length){const gc=LK.gearCols;for(const a of LK.hairCol.arr){const has=a.indexOf(gc[0])>=0;if(mk2&&!has)a.push(...gc);else if(!mk2&&has)for(const m of gc){const k=a.indexOf(m);if(k>=0)a.splice(k,1);}}}
   if(gearC)gearC.visible=true;if(gearM)gearM.visible=mk2;for(const m of gearMAtt)m.visible=mk2;if(LK.scab)for(const o of LK.scab)o.visible=!mk2;if(LK.tanks)for(const o of LK.tanks)o.visible=!mk2;   // Mk2 : tout l'équipement change, la tenue reste
   RACK_ORD.forEach((ix,rk)=>{const s=spearRack[ix];if(!s)return;s.visible=mk2&&rk<(player.spears||0);if(s.parent)s.parent.visible=mk2;});
-  handSpears.forEach(s=>s.visible=sp);if(sp)alignHandSpears();
-  const gun=gunMode();for(const k of ['L','R']){const bl=bladeGroups[k];if(bl)for(const c of bl.children){if(handSpears.includes(c))continue;c.visible=c.userData.gun?gun:!sp&&!gun;}}
+  const held=sp&&spearMk()===1;   // Mk1 : lances tenues sur les poignées ; Mk2 : tirées depuis les lanceurs des avant-bras, les mains gardent les lames
+  handSpears.forEach(s=>s.visible=held);if(held)alignHandSpears();
+  const gun=gunMode();for(const k of ['L','R']){const bl=bladeGroups[k];if(bl)for(const c of bl.children){if(handSpears.includes(c))continue;c.visible=c.userData.gun?gun:!held&&!gun;}}
   for(const g of fpRig.children){if(g.userData.sd===undefined)continue;for(const c of g.children){if(c.userData.fpSpear)c.visible=sp;else if(c.scale.z>.9)c.visible=!sp;}}
 }
 
@@ -5183,7 +5185,7 @@ function fireSpear(tg){
     if(gameMode==='pvp')for(const f of PV.enemiesOf(PV.myTeam())){if(f.kind==='me'||!f.center)continue;const to=f.center.clone().sub(eye),d=to.length();if(d>CFG.aimRange||d<2)continue;const a=to.normalize().angleTo(aim);if(a<Math.max(.045,Math.atan(1.3/d))&&a<ba&&pvLos(eye,f.center)){ba=a;tgt=null;ast=f;}}}
   spearCd=CFG.spearCooldown;p.spears-=n;applyEquipVisual();let dir=null;
   for(let i=0;i<n;i++){const side=mk1?(p.mk1Side=p.mk1Side==='R'?'L':'R'):'R',bg=bladeGroups[side],hand=bg?bg.getWorldPosition(new V3()):spearOrigin(new V3());dir=tgt?solveAim(hand,tgt,new V3()):ast?aimPt(hand,ast.center,ast.vel,new V3()):aimDir(0,0,new V3());
-    const m=spearMesh();m.position.copy(hand).addScaledVector(dir,.6);scene.add(m);
+    const m=mk1?spearMesh():mk2Proj();m.position.copy(hand).addScaledVector(dir,.6);scene.add(m);   // Mk2 : lance fine, comme celles portées aux avant-bras
     const s={m,v:dir.clone().multiplyScalar(CFG.spearSpeed).addScaledVector(p.vel,.4),t:0,stuck:null,fuse:0,mk1,side};
     if(mk1){const lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(6),3));s.cable=new THREE.Line(lg,lineMat);s.cable.frustumCulled=false;scene.add(s.cable);}   // câble jusqu'à la poignée
     spears.push(s);
@@ -5354,8 +5356,8 @@ function updSpearAim(dt,rdt){const p=player;p.spearT=Math.max(0,(p.spearT||0)-dt
     if(spAim&&st&&sp){MK1H.t+=rdt;MK1H.ring.style.opacity=1;MK1H.ring.style.background=`conic-gradient(rgba(255,150,70,.95) ${Math.min(1,MK1H.t)*360}deg,rgba(255,255,255,.14) 0)`;
       if(MK1H.t>=1){MK1H.t=0;cancelAim();pullCords();MK1H.ring.style.opacity=0;}}
     else{MK1H.t=0;MK1H.ring.style.opacity=0;}}
-  for(const s of handSpears)s.visible=ready;
-  for(const g of fpRig.children){if(g.userData.sd===undefined)continue;for(const c of g.children)if(c.userData.fpSpear)c.visible=ready;}
+  for(const s of handSpears)s.visible=ready&&spearMk()===1;
+  for(const g of fpRig.children){if(g.userData.sd===undefined)continue;for(const c of g.children)if(c.userData.fpSpear)c.visible=ready&&spearMk()===1;}
   if(!spAim)return;
   if(!sp||grab||state!=='play'){cancelAim();return;}
   spAim.t+=rdt;const tg=pickAimTarget();
@@ -7009,7 +7011,7 @@ var NET={mode:'normal',on:false,host:false,lobby:false,started:false,welcomed:fa
       for(let i=0;i<10;i++)av.j[N_JN[i]].rotation.set(L(14+i*3),L(15+i*3),L(16+i*3));
       if(av.cape)av.cape.rotation.x=.06+clamp(Math.hypot(B[3],B[4],B[5])/28,0,1)*1.15+Math.sin(now/1000*9+R.id)*.05*clamp(Math.hypot(B[3],B[4],B[5])/20,0,1);
       {const sh=!!(f&256);if(av.full){netSyncInst(av);av.salW=(av.salW||0)+((f&2097152?1:0)-(av.salW||0))*Math.min(1,(R.sdt||1/60)*7);applyFist(av.fist,av.salW,av.fistSt);   /* salut des autres joueurs : poing fermé */if(av.bg){av.bAl=lerp(av.bAl||0,((f>>9)&7)/7,.25);av.bNin=lerp(av.bNin||0,((f>>12)&7)/7,.25);alignBladeSet(av.bg,av.B,av.bAl,av.bNin,av.ori.quaternion);}
-        if(av.rack){const m2=!!(f&32768),n=(f>>16)&15;if(av.gearM)av.gearM.visible=m2;for(const m of av.gearMAtt)m.visible=m2;if(av.scab)for(const o of av.scab)o.visible=!m2;if(av.tanks)for(const o of av.tanks)o.visible=!m2;RACK_ORD.forEach((ix,rk)=>{const s=av.rack[ix];if(!s)return;s.visible=m2&&rk<n;if(s.parent)s.parent.visible=m2;});}   /* équipement Mk2 des autres joueurs */   /* lames de course ninja dans l'axe des bras, comme chez le joueur */const gn=!!(f&1048576);for(const b of av.blN)b.visible=!(f&64)&&!gn&&!sh;for(const b of av.blS)b.visible=!!(f&64)&&!sh;for(const b of av.blG||[])b.visible=gn&&!sh;}else for(const b of av.bl)b.visible=!(f&64)&&!sh;}   // 256 : lames rangées
+        if(av.rack){const m2=!!(f&32768),n=(f>>16)&15;if(av.gearM)av.gearM.visible=m2;for(const m of av.gearMAtt)m.visible=m2;if(av.scab)for(const o of av.scab)o.visible=!m2;if(av.tanks)for(const o of av.tanks)o.visible=!m2;RACK_ORD.forEach((ix,rk)=>{const s=av.rack[ix];if(!s)return;s.visible=m2&&rk<n;if(s.parent)s.parent.visible=m2;});}   /* équipement Mk2 des autres joueurs */   /* lames de course ninja dans l'axe des bras, comme chez le joueur */const gn=!!(f&1048576);const s2=!!(f&32768)||gameMode==='pvp';for(const b of av.blN)b.visible=(!(f&64)||s2)&&!gn&&!sh;for(const b of av.blS)b.visible=!!(f&64)&&!s2&&!sh;   /* Mk2 : pas de lance en main, elles partent des avant-bras */for(const b of av.blG||[])b.visible=gn&&!sh;}else for(const b of av.bl)b.visible=!(f&64)&&!sh;}   // 256 : lames rangées
       av.g.updateMatrixWorld(true);R.far=camera.position.distanceTo(av.g.position)>85;if(av.full&&!R.far)netHair(av,R.sdt||1/60,B[3],B[4],B[5]);   /* cheveux des autres joueurs */netLod(av,R);if(av.cloth)av.cloth.mesh.visible=!R.far&&av.g.visible;R.cf=(R.cf||0)+1;const cd=camera.position.distanceTo(av.g.position);if(av.full&&!R.far&&(cd<35||(R.cf&1))){av.vel.set(B[3],B[4],B[5]);netCape(av,Math.min(.06,R.sdt?R.sdt*(cd<35?1:2):(now-(av.capeAt||now))/1000));av.capeAt=now;}   /* de près : cape simulée à chaque image (sinon elle se décolle à grande vitesse) ; de loin : une image sur deux */
       for(let i=0;i<2;i++){const ln=av.lines[i],st=B[48+i*4];ln.visible=st>0&&!dead;if(ln.visible){const p=ln.geometry.attributes.position;av.trick.localToWorld(tA.set((i?1:-1)*.24,-.02,.06));p.setXYZ(0,tA.x,tA.y,tA.z);p.setXYZ(1,L(49+i*4),L(50+i*4),L(51+i*4));p.needsUpdate=true;}}
       tB.set(L(0),L(1)+2.4,L(2)).project(camera);const vis=tB.z<1&&Math.abs(tB.x)<1.05&&Math.abs(tB.y)<1.05;R.tag.style.display=vis?'':'none';
@@ -7595,7 +7597,7 @@ function pvBotAttacksTick(b,dt,E){pvBotGun(b,dt,E);if(b.slashA>0){b.slashA+=dt;i
 // lance foudroyante d'une IA : visée avec anticipation, erreur selon le niveau de l'IA
 function pvBotThrow(b,T){if(!T||b.spears<=0)return;b.spears--;b.spearCd=1.3+Math.random()*1.2;const o=b.center.clone().add(_pvA.set(0,.3,0)),d=T.center.distanceTo(o),t=d/CFG.spearSpeed;
   const aim=T.center.clone().addScaledVector(T.vel,t*.9);aim.y+=.5*CFG.spearGravity*t*t;const dir=aim.sub(o).normalize(),e=b.skill.err*2.4*(1+d/45)+.02;   /* lances des IA : nettement moins précises */dir.x+=(Math.random()-.5)*e*2;dir.y+=(Math.random()-.5)*e*2;dir.z+=(Math.random()-.5)*e*2;dir.normalize();
-  const m=spearMesh();m.position.copy(o).addScaledVector(dir,.8);scene.add(m);PV.proj.push({m,v:dir.clone().multiplyScalar(CFG.spearSpeed).addScaledVector(b.vel,.4),t:0,by:b.id,team:b.team});
+  const m=mk2Proj();m.position.copy(o).addScaledVector(dir,.8);scene.add(m);PV.proj.push({m,v:dir.clone().multiplyScalar(CFG.spearSpeed).addScaledVector(b.vel,.4),t:0,by:b.id,team:b.team});
   b.vel.addScaledVector(dir,-3);if(camera.position.distanceTo(o)<50)sfx.launch();}
 function pvProjStep(dt){for(let i=PV.proj.length-1;i>=0;i--){const s=PV.proj[i];s.t+=dt;const prev=s.m.position.clone();s.v.y-=CFG.spearGravity*dt;s.m.position.addScaledVector(s.v,dt);s.m.quaternion.setFromUnitVectors(_zf,_pvA.copy(s.v).normalize());
     if(Math.random()<.8)emit(prev,rv(1).clone(),.6,.25,1.1,0xd8d4cc,.45);

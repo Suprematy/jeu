@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124143603">
+<meta name="build" content="20261124143937">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -3589,7 +3589,7 @@ class Titan{
     let xp=base*(1+.1*(wave-1));if(oneShot)xp*=1.5;xp=Math.round(xp*combo);
     addStyle('Nuque',.5,true);
     if(this.silent)xp=Math.round(xp*.5);
-    feed(this.silent?`Son armée s'effondre  +${xp} XP`:`${oneShot?'ONE SHOT ! ':''}${this.cfg.name} abattu  +${xp} XP`,oneShot?'gold':'');
+    {const xs=Math.round(xp*(NET&&NET.on?coopXP():1));feed(this.silent?`Son armée s'effondre  +${xs} XP`:`${oneShot?'ONE SHOT ! ':''}${this.cfg.name} abattu  +${xs} XP`,oneShot?'gold':'');}
     addXP(xp);slowT=oneShot?.45:.28;sfx.kill();
     if(!this.silent)slashBlood(this.nape.getWorldPosition(new V3()),this.s,true);steamBurst(this.nape.getWorldPosition(tC),14,this.s);
     this.marker.remove();if(this.lbars)this.lbars.forEach(b=>b.remove());if(this.cfg.boss)bossDown(this);
@@ -3799,7 +3799,11 @@ function hurtPlayer(t,mult){
 }
 
 /* ================= XP ================= */
-function addXP(n){if(gameMode==='pvp')return;n*=modXP();   /* modificateurs : expérience en plus */   /* PvP : on monte d'un niveau par élimination */if(NET&&(NET.poss||NET.quiet))return;if(NET&&NET.on&&!NET.sharing&&n>0)NET.ev({k:'xp',n:Math.round(n)});   /* coop : toute expérience gagnée est versée à l'identique aux coéquipiers */
+/* coop : chaque joueur en plus ajoute 80 % de titans (et de vie aux boss) ; l'expérience de toute l'escouade est partagée, réduite pour qu'à deux on progresse au même rythme qu'en solo par vague (+10 % par joueur au-delà de deux) */
+function coopN(){return NET&&NET.on&&gameMode!=='pvp'?1+NET.rem.size:1;}
+function coopK(){return 1+.8*(coopN()-1);}
+function coopXP(){const n=coopN();return n>1?(1+.1*(n-2))/coopK():1;}
+function addXP(n){if(gameMode==='pvp')return;n*=modXP();if(NET&&NET.on&&!NET.sharing)n*=coopXP();   /* modificateurs : expérience en plus */   /* PvP : on monte d'un niveau par élimination */if(NET&&(NET.poss||NET.quiet))return;if(NET&&NET.on&&!NET.sharing&&n>0)NET.ev({k:'xp',n:Math.round(n)});   /* coop : toute expérience gagnée est versée à l'identique aux coéquipiers */
   save.xp+=n;let up=false;const oldR=rank().name,lv0=save.level;
   while(save.xp>=need(save.level)){save.xp-=need(save.level);save.level++;save.points+=gameMode==='boss'?2:1;up=true;}
   if(up){ST=calcStats();player.hp=ST.hpMax;sfx.level();
@@ -3899,12 +3903,12 @@ function startWave(n){wave=n;carnetWave(n);waveSnap={gid:GID,prof:save.prof,leve
     if(n===1){player.spears=spearMax();applyEquipVisual();}for(const k of bs)spawnBoss(Math.max(5,C.power),k);return;}
   if(gameMode==='final'){const k=n===1?'assaillant':'originel';toSpawn=n===1?6:4;spawnT=2;waveBreak=0;
     bigMsg('ASSAUT FINAL · '+(n===1?'L\'ASSAILLANT':'LE TITAN ORIGINEL'),n===1?'Niveau 100 et 100 points : Tab pour les répartir avant le combat':'Dernier combat');spawnBoss(n,k);return;}
-  if(gameMode==='boss'){const k=BOSS_FINAL[(n-1)%BOSS_FINAL.length];toSpawn=k==='originel'?4:3+Math.floor(n*.8);if(NET&&NET.on)toSpawn=Math.round(toSpawn*(1+.6*NET.rem.size));spawnT=2;waveBreak=0;   // le boss arrive entouré de titans
+  if(gameMode==='boss'){const k=BOSS_FINAL[(n-1)%BOSS_FINAL.length];toSpawn=k==='originel'?4:3+Math.floor(n*.8);if(NET&&NET.on)toSpawn=Math.round(toSpawn*coopK());spawnT=2;waveBreak=0;   // le boss arrive entouré de titans
     bigMsg('VAGUE DE BOSS · '+n,n===1?'Un boss par vague. Chaque niveau rapporte 2 points de compétence.':'Plus fort que le précédent');
     if(n>(save.bestBoss||1)){save.bestBoss=n;persist();}spawnBoss(n,k);return;}
   const rb=gameMode==='rumbling',boss=!rb&&n%5===0;
   // le nombre de titans augmente peu ; ce sont leur vitesse, leur agressivité, leurs dégâts et leur nombre simultané qui montent
-  toSpawn=rb?(n%10===0?0:2+Math.floor(n*.6)):boss?(n%40===0||n%35===0?4:Math.floor(n*.4)+(n===10?1:0)):4+Math.floor(n*.9);/* vague 35 : c'est son armée qui vient */if(NET&&NET.on)toSpawn=Math.round(toSpawn*(1+.6*NET.rem.size));spawnT=.5;waveBreak=0;
+  toSpawn=rb?(n%10===0?0:2+Math.floor(n*.6)):boss?(n%40===0||n%35===0?4:Math.floor(n*.4)+(n===10?1:0)):4+Math.floor(n*.9);/* vague 35 : c'est son armée qui vient */if(NET&&NET.on)toSpawn=Math.round(toSpawn*coopK());spawnT=.5;waveBreak=0;
   bigMsg(rb?'THE RUMBLING · VAGUE '+n:'VAGUE '+n,rb?(n===1?'Les murs sont tombés : des titans colossaux de 50 mètres avancent':'Le Grand Terrassement se rapproche'):(n===1?'Les titans ont franchi la brèche':'Plus rapides, plus agressifs, plus coriaces'));
   if(rb){if(n>(save.bestRumble||1)){save.bestRumble=n;persist();}}else if(n>save.bestWave){save.bestWave=n;persist();}
   if(boss)spawnBoss(n);
@@ -3921,7 +3925,7 @@ function updWave(dt){if(gameMode==='pvp')return;if(gameMode==='tuto'){TUTO.tick(
   const alive=titans.filter(t=>t.state!=='dead').length+(ORIG&&!ORIG.dead?1:0);
   sfx.intense=alive>0?(titans.some(t=>t.cfg.boss&&t.state!=='dead')||(ORIG&&!ORIG.dead)?2:1):0;
   if(waveBreak>0){waveBreak-=dt;if(waveBreak<=0)startWave(wave+1);return;}
-  if(toSpawn>0){spawnT-=dt;if(spawnT<=0&&alive<(gameMode==='train'?60:gameMode==='rumbling'?Math.min(6,2+Math.ceil(wave/2)):Math.min(14,3+Math.ceil(wave*.9))+(NET.on?2*NET.rem.size:0))){if(NET.on)NET.spawnT(pickType());else spawnTitan(pickType());toSpawn--;spawnT=gameMode==='train'?.35:Math.max(.8,2.2-wave*.05);}}
+  if(toSpawn>0){spawnT-=dt;if(spawnT<=0&&alive<(gameMode==='train'?60:gameMode==='rumbling'?Math.min(6,2+Math.ceil(wave/2)):Math.min(14,3+Math.ceil(wave*.9))+(NET.on?3*NET.rem.size:0))){if(NET.on)NET.spawnT(pickType());else spawnTitan(pickType());toSpawn--;spawnT=gameMode==='train'?.35:Math.max(.8,2.2-wave*.05);}}
   else if(alive===0&&gameMode==='train'&&TRN.cfg.waves&&wave>=TRN.cfg.waves){if(!TRN.done){TRN.done=true;bigMsg('ENTRAÎNEMENT TERMINÉ','Bravo ! Tab · Menu principal pour revenir, ou continue à t\'exercer ici.');}}
   else if(alive===0&&gameMode==='final'&&wave>=2){if(!finalWon)finalWin();}
   else if(alive===0){waveBreak=5;bigMsg('VAGUE '+wave+' NETTOYÉE','Prochaine vague dans 5 s');achWaveClear();}
@@ -4176,7 +4180,7 @@ const MEDALS=[['nuque1','Première nuque','trancher sa première nuque'],['cent'
   ['asec','Réservoir vide','trancher une nuque sans une goutte de gaz','d',1],
   ['amuse','Amuse-gueule','se faire dévorer par un titan','c'],['sauna','Sauna','mourir dans la vapeur d\'un titan','c'],['gaffe','Gaffe','mourir dès la première vague','c'],['cimet','Abonné au cimetière','mourir 50 fois','c'],
   ['platjour','Plat du jour','se faire attraper 25 fois','c'],['assiette','Pas dans mon assiette','se libérer d\'une saisie','c'],['panne','Panne sèche','tomber à court de gaz','c'],
-  ['acrobate','Acrobate','trancher une nuque en plein salto ou en pleine vrille','c',1],['politesse','Politesse','faire le salut militaire à moins de 20 m d\'un titan','c',1],['nostalgie','Nostalgique','taper un vieux code bien connu (↑↑↓↓←→←→BA) au menu principal','c',1],['realisateur','Réalisateur','passer 60 s dans la vue bonus','c',1],
+  ['acrobate','Acrobate','trancher une nuque en plein salto ou en pleine vrille','c',1],['politesse','Politesse','faire le salut militaire à moins de 20 m d\'un titan','c',1],['nostalgie','Nostalgique','taper un vieux code bien connu (↑↑↓↓←→←→BA) au menu principal','c',1],['realisateur','Réalisateur','passer 60 s dans la vue bonus','c',1],['plan','Plan-séquence','abattre 25 titans dans la vue bonus','d',1],
   ['kamikaze','Kamikaze','mourir de sa propre lance foudroyante','a'],['feu','Feu d\'artifice','faire exploser 4 lances d\'affilée sans toucher un seul titan','a'],['deserteur','Déserteur','quitter une partie en pleine vague','a'],
   ['sieste','Sieste','ne toucher à rien pendant 60 s en pleine vague','a',1],['objecteur','Objecteur de conscience','survivre 3 minutes dans une vague sans toucher un seul titan','a',1]];
 const MEDAL_CAT=[['','Médailles'],['d','Exploits'],['c','Pour rire'],['a','Anti-jeu']];
@@ -4196,7 +4200,8 @@ function achTick(dt,rdt){try{if(state!=='play'||cnOff())return;const p=player,A=
   if(live&&A.gt-A.atk>180)medal('objecteur');}catch(e){}}
 function achKill(t){const p=player,A=ACH;A.kt.push(A.gt);A.kt=A.kt.filter(x=>A.gt-x<10);if(A.kt.length>=5)medal('massacre');if(save.totK>=10000)medal('fleau');
   if(dmgSrc==='spear')A.spk++;else{if(p.flipT>0||p.rollT>0)medal('acrobate');if(p.gas<=0)medal('asec');}
-  if(A.esc===t&&A.gt-A.escT<5)medal('retour');}
+  if(A.esc===t&&A.gt-A.escT<5)medal('retour');
+  if(save.camMode==='cine'){save.cineK=(save.cineK||0)+1;if(save.cineK>=25)medal('plan');}}
 function achWaveClear(){try{if(cnOff())return;const p=player;if(ACH.hitW)ACH.noHit=0;else if(++ACH.noHit>=10)medal('intouch');ACH.hitW=false;if(p.hp>0&&p.hp<ST.hpMax*.05)medal('cheveu');}catch(e){}}
 function achDeath(){try{if(cnOff()||state!=='play'||(NET&&NET.on&&NET.dead))return;save.deaths=(save.deaths||0)+1;if(save.deaths>=50)medal('cimet');
   if(DC==='lance')medal('kamikaze');else if(DC==='mange')medal('amuse');else if(DC==='vapeur')medal('sauna');
@@ -5984,7 +5989,7 @@ function originelArrival(){if(ORIG)clearOriginel();const ew=effWave();
   const wz=MAP==='district'?DZ0:-SQW,top=WH+1.2,bz=wz-172;
   ORIG={type:'originel',cfg:TT.originel,wz,top,bz,gy0:groundY(0,bz),hooks:[],maxHp:Math.round(45000*clamp(ew/40<=.6?.6:.6+.8*(ew/40-.6),.6,3)),hp:0,dead:false,deadT:0,t:0,introT:5,
     phase:1,screamCd:11,screamT:-1,slamCd:9,spikeCd:6,callCd:4,colCd:3,exposeT:0,staggerT:0,queue:ORIG_CTRL.filter(k=>k!=='cuirasse'||spearsOK()).sort(()=>Math.random()-.5),freed:0,need:0,spikes:[],lances:[],rage:false,rageT:0,volleyCd:9,steamCd:14,steamT:-1,steamHit:0,slam2:0,plateHP:Math.round(700*clamp(ew/40,.6,3))};
-  if(NET&&NET.on&&NET.host)ORIG.maxHp=Math.round(ORIG.maxHp*(1+.5*NET.rem.size));   /* plus résistant quand l'escouade est nombreuse */
+  if(NET&&NET.on&&NET.host)ORIG.maxHp=Math.round(ORIG.maxHp*coopK());   /* plus résistant quand l'escouade est nombreuse */
   ORIG.hp=ORIG.maxHp;ORIG.need=ORIG.queue.length;origBuild();OM.eye.color.setHex(0x58ff7c);OM.bone.emissive.setRGB(0,0,0);for(const p of ORIG.plates)p.hp=ORIG.plateHP;
   ORIG.g.position.y=-80;for(const a of ORIG.arms)a.W.copy(a.G).add(new V3(0,-90,-30));
   sfx.bossHorn();shake=Math.max(shake,1.2);setTimeout(()=>sfx.bossHorn(),1400);
@@ -7235,7 +7240,7 @@ var NET={mode:'normal',on:false,host:false,lobby:false,started:false,welcomed:fa
     try{super(type,x,z);}finally{Math.random=R0;}
     if(type==='assaillant')titanGreenEyes(this);titanCull(this);
     this.seed=sd;this.sx=x;this.sz=z;this.cw=wave;const B=this.bodyMesh.skeleton.bones;this.rest=new Float32Array(54);for(let i=0;i<18;i++){this.rest[i*3]=B[i].position.x;this.rest[i*3+1]=B[i].position.y;this.rest[i*3+2]=B[i].position.z;}
-    if(NET.on&&this.cfg.boss){const k=1+.5*NET.rem.size;this.maxHp*=k;this.hp=this.maxHp;this.limbMax*=k;this.limbHp={arm:[this.limbMax,this.limbMax],leg:[this.limbMax,this.limbMax]};}
+    if(NET.on&&this.cfg.boss){const k=coopK();this.maxHp*=k;this.hp=this.maxHp;this.limbMax*=k;this.limbHp={arm:[this.limbMax,this.limbMax],leg:[this.limbMax,this.limbMax]};}
     if(NET.on&&NET.host){this.nid=++NET.tid;NET.tmap.set(this.nid,this);}}};}
 // enveloppe d'un titan : sphère de sa pose de repos, élargie pour couvrir bras tendus, saisies et chute ; le moteur peut alors l'écarter quand il n'est pas vu
 function titanCull(t){t.root.traverse(o=>{if(!o.isSkinnedMesh||o.userData.cullOk)return;const g=o.geometry;g.computeBoundingBox();const b=g.boundingBox,c=new THREE.Vector3(),sz=new THREE.Vector3();b.getCenter(c);b.getSize(sz);

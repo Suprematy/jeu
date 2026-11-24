@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124142437">
+<meta name="build" content="20261124143603">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -185,6 +185,8 @@ button.small{font-size:14px;padding:6px 12px;letter-spacing:.06em}
 .cn-t{width:100%;border-collapse:collapse;font-size:14px}.cn-t th{color:var(--muted);font-weight:600;text-align:left;font-size:12px;letter-spacing:.06em}.cn-t td,.cn-t th{padding:2px 4px;border-bottom:1px solid rgba(255,255,255,.06)}
 .cn-med{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:6px 4px}
 .cn-m{display:flex;flex-direction:column;align-items:center;gap:2px;color:rgba(255,255,255,.2);font-size:11px;text-align:center;line-height:1.1;min-width:0}
+.cn-tabs button small{opacity:.65;font-size:.85em}.cn-tabs button.cn-cd{color:#d9a54a}.cn-tabs button.cn-cc{color:#7fc2d9}.cn-tabs button.cn-ca{color:#d77a6a}.cn-mbox .cn-tabs{margin-bottom:8px}
+.cn-m.cn-cd.on{color:#e2ad4c}.cn-m.cn-cc.on{color:#7fc2d9}.cn-m.cn-ca.on{color:#d77a6a}.cn-m.sec span{letter-spacing:.2em}
 .cn-m svg{width:24px;height:24px}.cn-m.on{color:var(--gold)}.cn-m span{color:var(--muted);overflow:hidden;text-overflow:ellipsis;max-width:100%;white-space:nowrap}.cn-m.on span{color:var(--fg)}
 .mpanel h2{font-family:var(--display);font-size:clamp(20px,2.8vh,28px);letter-spacing:.12em;margin:0;font-weight:800}
 .mpanel .lead{color:var(--muted);font-size:15px;margin:-4px 0 2px;line-height:1.4}
@@ -1777,7 +1779,7 @@ const FIST_F=[['Proximal',1.25],['Intermediate',1.4],['Distal',1.0]],FIST_T=[['T
 function fistBones(h){const L=[];if(!h||!h.getBoneNode)return L;for(const f of ['Index','Middle','Ring','Little'])for(const [s,a] of FIST_F){const b=h.getBoneNode('right'+f+s);if(b)L.push([b,new V3(0,0,1),-a]);}for(const [s,a] of FIST_T){const b=h.getBoneNode('right'+s);if(b)L.push([b,new V3(1,0,0),-a]);}{const b=h.getBoneNode('rightHand');if(b)L.push([b,null,new THREE.Quaternion().setFromEuler(new THREE.Euler(FIST_H[0],FIST_H[1],FIST_H[2]))]);}return L;}
 function applyFist(L,w,st){if(!L||!st)return;if(w<.002){if(st.on){for(const [b] of L)if(b.userData.fq0)b.quaternion.copy(b.userData.fq0);st.on=false;}return;}
   st.on=true;for(const [b,ax,a] of L){if(!b.userData.fq0)b.userData.fq0=b.quaternion.clone();b.quaternion.copy(b.userData.fq0).multiply(ax?_fq.setFromAxisAngle(ax,a*w):_fq.set(0,0,0,1).slerp(a,w));}}
-function salute(){const p=player;if(grab||!p.grounded)return;p.saluteT=2.6;medal('salut');if(bladesShown()&&typeof toggleSheath==='function')toggleSheath();}
+function salute(){const p=player;if(grab||!p.grounded)return;p.saluteT=2.6;medal('salut');if(state==='play'&&!cnOff()&&achAlive().some(t=>t.root.position.distanceTo(p.pos)<20))medal('politesse');if(bladesShown()&&typeof toggleSheath==='function')toggleSheath();}
 const SL2={x:-1.45,z0:1.15,z1:-.45,z2:-.1,f0:-.75,f1:-.08,dy:.25,rx:-.55,rz:-.3,rf:-.9};   // coupe en deux arcs (bras, avant-bras)   // lances tenues basses (réglage)
 function animPlayer(dt){
   const p=player,spd=p.vel.length(),hs=Math.hypot(p.vel.x,p.vel.z),tm=performance.now()/1000,att=attCount();if(!(p.grounded&&hs<=1.5)||p.wall)p.idleT=0;
@@ -2702,7 +2704,7 @@ function bossUpdate(t,dt,dist){const k=t.type,p=player;t.bt=(t.bt===undefined?3:
       const inSteam=dd<5.5*t.s&&p.pos.y<t.H*1.15;t.inSteam=inSteam;
       if(inSteam&&!(NET&&NET.on)){const sr=ST.hpMax*.06*(.35+.65*Math.pow(1-dd/(5.5*t.s),1.5));p.hp-=sr*dt;   /* plus on est près de son corps, plus la vapeur brûle (2 % à 6 % de la vie par seconde), pas de régénération dedans */
         p.lastHit=0;t.steamTick=(t.steamTick||0)+dt;if(t.steamTick>.6){t.steamTick=0;popNum(p.center,'-'+Math.max(1,Math.round(sr*.6)),'hurt');}
-        $('flash').style.transition='none';$('flash').style.opacity=.1+.05*Math.sin(performance.now()/120);deathCheck();}
+        $('flash').style.transition='none';$('flash').style.opacity=.1+.05*Math.sin(performance.now()/120);ACH.inSt=1;DC='vapeur';deathCheck();DC='';}
       if(t.steam<=0&&t.wasInSteam!==false){$('flash').style.transition='opacity .6s';$('flash').style.opacity=0;}
     }else{if(t.inSteam){t.inSteam=false;$('flash').style.transition='opacity .6s';$('flash').style.opacity=0;}
       // la vapeur sert surtout contre un soldat en l'air près de lui
@@ -3540,14 +3542,14 @@ class Titan{
     if(this.cfg.boss){dmg=bossDamage(this,dmg);if(dmg<=0)return;}
     const kill=this.hp-dmg<=0;let np=this.nape.getWorldPosition(new V3());
     if(dmgSrc!=='spear'){const wp=woundAt(this,this.body,np,kill?1.7:1.15,kill?.15:.095);if(wp)np=wp;}
-    this.hp-=dmg;
+    this.hp-=dmg;ACH.atk=ACH.gt;
     slashBlood(np,this.s,false);steamBurst(np,3,this.s*.5);sfx.hit();shake=Math.max(shake,.35);if(dmgSrc!=='spear'&&!(NET&&NET.replay))bloodOnMe(np,kill?1:.5,this.s);   /* le sang gicle sur le soldat */
     const crit=this.firstHit&&dmg>=this.maxHp;
     popNum(np,Math.round(dmg),crit?'crit':'');
     if(this.hp<=0)this.die(crit);else{this.firstHit=false;this.stagger=Math.max(this.stagger,.5);}
     tut(2);
   }
-  hitLimb(m,dmg){
+  hitLimb(m,dmg){ACH.atk=ACH.gt;
     if(this.cfg.boss){dmg=bossDamage(this,dmg,true);if(dmg<=0)return;}
     this.flinchT=.35;const lb=m.userData.limb,p=m.getWorldPosition(new V3());let kind,i;
     if(lb==='leg'){kind='leg';i=this.legs.findIndex(h=>isDesc(m,h));if(i<0)i=0;}
@@ -3788,7 +3790,7 @@ function hurtPlayer(t,mult){
   if(NET&&NET.on&&NET.host&&!NET.deliver&&NET.debt>.05){NET.q.push({at:performance.now()+NET.debt*1000,m:{k:'self',t,mult}});return;}   // pendant un ralenti local, le coup arrive quand on le voit arriver
   const p=player;if(p.inv>0||state!=='play')return;
   const dmg=Math.round(16*t.s*(1+.09*(effWave()-1))*(t.type==='abnormal'?1.2:1)*(t.cfg&&t.cfg.dmg||1)*(mult||1));
-  p.hp-=modOn('fragile')?Math.max(dmg,p.hp+1):dmg;p.inv=1;p.lastHit=0;
+  p.hp-=modOn('fragile')?Math.max(dmg,p.hp+1):dmg;p.inv=1;p.lastHit=0;ACH.hitW=true;
   tA.set(p.pos.x-t.root.position.x,0,p.pos.z-t.root.position.z).normalize();
   p.vel.set(tA.x*26,10,tA.z*26);releaseAll();combo=1;
   shake=1.3;$('flash').style.transition='none';$('flash').style.opacity=.45;requestAnimationFrame(()=>{$('flash').style.transition='opacity .5s';$('flash').style.opacity=0;});
@@ -3914,7 +3916,7 @@ function startWave(n){wave=n;carnetWave(n);waveSnap={gid:GID,prof:save.prof,leve
   if(gameMode==='normal'&&(n===11||n===21||n===31)){const m=spearMax();player.spears=m;applyEquipVisual();
     setTimeout(()=>bigMsg(n===11?'2 LANCES FOUDROYANTES':'+2 LANCES FOUDROYANTES',n===11?'B : alterner entre les lames et les lances. 2 de plus toutes les 10 vagues':n===31?'Tu portes maintenant 6 lances : le maximum':'Tu portes maintenant '+m+' lances'),2600);}}
 let finalWon=false;
-function finalWin(){finalWon=true;}   // plus de vague après le Titan Originel : la partie continue librement, sans message
+function finalWin(){finalWon=true;if(!cnOff())medal('originel');}   // plus de vague après le Titan Originel : la partie continue librement, sans message
 function updWave(dt){if(gameMode==='pvp')return;if(gameMode==='tuto'){TUTO.tick(dt);return;}if(gameMode==='train')TRN.tick();
   const alive=titans.filter(t=>t.state!=='dead').length+(ORIG&&!ORIG.dead?1:0);
   sfx.intense=alive>0?(titans.some(t=>t.cfg.boss&&t.state!=='dead')||(ORIG&&!ORIG.dead)?2:1):0;
@@ -3922,7 +3924,7 @@ function updWave(dt){if(gameMode==='pvp')return;if(gameMode==='tuto'){TUTO.tick(
   if(toSpawn>0){spawnT-=dt;if(spawnT<=0&&alive<(gameMode==='train'?60:gameMode==='rumbling'?Math.min(6,2+Math.ceil(wave/2)):Math.min(14,3+Math.ceil(wave*.9))+(NET.on?2*NET.rem.size:0))){if(NET.on)NET.spawnT(pickType());else spawnTitan(pickType());toSpawn--;spawnT=gameMode==='train'?.35:Math.max(.8,2.2-wave*.05);}}
   else if(alive===0&&gameMode==='train'&&TRN.cfg.waves&&wave>=TRN.cfg.waves){if(!TRN.done){TRN.done=true;bigMsg('ENTRAÎNEMENT TERMINÉ','Bravo ! Tab · Menu principal pour revenir, ou continue à t\'exercer ici.');}}
   else if(alive===0&&gameMode==='final'&&wave>=2){if(!finalWon)finalWin();}
-  else if(alive===0){waveBreak=5;bigMsg('VAGUE '+wave+' NETTOYÉE','Prochaine vague dans 5 s');}
+  else if(alive===0){waveBreak=5;bigMsg('VAGUE '+wave+' NETTOYÉE','Prochaine vague dans 5 s');achWaveClear();}
 }
 
 /* ================= ENTRAÎNEMENT CONTRE LES TITANS ================= */
@@ -4164,9 +4166,48 @@ function renderMods(){const M=save.mods||(save.mods={});$('modRow').innerHTML=MO
 $('modRow').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const M=save.mods||(save.mods={});M[b.dataset.mod]=!M[b.dataset.mod];persist();renderMods();});
 const MEDALS=[['nuque1','Première nuque','trancher sa première nuque'],['cent','Centurion','100 nuques tranchées'],['mille','Mille nuques','1 000 nuques tranchées'],['parfaite','Coupe parfaite','trancher une nuque à pleine vitesse'],['tendon','Jarret','trancher un tendon derrière le genou'],['aveugle','Dans le noir','aveugler un titan'],
   ['lance','Foudroyant','abattre un titan à la lance foudroyante'],['boss','Tueur de géants','vaincre un boss'],['v10','Recrue aguerrie','vague 10 en classique'],['v25','Vétéran','vague 25 en classique'],['v50','Héros','vague 50 en classique'],['rumb10','Face au Rumbling','vague 10 du Rumbling'],
-  ['orage','Sous l\'orage','trancher une nuque sous l\'orage'],['nuit','Chasseur nocturne','trancher une nuque de nuit'],['risque','Goût du risque','vague 10 avec un modificateur'],['salut','Offrez vos cœurs','faire le salut militaire'],['tireur','Tireur d\'élite','tir à la tête au pistolet (PvP)'],['defi','Défi relevé','accomplir un défi du jour']];
+  ['orage','Sous l\'orage','trancher une nuque sous l\'orage'],['nuit','Chasseur nocturne','trancher une nuque de nuit'],['risque','Goût du risque','vague 10 avec un modificateur'],['salut','Offrez vos cœurs','faire le salut militaire'],['tireur','Tireur d\'élite','tir à la tête au pistolet (PvP)'],['defi','Défi relevé','accomplir un défi du jour'],
+  /* v104 : succès difficiles (d), comiques (c) et anti-jeu (a) ; le 5e champ à 1 = secret (nom et condition cachés tant qu'il n'est pas obtenu) */
+  ['v100','Immortel','vague 100 en classique','d'],['rumb30','Dernier rempart','vague 30 du Rumbling','d'],['funambule','Funambule','vague 25 avec « Un coup, une vie »','d'],['maso','Masochiste','vague 10 avec les six modificateurs à la fois','d'],
+  ['intouch','Intouchable','10 vagues d\'affilée sans prendre un seul coup','d'],['massacre','Massacre','5 nuques en moins de 10 secondes','d'],['fleau','Fléau des titans','10 000 nuques tranchées','d'],['originel','Fin de l\'Originel','vaincre le Titan Originel','d'],
+  ['triple','Une lance, trois titans','abattre 3 titans avec une seule lance foudroyante','d'],
+  ['fil','Sur le fil','tenir 5 s sous 5 % de vie, en pleine vague, sans mourir','d',1],['encercle','Encerclé','survivre 5 s avec 5 titans à moins de 30 m','d',1],['etuve','Étuve','rester 8 s dans la vapeur brûlante d\'un titan et en ressortir vivant','d',1],
+  ['retour','Retour à l\'envoyeur','trancher la nuque du titan qui t\'a attrapé moins de 5 s après t\'être libéré','d',1],['justesse','Dernière seconde','se libérer d\'une saisie juste avant d\'être mordu','d',1],['cheveu','À un cheveu','nettoyer une vague avec moins de 5 % de vie','d',1],
+  ['asec','Réservoir vide','trancher une nuque sans une goutte de gaz','d',1],
+  ['amuse','Amuse-gueule','se faire dévorer par un titan','c'],['sauna','Sauna','mourir dans la vapeur d\'un titan','c'],['gaffe','Gaffe','mourir dès la première vague','c'],['cimet','Abonné au cimetière','mourir 50 fois','c'],
+  ['platjour','Plat du jour','se faire attraper 25 fois','c'],['assiette','Pas dans mon assiette','se libérer d\'une saisie','c'],['panne','Panne sèche','tomber à court de gaz','c'],
+  ['acrobate','Acrobate','trancher une nuque en plein salto ou en pleine vrille','c',1],['politesse','Politesse','faire le salut militaire à moins de 20 m d\'un titan','c',1],['nostalgie','Nostalgique','taper un vieux code bien connu (↑↑↓↓←→←→BA) au menu principal','c',1],['realisateur','Réalisateur','passer 60 s dans la vue bonus','c',1],
+  ['kamikaze','Kamikaze','mourir de sa propre lance foudroyante','a'],['feu','Feu d\'artifice','faire exploser 4 lances d\'affilée sans toucher un seul titan','a'],['deserteur','Déserteur','quitter une partie en pleine vague','a'],
+  ['sieste','Sieste','ne toucher à rien pendant 60 s en pleine vague','a',1],['objecteur','Objecteur de conscience','survivre 3 minutes dans une vague sans toucher un seul titan','a',1]];
+const MEDAL_CAT=[['','Médailles'],['d','Exploits'],['c','Pour rire'],['a','Anti-jeu']];
+/* ----- suivi des succès v104 ----- */
+var DC='';   /* cause du coup en cours : 'lance' (sa propre lance), 'mange' (dévoré), 'vapeur' */
+const ACH={gt:0,kt:[],low:0,ring:0,steam:0,inSt:0,esc:null,escT:-99,miss:0,spk:0,noHit:0,hitW:false,atk:0,t0:0,cine:0,kon:0};
+function achReset(){Object.assign(ACH,{gt:0,kt:[],low:0,ring:0,steam:0,inSt:0,esc:null,escT:-99,miss:0,spk:0,noHit:0,hitW:false,atk:0,t0:performance.now()});}
+function achPop(t){const d=document.createElement('div');d.textContent=t;d.style.cssText='position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:60;padding:8px 16px;background:rgba(14,12,10,.88);border:1px solid var(--gold);color:var(--gold);font:700 14px/1.3 Arial;letter-spacing:.03em;border-radius:6px;pointer-events:none;transition:opacity .6s;max-width:calc(100vw - 32px);text-align:center';document.body.appendChild(d);setTimeout(()=>d.style.opacity=0,3600);setTimeout(()=>d.remove(),4300);}
+const achAlive=()=>titans.filter(t=>t.state!=='dead'&&!t.gone);
+function achTick(dt,rdt){try{if(state!=='play'||cnOff())return;const p=player,A=ACH;A.gt+=dt;const al=achAlive(),live=al.length>0&&p.hp>0;
+  if(save.camMode==='cine'){A.cine+=rdt;if(A.cine>=60)medal('realisateur');}
+  if(p.gas<=0)medal('panne');
+  if(live&&p.hp<ST.hpMax*.05){A.low+=dt;if(A.low>=5)medal('fil');}else A.low=0;
+  {let n=0;for(const t of al)if(t.root.position.distanceTo(p.pos)<30)n++;if(n>=5&&p.hp>0){A.ring+=dt;if(A.ring>=5)medal('encercle');}else A.ring=0;}
+  if(A.inSt){A.steam+=dt;A.inSt=0;A.hitW=true;}else{if(A.steam>=8&&p.hp>0)medal('etuve');A.steam=0;}
+  if(live&&performance.now()-Math.max(CINE.inp||0,A.t0)>60000)medal('sieste');
+  if(live&&A.gt-A.atk>180)medal('objecteur');}catch(e){}}
+function achKill(t){const p=player,A=ACH;A.kt.push(A.gt);A.kt=A.kt.filter(x=>A.gt-x<10);if(A.kt.length>=5)medal('massacre');if(save.totK>=10000)medal('fleau');
+  if(dmgSrc==='spear')A.spk++;else{if(p.flipT>0||p.rollT>0)medal('acrobate');if(p.gas<=0)medal('asec');}
+  if(A.esc===t&&A.gt-A.escT<5)medal('retour');}
+function achWaveClear(){try{if(cnOff())return;const p=player;if(ACH.hitW)ACH.noHit=0;else if(++ACH.noHit>=10)medal('intouch');ACH.hitW=false;if(p.hp>0&&p.hp<ST.hpMax*.05)medal('cheveu');}catch(e){}}
+function achDeath(){try{if(cnOff()||state!=='play'||(NET&&NET.on&&NET.dead))return;save.deaths=(save.deaths||0)+1;if(save.deaths>=50)medal('cimet');
+  if(DC==='lance')medal('kamikaze');else if(DC==='mange')medal('amuse');else if(DC==='vapeur')medal('sauna');
+  if(wave<=1&&['normal','rpg','rumbling','boss','final'].includes(gameMode))medal('gaffe');persist();}catch(e){}}
+function achSpear(hit){try{if(cnOff())return;if(ACH.spk>=3)medal('triple');if(hit)ACH.miss=0;else if(++ACH.miss>=4)medal('feu');}catch(e){}}
+function achGrab(){try{if(cnOff())return;ACH.hitW=true;save.grabs=(save.grabs||0)+1;if(save.grabs>=25)medal('platjour');}catch(e){}}
+function achEscape(g){try{if(cnOff()||!g)return;medal('assiette');ACH.esc=g.t;ACH.escT=ACH.gt;if(g.T/GRAB_CFG.dur>.85)medal('justesse');}catch(e){}}
+{const KON=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','KeyB','KeyA'];
+  addEventListener('keydown',e=>{if(state!=='menu'){ACH.kon=0;return;}if(e.code===KON[ACH.kon]){ACH.kon++;if(ACH.kon===KON.length){ACH.kon=0;medal('nostalgie');}}else ACH.kon=e.code===KON[0]?1:0;});}
 const MEDAL_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M8 2h8l-2 6h-4z" fill="currentColor" fill-opacity=".35"/><circle cx="12" cy="15" r="6"/><path d="M12 12.3l.9 1.8 2 .3-1.5 1.4.4 2-1.8-1-1.8 1 .4-2-1.5-1.4 2-.3z" fill="currentColor" stroke="none"/></svg>';
-function medal(id){try{if(!save.medals)save.medals={};if(save.medals[id])return;const m=MEDALS.find(x=>x[0]===id);if(!m)return;save.medals[id]=Date.now();persist();feed('Médaille : '+m[1]+' ('+m[2]+')','gold');sfx.burst(3200,.12,.22,'bandpass',1.5);sfx.burst(4200,.18,.14,'bandpass',2,0,0,.12);}catch(e){}}
+function medal(id,pop){try{if(!save.medals)save.medals={};if(save.medals[id])return;const m=MEDALS.find(x=>x[0]===id);if(!m)return;save.medals[id]=Date.now();persist();{const tx=(m[4]?'Succès secret : ':m[3]?'Succès : ':'Médaille : ')+m[1]+' ('+m[2]+')';if(pop||$('hud').hidden)achPop(tx);else feed(tx,'gold');}sfx.burst(3200,.12,.22,'bandpass',1.5);sfx.burst(4200,.18,.14,'bandpass',2,0,0,.12);}catch(e){}}
 const DAILY_POOL=[{k:'kills',n:[15,25,40],t:'Trancher {n} nuques'},{k:'perfect',n:[2,4,7],t:'Réussir {n} coupes parfaites'},{k:'tendon',n:[2,4,6],t:'Trancher {n} tendons'},{k:'blind',n:[2,3,5],t:'Aveugler {n} titans'},
   {k:'limb',n:[5,10,16],t:'Trancher {n} membres'},{k:'spear',n:[3,6,10],t:'Abattre {n} titans à la lance'},{k:'wave',n:[8,12,16],t:'Atteindre la vague {n} (classique ou RPG)'},{k:'boss',n:[1,2,3],t:'Vaincre {n} boss'}];
 const REWARDS=[[1,'blanche'],[3,'ecarlate'],[5,'ocre'],[8,'pourpre'],[12,'acier']];   // capes gagnées avec les insignes des défis
@@ -4183,12 +4224,13 @@ function dailyMax(k,v){const D=dailyGet();let ch=false;for(const c of D.c){if(c.
 const cnOff=()=>(NET&&NET.replay)||gameMode==='train'||gameMode==='tuto'||gameMode==='pvp';
 function carnetEv(k){try{if(cnOff())return;dailyAdd(k,1);medal({perfect:'parfaite',tendon:'tendon',blind:'aveugle'}[k]);}catch(e){}}
 function carnetKill(t){try{if(cnOff())return;RUN.kills++;save.totK=(save.totK||0)+1;dailyAdd('kills',1);medal('nuque1');if(save.totK>=100)medal('cent');if(save.totK>=1000)medal('mille');
-  if(dmgSrc==='spear'){dailyAdd('spear',1);medal('lance');}if(t.cfg&&t.cfg.boss){dailyAdd('boss',1);medal('boss');}if(WX.st)medal('orage');if(save.night)medal('nuit');}catch(e){}}
-function carnetWave(n){try{if(cnOff())return;if(gameMode==='normal'||gameMode==='rpg')dailyMax('wave',n);if(gameMode==='normal'){if(n>=10)medal('v10');if(n>=25)medal('v25');if(n>=50)medal('v50');}if(gameMode==='rumbling'&&n>=10)medal('rumb10');if(n>=10&&modCount()>0)medal('risque');}catch(e){}}
+  if(dmgSrc==='spear'){dailyAdd('spear',1);medal('lance');}if(t.cfg&&t.cfg.boss){dailyAdd('boss',1);medal('boss');}if(WX.st)medal('orage');if(save.night)medal('nuit');achKill(t);}catch(e){}}
+function carnetWave(n){try{if(cnOff())return;if(gameMode==='normal'||gameMode==='rpg')dailyMax('wave',n);if(gameMode==='normal'){if(n>=10)medal('v10');if(n>=25)medal('v25');if(n>=50)medal('v50');}if(gameMode==='rumbling'&&n>=10)medal('rumb10');if(n>=10&&modCount()>0)medal('risque');
+  ACH.atk=ACH.gt;if(gameMode==='normal'&&n>=100)medal('v100');if(gameMode==='rumbling'&&n>=30)medal('rumb30');if(n>=25&&modOn('fragile'))medal('funambule');if(n>=10&&modCount()===MODS.length)medal('maso');}catch(e){}}
 const BOARD_MODES=[['normal','Classique'],['rpg','RPG'],['rumbling','Rumbling'],['boss','Boss'],['final','Assaut final']];
 function recordRun(){try{if(RUN.rec||(NET&&NET.on)||!BOARD_MODES.some(m=>m[0]===gameMode)||(wave<=1&&!RUN.kills))return;RUN.rec=true;const B=save.board||(save.board={}),L=B[gameMode]||(B[gameMode]=[]);
   L.push({w:wave,k:RUN.kills,lv:gameMode==='rpg'?save.level:0,m:MODS.filter(o=>modOn(o[0])).map(o=>o[0]),d:Date.now()});L.sort((a,b)=>b.w-a.w||b.k-a.k);L.length=Math.min(L.length,10);persist();}catch(e){}}
-let CN_MODE='normal';
+let CN_MODE='normal',CN_MCAT='';
 function renderCarnet(){const D=dailyGet(),ins=save.insignes||0,M=save.medals||{};
   let h='<div class="cn-grid"><div class="cn-box"><div class="cn-h">Défis du jour</div>';
   for(const c of D.c)h+=`<div class="cn-d${c.done?' ok':''}"><span>${dailyTxt(c)}</span><b>${c.done?'Accompli':c.p+' / '+c.n}</b></div><div class="cn-bar"><i style="width:${Math.min(100,c.p/c.n*100).toFixed(0)}%"></i></div>`;
@@ -4196,17 +4238,18 @@ function renderCarnet(){const D=dailyGet(),ins=save.insignes||0,M=save.medals||{
   h+='<div class="cn-box"><div class="cn-h">Classement</div><div class="cn-tabs">'+BOARD_MODES.map(([k,l])=>`<button data-cnm="${k}" class="${CN_MODE===k?'on':''}">${l}</button>`).join('')+'</div>';
   const L=(save.board&&save.board[CN_MODE])||[],rp=CN_MODE==='rpg';
   h+=L.length?'<table class="cn-t"><tr><th>#</th><th>Vague</th><th>Nuques</th>'+(rp?'<th>Niveau</th>':'')+'<th>Modif.</th><th>Date</th></tr>'+L.slice(0,8).map((e,i)=>`<tr><td>${i+1}</td><td>${e.w}</td><td>${e.k}</td>${rp?'<td>'+e.lv+'</td>':''}<td title="${(e.m||[]).map(k=>(MODS.find(o=>o[0]===k)||[k,k])[1]).join(', ')}">${(e.m||[]).length||'–'}</td><td>${new Date(e.d).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})}</td></tr>`).join('')+'</table>':'<p class="cn-note">Aucune partie enregistrée dans ce mode pour l\'instant. Chaque partie solo terminée y entre.</p>';
-  h+='</div></div><div class="cn-box"><div class="cn-h">Médailles · '+MEDALS.filter(m=>M[m[0]]).length+' / '+MEDALS.length+'</div><div class="cn-med">'+MEDALS.map(m=>`<div class="cn-m${M[m[0]]?' on':''}" title="${m[1]} : ${m[2]}">${MEDAL_SVG}<span>${m[1]}</span></div>`).join('')+'</div></div>';
+  h+='</div></div><div class="cn-box cn-mbox"><div class="cn-h">Médailles et succès · '+MEDALS.filter(m=>M[m[0]]).length+' / '+MEDALS.length+'</div><div class="cn-tabs">'+MEDAL_CAT.map(([c,l])=>{const L=MEDALS.filter(m=>(m[3]||'')===c);return `<button data-cnc="${c}" class="cn-c${c}${CN_MCAT===c?' on':''}">${l} <small>${L.filter(m=>M[m[0]]).length}/${L.length}</small></button>`;}).join('')+'</div>'+MEDAL_CAT.filter(([c])=>c===CN_MCAT).map(([c,l])=>{const L=MEDALS.filter(m=>(m[3]||'')===c);
+    return `<div class="cn-med">`+L.map(m=>{const on=M[m[0]],hid=m[4]&&!on;return `<div class="cn-m cn-c${c}${on?' on':''}${hid?' sec':''}" title="${hid?'Succès secret : à toi de le découvrir':m[1]+' : '+m[2]}">${MEDAL_SVG}<span>${hid?'???':m[1]}</span></div>`;}).join('')+'</div>';}).join('')+'</div>';
   $('carnetBody').innerHTML=h;}
-$('carnetBody').addEventListener('click',e=>{const b=e.target.closest('[data-cnm]');if(b){CN_MODE=b.dataset.cnm;renderCarnet();}});
-function startGame(w,mode,cont){GID++;gameMode=mode||'normal';wave=w;if(!(NET&&NET.on)){NET.dead=false;NET.deadT=0;NET.over=false;}$('coopDown').hidden=true;RUN.kills=0;   /* « À terre » d'une partie PvP quittée en étant à terre : effacé */RUN.rec=false;RUN.modsOn=!(NET&&NET.on)&&['normal','rpg','rumbling','boss','final'].includes(gameMode);try{wxFog();}catch(e){}window._trAll=gameMode==='train'&&!!TRN.cfg.all;TRN.done=false;useProfile(NET&&NET.on?'coop':gameMode==='train'||gameMode==='tuto'?'train':gameMode==='rpg'?'rpg':gameMode==='final'?'final':gameMode==='pvp'?'pvp':'classic');if(NET&&NET.on)NET.zero();else if(!cont)freshProfile();else repairProfile(w);if(gameMode==='rpg')save.tp=rpgTP();ST=calcStats();   // la vague est connue avant le réapprovisionnement (nombre de lances)
+$('carnetBody').addEventListener('click',e=>{const b=e.target.closest('[data-cnm]');if(b){CN_MODE=b.dataset.cnm;renderCarnet();}const c=e.target.closest('[data-cnc]');if(c){CN_MCAT=c.dataset.cnc;renderCarnet();}});
+function startGame(w,mode,cont){GID++;gameMode=mode||'normal';wave=w;if(!(NET&&NET.on)){NET.dead=false;NET.deadT=0;NET.over=false;}$('coopDown').hidden=true;RUN.kills=0;achReset();   /* « À terre » d'une partie PvP quittée en étant à terre : effacé */RUN.rec=false;RUN.modsOn=!(NET&&NET.on)&&['normal','rpg','rumbling','boss','final'].includes(gameMode);try{wxFog();}catch(e){}window._trAll=gameMode==='train'&&!!TRN.cfg.all;TRN.done=false;useProfile(NET&&NET.on?'coop':gameMode==='train'||gameMode==='tuto'?'train':gameMode==='rpg'?'rpg':gameMode==='final'?'final':gameMode==='pvp'?'pvp':'classic');if(NET&&NET.on)NET.zero();else if(!cont)freshProfile();else repairProfile(w);if(gameMode==='rpg')save.tp=rpgTP();ST=calcStats();   // la vague est connue avant le réapprovisionnement (nombre de lances)
   sfx.init();$('start').hidden=true;$('hud').hidden=false;
   finalWon=false;clearTitans();resetPlayer();startWave(w);state='play';goFull();lockPointer();showTut();last=performance.now();
 }
 function pause(){if(NET&&NET.on){if(state!=='play'||NET.menu)return;NET.menu=true;cancelAim();for(const k in keys)keys[k]=false;mouseR=false;renderMenu();$('pauseNote').hidden=false;$('pause').hidden=false;if(document.pointerLockElement)document.exitPointerLock();return;}   /* coop : le jeu continue pendant le menu */
   if(state!=='play')return;$('pauseNote').hidden=true;cancelAim();state='pause';renderMenu();$('pause').hidden=false;if(document.pointerLockElement)document.exitPointerLock();tut(4);}
 function resume(){try{const ae=document.activeElement;if(ae&&ae!==document.body&&ae.blur)ae.blur();}catch(_){}if(NET&&NET.on&&NET.menu){NET.menu=false;$('pause').hidden=true;ST=calcStats();player.hp=Math.min(player.hp,ST.hpMax);goFull();lockPointer();return;}$('pause').hidden=true;state='play';ST=calcStats();player.hp=Math.min(player.hp,ST.hpMax);goFull();lockPointer();last=performance.now();}
-function gameOver(){if(gameMode==='pvp'){NET.goDown();return;}$('overH').textContent='Vous êtes mort.';if(!(NET&&NET.on))$('retryBtn').hidden=false;if(NET&&NET.on){NET.goDown();return;}recordRun();state='over';player.hp=0;if(document.pointerLockElement)document.exitPointerLock();
+function gameOver(){if(gameMode==='pvp'){NET.goDown();return;}achDeath();$('overH').textContent='Vous êtes mort.';if(!(NET&&NET.on))$('retryBtn').hidden=false;if(NET&&NET.on){NET.goDown();return;}recordRun();state='over';player.hp=0;if(document.pointerLockElement)document.exitPointerLock();
   let lost='';if(waveSnap&&waveSnap.gid===GID&&waveSnap.prof===save.prof){const gl=save.level-waveSnap.level;lost=gl>1?' Les '+gl+' niveaux gagnés pendant cette manche sont perdus.':gl===1?' Le niveau gagné pendant cette manche est perdu.':' L\'expérience gagnée pendant cette manche est perdue.';
     Object.assign(save,{level:waveSnap.level,xp:waveSnap.xp,points:waveSnap.points,kills:waveSnap.kills,spec:waveSnap.spec,spec2:waveSnap.spec2,tp:waveSnap.tp,abil:JSON.parse(JSON.stringify(waveSnap.abil)),stats:JSON.parse(JSON.stringify(waveSnap.stats))});ST=calcStats();}
   $('overT').textContent=`${gameMode==='final'?'Assaut final · ':gameMode==='rumbling'?'The Rumbling · ':gameMode==='boss'?'Vague de boss · ':gameMode==='rpg'?'Mode RPG · ':''}Vague ${wave} · Niveau ${save.level}. Tu recommences au début de la vague.${lost}`;
@@ -5251,15 +5294,17 @@ function spearExplode(p,hitT){if(NET&&NET.on&&!NET.fxOnly)NET.ev({k:'boom',p:[p.
   if(NET&&NET.fxOnly){for(const t of titans)if(t.type==='cuirasse'&&t.state!=='dead'&&!t.gone)breakArmor(t,p);return;}   /* l'armure du Cuirassé se brise chez tout le monde */
   if(gameMode==='pvp'){PV.blastMine(p);return;}
   if(ORIG&&!ORIG.dead)origSpear(p);
+  let hitAny=!!(ORIG&&!ORIG.dead&&ORIG.root&&ORIG.root.position.distanceTo(p)<60);ACH.spk=0;
   for(const t of titans){if(t.state==='dead'||t.gone)continue;
     const R=CFG.spearRadius*(.7+.3*t.s),np=t.nape.getWorldPosition(new V3()),dn=np.distanceTo(p);
     if(t.type==='cuirasse')breakArmor(t,p);
-    if(dn<R){const f=1-dn/R;dmgSrc='spear';t.hurt(CFG.spearDamage*f*(dn<2.2*t.s?CFG.spearNapeMult:1)+1);dmgSrc='';continue;}
-    if(t===hitT||t.root.position.distanceTo(p)<R+2.5*t.s){
+    if(dn<R){hitAny=true;const f=1-dn/R;dmgSrc='spear';t.hurt(CFG.spearDamage*f*(dn<2.2*t.s?CFG.spearNapeMult:1)+1);dmgSrc='';continue;}
+    if(t===hitT||t.root.position.distanceTo(p)<R+2.5*t.s){hitAny=true;
       dmgSrc='spear';for(const m of t.parts){const lb=m.userData.limb;if((lb==='leg'||lb==='arm')&&shown(m)&&m.getWorldPosition(tB).distanceTo(p)<R)t.hitLimb(m,CFG.spearLimbDamage);}dmgSrc='';
       t.stagger=Math.max(t.stagger,1.4);bloodBurst(p,12,t.s*.6);}
   }
-  if(player.center.distanceTo(p)<CFG.spearSelfRadius){hurtPlayer(fakeHit(p.clone(),1.4));toast('Trop près de l\'explosion !');}
+  achSpear(hitAny);
+  if(player.center.distanceTo(p)<CFG.spearSelfRadius){DC='lance';hurtPlayer(fakeHit(p.clone(),1.4));DC='';toast('Trop près de l\'explosion !');}
 }
 /* ================= SAISIE : le titan attrape le soldat et le porte à sa bouche ; F pour se libérer en tourbillon ================= */
 const GRAB_CFG={chance:.8,chanceAbnormal:.6,dur:3.2,chew:.3,squeeze:5,biteFrac:.7,biteFlat:20};
@@ -5269,7 +5314,7 @@ function startGrab(t){if(NET&&NET.poss){NET.pGrab(t);return;}const p=player,i=t.
   grab={t,i,T:0,a0:t.arms[i].rotation.x,e0:t.elbows[i].rotation.x,z0:t.arms[i].rotation.z};Object.assign(grab,grabPose(t,i));t.state='grab';cancelAim();
   releaseAll();if(p.wall)exitWall(.5);p.vel.set(0,0,0);p.flipT=p.rollT=p.landRoll=0;pTrick.rotation.set(0,0,0);pTrick.position.y=0;
   shake=Math.max(shake,1);sfx.hurt();sfx.stomp(.4);bloodBurst(p.center,4,.3);
-  $('grabP').hidden=false;feed('Le titan t\'a attrapé : F pour te libérer !','');
+  $('grabP').hidden=false;feed('Le titan t\'a attrapé : F pour te libérer !','');achGrab();
 }
 // pose finale du bras calculée pour CE titan (proportions variables) : la main arrive devant la bouche
 function grabPose(t,i){const arm=t.arms[i],el=t.elbows[i],sd=i?1:-1,b=t.body,bx=b.rotation.x,by=b.rotation.y,s0=[arm.rotation.x,arm.rotation.z,el.rotation.x];
@@ -5292,7 +5337,7 @@ Titan.prototype.updateGrab=function(dt){const g=grab;if(!g||g.t!==this){this.sta
   if(g.T>=GRAB_CFG.dur+GRAB_CFG.chew)biteGrab();};
 function updGrabPlayer(dt){const g=grab,p=player;
   grabPoint(_gh);p.pos.set(_gh.x,_gh.y-1,_gh.z);p.vel.set(0,0,0);p.grounded=false;p.center.set(p.pos.x,p.pos.y+1,p.pos.z);
-  p.hp-=GRAB_CFG.squeeze*dt;p.lastHit=0;if(p.hp<=0){if(HAS('souffle')&&!p.souffleUsed){escapeGrab(true);deathCheck();return;}grab=null;$('grabP').hidden=true;g.t.state='walk';gameOver();return;}
+  p.hp-=GRAB_CFG.squeeze*dt;p.lastHit=0;if(p.hp<=0){if(HAS('souffle')&&!p.souffleUsed){escapeGrab(true);deathCheck();return;}grab=null;$('grabP').hidden=true;g.t.state='walk';DC='mange';gameOver();DC='';return;}
   const u=clamp(g.T/GRAB_CFG.dur,0,1);pTrick.rotation.z=Math.sin(g.T*17)*.12;shake=Math.max(shake,.12+u*.25);
   $('grabF').style.width=((1-u)*100)+'%';$('grabP').classList.toggle('urgent',u>.6);
 }
@@ -5306,8 +5351,8 @@ function biteGrab(){if(NET&&NET.poss){const g=endGrab();if(g)NET.toP(NET.poss,{k
   sfx.hurt();sfx.stomp(.6);shake=1.6;bloodBurst(p.center,22,.8);popNum(p.center,'-'+dmg,'hurt');
   $('flash').style.transition='none';$('flash').style.opacity=.7;requestAnimationFrame(()=>{$('flash').style.transition='opacity .8s';$('flash').style.opacity=0;});
   const f=tA.set(Math.sin(t.root.rotation.y),0,Math.cos(t.root.rotation.y));p.vel.set(f.x*14,4,f.z*14);combo=1;
-  feed('Mordu ! Le titan t\'a recraché','');deathCheck();}
-function escapeGrab(noSpin){const g=endGrab();if(!g)return;const p=player,t=g.t;
+  feed('Mordu ! Le titan t\'a recraché','');DC='mange';deathCheck();DC='';}
+function escapeGrab(noSpin){const g=endGrab();if(!g)return;const p=player,t=g.t;achEscape(g);
   if(save.weapon!=='blade')setWeapon('blade');ensureBlades();wearBlades(CFG.bladeWearLimb);
   // tourbillon : la main qui tient est tranchée net
   const part=t.parts.find(m=>m.userData.limb==='arm'&&isDesc(m,t.elbows[g.i])&&shown(m));
@@ -5392,7 +5437,7 @@ sfx.launch=function(){this.burst(900,.12,.6,'lowpass',.8,.1);this.tone(180,60,.1
 sfx.aimIn=function(){this.burst(3200,.06,.2,'bandpass',3);this.burst(900,.1,.16,'lowpass',.8,0,0,.06);};
 sfx.stick=function(){this.burst(700,.12,.55,'lowpass',.8);this.burst(3400,.05,.3,'bandpass',3);this.burst(5200,.6,.12,'highpass',.6,0,1800,.05);};
 /* ----- retour à l'écran titre ----- */
-function toMainMenu(){if(state==='play'||state==='pause'||state==='over')recordRun();if(!(NET&&NET.on)){NET.dead=false;NET.deadT=0;NET.over=false;}$('coopDown').hidden=true;RUN.modsOn=false;try{wxFog();}catch(e){}try{PV.stop();}catch(e){}window._trAll=false;TUTO.stop();$('retryBtn').textContent='Améliorer et réessayer';$('retryBtn').hidden=false;if(NET&&(NET.on||NET.lobby))NET.leave();cancelAim();endGrab();clearTitans();state='menu';slowT=0;timeScale=1;{const e=$('mblur');e.style.backdropFilter=e.style.webkitBackdropFilter='none';blurPx=0;speedFX.sp=0;speedFX.kick=0;fxg.clearRect(0,0,fxc.width,fxc.height);}
+function toMainMenu(){if((state==='play'||state==='pause')&&!cnOff()&&gameMode!=='menu'&&achAlive().length&&player.hp>0)medal('deserteur',1);if(state==='play'||state==='pause'||state==='over')recordRun();if(!(NET&&NET.on)){NET.dead=false;NET.deadT=0;NET.over=false;}$('coopDown').hidden=true;RUN.modsOn=false;try{wxFog();}catch(e){}try{PV.stop();}catch(e){}window._trAll=false;TUTO.stop();$('retryBtn').textContent='Améliorer et réessayer';$('retryBtn').hidden=false;if(NET&&(NET.on||NET.lobby))NET.leave();cancelAim();endGrab();clearTitans();state='menu';slowT=0;timeScale=1;{const e=$('mblur');e.style.backdropFilter=e.style.webkitBackdropFilter='none';blurPx=0;speedFX.sp=0;speedFX.kick=0;fxg.clearRect(0,0,fxc.width,fxc.height);}
   $('pause').hidden=true;$('over').hidden=true;$('hud').hidden=true;$('start').hidden=false;$('hint').hidden=true;
   if(document.pointerLockElement)document.exitPointerLock();sfx.set(sfx.gasG,0);sfx.set(sfx.windG,0);sfx.intense=0;
   resetPlayer();
@@ -7072,7 +7117,7 @@ var NET={mode:'normal',on:false,host:false,lobby:false,started:false,welcomed:fa
     if(this.dead||state!=='play'){if(t.inSL)flashOff();return;}
     if(k==='colosse'||k==='rumble'){const r=t.root.position,dd=Math.hypot(p.pos.x-r.x,p.pos.z-r.z)||1,inS=t.steam>0&&dd<5.5*t.s&&p.pos.y<t.H*1.15;
       if(inS){const sr=ST.hpMax*.06*(.35+.65*Math.pow(1-dd/(5.5*t.s),1.5));p.hp-=sr*dt;p.lastHit=0;t.stL=(t.stL||0)+dt;if(t.stL>.6){t.stL=0;popNum(p.center,'-'+Math.max(1,Math.round(sr*.6)),'hurt');}
-        $('flash').style.transition='none';$('flash').style.opacity=.1+.05*Math.sin(performance.now()/120);t.inSL=true;deathCheck();}
+        $('flash').style.transition='none';$('flash').style.opacity=.1+.05*Math.sin(performance.now()/120);t.inSL=true;ACH.inSt=1;DC='vapeur';deathCheck();DC='';}
       else if(t.inSL)flashOff();
       if(t.tgtId!==this.id&&p.inv<=0&&t.root.visible&&t.root.scale.x>t.s*.95)for(let i=0;i<2;i++){const ft=t.knees[i].localToWorld(tC.set(0,-2.3,.3)),gy=groundY(ft.x,ft.z);
         if(ft.y-gy<1.0*t.s&&Math.hypot(p.pos.x-ft.x,p.pos.z-ft.z)<1.7*t.s&&p.pos.y-gy<2.6*t.s){this.deliver=true;try{hurtPlayer(fakeHit(new V3(ft.x,gy,ft.z),2.6));}finally{this.deliver=false;}feed('Écrasé sous le pied d\'un titan colossal !','');shake=Math.max(shake,1.2);break;}}}
@@ -7709,6 +7754,7 @@ function loop(now){
   else if(state==='play'&&gameMode==='pvp')PV.frameOff(dt,rdt);
   else if(state==='play'){updPlayer(dt,rdt);updHooks(dt);updTitans(dt);if(ORIG)updOriginel(dt);updWave(dt);updBottles(dt);updSpears(dt);updSpearAim(dt,rdt);
     if(save.tut===4){tutTimer+=rdt;if(tutTimer>14)tut(4);}}
+  if(state==='play')achTick(dt,rdt);
   else if(state==='menu'){if(CUS.open)updCustom(rdt);else{yaw+=rdt*.05;pitch=.12;}}
   if(state==='pause'&&TUTO.on)TUTO.tick(rdt);   /* didacticiel : les étapes du menu avancent aussi en pause */
   updParts(dt);updGunFx(rdt);updBlood(dt);updCam(rdt);updGrass(rdt);updWeather(rdt);updBloodSplats(rdt);

@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124145053">
+<meta name="build" content="20261124171312">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -3440,6 +3440,7 @@ class Titan{
       const turn=(ab?3:1.7)*(this.state==='attack'?.6:this.state==='stomp'?0:1)*this.turnK*(this.dashT>0&&(this.type==='cuirasse'||this.type==='agile')?.13:1);   // les géants pivotent lentement ; en pleine charge, le Cuirassé tient sa ligne
       const dr=clamp(wrapA(target-r.rotation.y),-turn*dt,turn*dt);r.rotation.y+=dr;this.turning=Math.abs(dr)>dt*.2;const err=Math.abs(wrapA(target-r.rotation.y));
       const reach=8.4*this.s;let moving=false;
+      if(this.state!=='bite'&&this.atkCd>50)this.atkCd=.6;   /* morsure interrompue (coup, douleur, genoux) : il peut de nouveau attaquer, sinon il ne mordait plus jamais */
       if(this.blindT>0){this.atkCd=Math.max(this.atkCd,.3);this.flailT-=dt;if(this.flailT<=0&&this.state==='walk'&&!this.legLoss&&this.rubT<=0&&this.type!=='rumble'){this.flailT=1.3+Math.random()*1.7;this.startAttack();}}   // aveuglé : il frappe dans le vide, au hasard
       if(this.state==='attack')this.updateAttack(dt);
       else if(this.state==='kick')this.updateKick(dt);
@@ -3560,7 +3561,7 @@ class Titan{
     slashBlood(np,this.s,false);steamBurst(np,3,this.s*.5);sfx.hit();shake=Math.max(shake,.35);if(dmgSrc!=='spear'&&!(NET&&NET.replay))bloodOnMe(np,kill?1:.5,this.s);   /* le sang gicle sur le soldat */
     const crit=this.firstHit&&dmg>=this.maxHp;
     popNum(np,Math.round(dmg),crit?'crit':'');
-    if(this.hp<=0)this.die(crit);else{this.firstHit=false;this.stagger=Math.max(this.stagger,.5);}
+    if(this.hp<=0)this.die(crit);else{this.firstHit=false;if(this.type==='croc')this.flinchT=.3;else this.stagger=Math.max(this.stagger,.5);}   /* le Croc encaisse sans s'arrêter : juste un sursaut */
     tut(2);
   }
   cutArmTendon(i){if(this.state==='dead')return;ACH.atk=ACH.gt;crocCutArm(this,i);}
@@ -3573,7 +3574,7 @@ class Titan{
     const d=dmg*.4;this.limbHp[kind][i]-=d;this.limbHit=3;
     if(dmgSrc!=='spear'){const wp=woundAt(this,m.parent,p,0.95+Math.random()*.4,.08+Math.random()*.03);if(wp)p.copy(wp);}
     spray(p,tD.subVectors(p,player.center).setY(.6).normalize().clone(),18,11,.55,Math.min(1.1,.3+this.s*.16));steamBurst(p,1,this.s*.4);sfx.hit();popNum(p,Math.round(d),'');if(dmgSrc!=='spear'&&!(NET&&NET.replay))bloodOnMe(p,this.limbHp[kind][i]<=0?.75:.25,this.s);
-    if(kind==='leg')this.stagger=Math.max(this.stagger,.25);
+    if(kind==='leg'&&this.type!=='croc')this.stagger=Math.max(this.stagger,.25);
     if(this.limbHp[kind][i]>0)return;
     slashBlood(p,this.s*.6,false);severPart(this,grp);this.sev[kind][i]=LIMB_REGROW;
     this.painT=2.1;this.painSide=i;this.painKind=kind;if(kind==='leg'){this.fallT=1.15;this.fallHit=false;}   // il hurle, se tord de douleur ; une jambe en moins : il s'effondre
@@ -3935,9 +3936,9 @@ function startWave(n){wave=n;carnetWave(n);waveSnap={gid:GID,prof:save.prof,leve
   if(n>10&&!save.modern){save.modern=true;persist();}
   if(gameMode==='rpg'&&n===1&&!(save.abil&&Object.keys(save.abil).length))setTimeout(()=>bigMsg('MODE RPG','Chaque nouveau grade rapporte 3 points de technique : Tab · Techniques. Les lances foudroyantes arrivent après la vague 10'),2800);
   if(gameMode==='normal'&&n===1)setTimeout(()=>bigMsg('MODE CLASSIQUE','Toutes les techniques sont maîtrisées (Tab · Techniques). Les lances foudroyantes arrivent après la vague 10'),2800);
-  if(gameMode==='rpg'&&n===11){player.spears=spearMax();applyEquipVisual();setTimeout(()=>bigMsg('2 LANCES FOUDROYANTES','B : alterner lames et lances. Tab · Techniques : passe à 4 lances, puis à 6'),2600);}
+  if(gameMode==='rpg'&&n===11){player.spears=spearMax();applyEquipVisual();setTimeout(()=>bigMsg('2 LANCES FOUDROYANTES','B : alterner lames et lances. Tab · Techniques : passe à 4 lances, puis à 8'),2600);}
   if(gameMode==='normal'&&(n===11||n===21||n===31)){const m=spearMax();player.spears=m;applyEquipVisual();
-    setTimeout(()=>bigMsg(n===11?'2 LANCES FOUDROYANTES':'+2 LANCES FOUDROYANTES',n===11?'B : alterner entre les lames et les lances. 2 de plus toutes les 10 vagues':n===31?'Tu portes maintenant 6 lances : le maximum':'Tu portes maintenant '+m+' lances'),2600);}}
+    setTimeout(()=>bigMsg(n===11?'2 LANCES FOUDROYANTES':'+2 LANCES FOUDROYANTES',n===11?'B : alterner entre les lames et les lances. 2 de plus toutes les 10 vagues':n===31?'Tu portes maintenant '+m+' lances : le maximum':'Tu portes maintenant '+m+' lances'),2600);}}
 let finalWon=false;
 function finalWin(){finalWon=true;if(!cnOff())medal('originel');}   // plus de vague après le Titan Originel : la partie continue librement, sans message
 function updWave(dt){if(gameMode==='pvp')return;if(gameMode==='tuto'){TUTO.tick(dt);return;}if(gameMode==='train')TRN.tick();
@@ -5059,7 +5060,7 @@ const EQUIP_NAMES={classic:'Équipement classique',modern:'Équipement modernis�
 // lances foudroyantes : débloquées après la vague 10 (toujours disponibles en mode Vague de boss), sur le même équipement que les lames
 function spearsOK(){if(gameMode==='pvp')return PV.cfg.spears!==false;if(gameMode==='train')return !!TRN.cfg.spears;if(gameMode==='tuto')return false;return gameMode==='rpg'?HAS('lances1'):gameMode==='normal'?wave>10:(save.modern||gameMode==='boss'||gameMode==='final'||gameMode==='pvp');}
 // jeu normal : 2 lances après la vague 10, 2 de plus toutes les 10 vagues, jusqu'à 6 ; les autres modes en ont toujours 6
-function spearMax(){return gameMode==='train'?(TRN.cfg.spears?8:0):gameMode==='tuto'?0:gameMode==='rpg'?(!HAS('lances1')?0:HAS('lances3')?8:HAS('lances2')?4:2):gameMode==='normal'?(wave>30?8:wave>20?4:wave>10?2:0):gameMode==='pvp'?4:CFG.spearCount;}   /* PvP : lances Mk2 (4) */
+function spearMax(){return gameMode==='train'?(TRN.cfg.spears?8:0):gameMode==='tuto'?0:gameMode==='rpg'?(!HAS('lances1')?0:HAS('lances3')?8:HAS('lances2')?4:2):gameMode==='normal'?(wave>30?8:wave>20?4:wave>10?2:0):gameMode==='pvp'?4:gameMode==='boss'?8:CFG.spearCount;}   /* vague de boss : 8 lances */   /* PvP : lances Mk2 (4) */
 // Mk1 : deux actionneurs, lances reliées aux poignées par un câble (F pour tirer) ; Mk2 : un actionneur, la lance explose seule une fois plantée
 function spearMk(){return gameMode==='rpg'?(HAS('lances2')?2:1):gameMode==='normal'?(wave>20?2:1):2;}
 

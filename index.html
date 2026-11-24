@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124014521">
+<meta name="build" content="20261124100447">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -467,7 +467,7 @@ const SAVE_KEY='grappin_save';
 let save={level:1,xp:0,points:0,stats:{speed:0,power:0,gas:0,vit:0,blade:0,hook:0},spec:null,bestWave:1,kills:0,tut:0,sens:1,shadows:true,camMode:'libre',follow:1,fullscreen:true,gfx:null,equip:'classic',weapon:'blade',modern:false,spearCap:16,bestRumble:1,bestBoss:1};
 try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));if(s&&s.stats){save=Object.assign(save,s);save.stats=Object.assign({speed:0,power:0,gas:0,vit:0,blade:0,hook:0},s.stats);}}catch(e){}
 function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save));}catch(e){}}
-const RANKS=['Recrue','Cadet','Soldat','Soldat confirmé','Vétéran','Vétéran aguerri','Élite','Sergent','Sergent-chef','Chef d\'escouade','Lieutenant','Capitaine','Major','Commandant','Colonel','Commandant de légion','Général','Maréchal','Héros','Légende'].map((name,i)=>({lv:1+5*i,name,m:Math.min(1.6,1+.05*i)}));   // un grade tous les 5 niveaux, 3 points de technique chacun
+const RANKS=['Recrue','Cadet','Soldat','Soldat confirmé','Vétéran','Vétéran aguerri','Élite','Sergent','Sergent-chef','Chef d\'escouade','Lieutenant','Capitaine','Major','Commandant','Colonel','Commandant de légion','Général','Maréchal','Héros','Légende'].map((name,i)=>({lv:i?5*i:1,name,m:Math.min(1.6,1+.05*i)}));   // un grade aux niveaux 5, 10, 15, 20… (3 points de technique chacun)
 const rank=()=>{let r=RANKS[0];for(const k of RANKS)if(save.level>=k.lv)r=k;return r;};
 const SPECS={
   assaut:{name:'Assaut',desc:'+35 % de dégâts sur la nuque. Pour finir les titans en un coup plus tôt.'},
@@ -483,7 +483,7 @@ const STATDEFS=[
 ];
 const STAT_MAX=20;
 const RESPEC=()=>typeof gameMode!=='undefined'&&(gameMode==='pvp'||gameMode==='train');   // PvP et entraînement : on peut reprendre un point (bouton −)
-const need=l=>Math.floor(60*Math.pow(l,1.4));   // un peu moins raide qu'avant (1,45)
+const need=l=>Math.floor(60*Math.pow(l,1.45));   // courbe d'origine
 /* ================= MODE RPG : progression séparée, techniques achetées avec les points de boss =================
    Le mode RPG a son propre profil (niveau, statistiques, spécialisation, techniques, points de technique, record de vague).
    Les autres modes (classique, The Rumbling, vague de boss) partagent le profil « classique », comme avant. */
@@ -505,7 +505,7 @@ const ABIL=[   // uniquement ce qu'un soldat apprend par l'entraînement ou l'ex
   {k:'charge',name:'Coupe chargée',cost:3,desc:'Technique de vétéran : maintiens le clic gauche pour armer tes lames, relâche pour une coupe tournoyante avec élan vers la nuque, en l\'air. Use jusqu\'à une paire de lames selon la charge (moitié chargée : une demi-paire), seulement si le coup touche (jusqu\'à ×2,9 de dégâts une fois pleinement chargée).'},
   {k:'acier2',name:'Maîtrise des lames II',cost:6,req:'acier',desc:'Maîtrise parfaite du tranchant : encore −25 % d\'usure, soit des lames qui s\'usent 2 fois moins vite (−50 % en tout).'},
   {k:'agilite',name:'Agilité',cost:3,desc:'Entraînement acrobatique : courir sur les murs, sauter de mur en mur et de toit en toit (bond plus haut), saltos (C) et vrilles (X ; maintenu : tu vrilles sans t\'arrêter). La vrille sert à se déplacer : elle ne blesse pas.'},
-  {k:'spirale',name:'Coupe spirale',cost:1,req:'agilite',desc:'Ta vrille devient une attaque : pendant que tu vrilles (X, ou maintenu pour vriller sans t\'arrêter), tes lames tranchent tout ce que tu frôles. Comme le tourbillon, elle use une demi-paire de lames si elle touche.'},
+  {k:'spirale',name:'Coupe spirale',cost:3,req:'agilite',desc:'Ta vrille devient une attaque : pendant que tu vrilles (X, ou maintenu pour vriller sans t\'arrêter), tes lames tranchent tout ce que tu frôles. Comme le tourbillon, elle use une demi-paire de lames si elle touche.'},
   {k:'lances1',name:'Lances Mk1',cost:0,auto:true,desc:'Remises après la vague 10 : 2 lances reliées à tes poignées par un câble. Clic gauche : tu plantes les deux à la fois. F : tu tires le câble et elles explosent.'},
   {k:'lances2',name:'Lances Mk2 · 4',cost:3,req:'lances1',desc:'Équipement tridimensionnel anti-personnel amélioré : lanceurs à un seul actionneur (la lance explose toute seule une fois plantée) et 4 lances portées le long du corps. Ton soldat s\'équipe de l\'équipement Mk2.'},
   {k:'lances3',name:'Lances Mk2 · 8',cost:6,req:'lances2',desc:'Maîtrise complète de l\'équipement Mk2 : 8 lances portées, le maximum.'}];
@@ -3581,7 +3581,7 @@ class Titan{
   }
   die(oneShot){
     if(grab&&grab.t===this)releaseGrab();this.state='dead';this.deadT=0;save.kills++;carnetKill(this);cineKill(this);
-    const base=this.cfg.boss||this.cfg.fixedH?this.cfg.xp:2.2*Math.pow(this.H,1.2)*(this.type==='abnormal'?1.15:1);   /* titans ordinaires : plus il est grand, plus il rapporte ; un déviant un peu plus qu'un titan normal de même taille */
+    const AVGH={small:9.3,medium:13.9,large:20.2,abnormal:12.8},base=this.cfg.boss||this.cfg.fixedH||!AVGH[this.type]?this.cfg.xp:this.cfg.xp*Math.pow(this.H/AVGH[this.type],1.2);   /* expérience d'origine par type ; un titan plus grand que la moyenne de son type rapporte un peu plus (même total en moyenne) */
     let xp=base*(1+.1*(wave-1));if(oneShot)xp*=1.5;xp=Math.round(xp*combo);
     addStyle('Nuque',.5,true);
     if(this.silent)xp=Math.round(xp*.5);

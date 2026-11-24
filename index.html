@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124171312">
+<meta name="build" content="20261124171739">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -3982,9 +3982,9 @@ const TUTO={on:false,i:0,okT:0,mv:0,d0:null,flip:false,roll:false,cam0:null,paus
     {tab:'gfx',t:'Clique sur l\'onglet <b>Graphismes</b> : qualité d\'image, ombres, réglages de la première personne et style de course. Si le jeu rame, baisse les ombres ou la distance de vue.',ok:T=>state==='pause'&&menuTab==='gfx'&&T.st>1},
     {tab:'ctl',t:'Clique sur l\'onglet <b>Commandes</b> : choix de la caméra, sensibilité de la souris et liste de toutes les touches.',ok:T=>state==='pause'&&menuTab==='ctl'&&T.st>1},
     {target:'#resumeBtn',t:'Reviens au jeu : <b class="k">Tab</b> ou le bouton <b>Reprendre</b>.',ok:()=>state==='play'},
-    {cam:'auto',t:'Les vues : <b class="k">1</b> à <b class="k">4</b> (ou <b class="k">V</b> pour passer à la suivante). Appuie sur <b class="k">1</b> : vue <b>Auto</b>, la caméra suit tes mouvements toute seule.',ok:T=>T.camT>1.5},
+    {cam:'libre',t:'Les vues : <b class="k">1</b> à <b class="k">4</b> (ou <b class="k">V</b> pour passer à la suivante). Appuie sur <b class="k">1</b> : vue <b>Libre</b>, tu tournes la caméra avec la souris, le viseur reste au centre.',ok:T=>T.camT>1.5},
     {cam:'lock',t:'Appuie sur <b class="k">2</b> : vue <b>Verrouillage</b>, la caméra reste fixée sur un titan (<b class="k">T</b> ou clic molette pour en viser un autre).',ok:T=>T.camT>1.5},
-    {cam:'libre',t:'Appuie sur <b class="k">3</b> : vue <b>Libre</b>, tu tournes la caméra avec la souris, le viseur reste au centre.',ok:T=>T.camT>1.5},
+    {cam:'auto',t:'Appuie sur <b class="k">3</b> : vue <b>Auto</b>, la caméra suit tes mouvements toute seule.',ok:T=>T.camT>1.5},
     {cam:'fps',t:'Appuie sur <b class="k">4</b> : vue <b>Première personne</b>, à travers les yeux du soldat. Garde ensuite la vue que tu préfères.',ok:T=>T.camT>1.5},
     {t:'Bouge la souris : le cercle blanc est ton <b>viseur</b>. Il suffit de viser là où tu veux aller.',enter:T=>{T.mv=0;},ok:T=>T.mv>500},
     {t:'Déplace-toi au sol avec <b class="k">Z</b><b class="k">Q</b><b class="k">S</b><b class="k">D</b> (ou <b class="k">W</b><b class="k">A</b><b class="k">S</b><b class="k">D</b>) : tu marches d\'un pas rapide.',enter:T=>{T.d0=player.pos.clone();},ok:T=>T.d0&&Math.hypot(player.pos.x-T.d0.x,player.pos.z-T.d0.z)>8},
@@ -4059,9 +4059,9 @@ addEventListener('keydown',e=>{
     case'KeyX':trick('roll');break;
     case'KeyF':if(grab){if(HAS('tourbillon'))escapeGrab();else struggleGrab();}else if(mk1Pending())pullCords();else spinAttack();break;   // lances Mk1 en place : F tire le câble
     case'KeyB':toggleWeapon();break;
-    case'Digit1':setCamMode('auto');break;case'Digit2':setCamMode('lock');break;case'Digit3':setCamMode('libre');break;case'Digit4':setCamMode('fps');break;case'Digit5':setCamMode('cine');break;   // rangée de chiffres : même choix de caméra que le pavé numérique
+    case'Digit1':setCamMode('libre');break;case'Digit2':setCamMode('lock');break;case'Digit3':setCamMode('auto');break;case'Digit4':setCamMode('fps');break;case'Digit5':setCamMode('cine');break;   // rangée de chiffres : même choix de caméra que le pavé numérique
     case'KeyV':cycleCam();break;
-    case'Numpad1':setCamMode('auto');break;case'Numpad2':setCamMode('lock');break;case'Numpad3':setCamMode('libre');break;case'Numpad4':setCamMode('fps');break;case'Numpad5':setCamMode('cine');break;   // choix direct de la caméra
+    case'Numpad1':setCamMode('libre');break;case'Numpad2':setCamMode('lock');break;case'Numpad3':setCamMode('auto');break;case'Numpad4':setCamMode('fps');break;case'Numpad5':setCamMode('cine');break;   // choix direct de la caméra
     case'Numpad0':cycleCam();break;
     case'KeyT':nextLock();break;
     case'KeyR':if(save.camMode!=='lock')turnLeft=Math.PI;break;
@@ -4110,10 +4110,10 @@ document.addEventListener('pointerlockchange',()=>{locked=document.pointerLockEl
 document.addEventListener('pointerlockerror',lockFailed);
 
 /* ================= CAMÉRA ================= */
-const CAM_NAMES={auto:'Auto',lock:'Verrouillage',libre:'Libre',fps:'Première personne',cine:'Cinématique'};
+const CAM_NAMES={libre:'Libre',lock:'Verrouillage',auto:'Auto',fps:'Première personne',cine:'Cinématique'};   /* même ordre que les touches 1 à 4 */
 let lockT=null,turnLeft=0,followHold=0,zoomBase=clamp(save.zoom||6.2,1.8,13);
 function cycleCam(){
-  const order=['auto','lock','libre','fps'];setCamMode(order[(order.indexOf(save.camMode)+1)%4]);   /* la vue cinématique est une vue bonus : seulement avec la touche 5 */
+  const order=['libre','lock','auto','fps'];setCamMode(order[(order.indexOf(save.camMode)+1)%4]);   /* la vue cinématique est une vue bonus : seulement avec la touche 5 */
 }
 function setCamMode(m){
   const prev=save.camMode;save.camMode=m;persist();

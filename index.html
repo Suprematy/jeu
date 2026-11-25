@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124205835">
+<meta name="build" content="20261124210159">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -3467,7 +3467,8 @@ class Titan{
       if(this.state==='grab')releaseGrab();if(this.state==='bite'||this.state==='snap')this.state='walk';
     }else{
       // vise où le soldat va être (anticipation limitée, sans tourner plus vite) ; les titans ordinaires l'encerclent au lieu de faire la queue
-      const ag=this.army?armyGoal(this,dist):this.fetch&&!this.fetch.gone?{x:this.fetch.root.position.x,z:this.fetch.root.position.z,hold:false}:null;   /* le Cuirassé va chercher un titan à te lancer */   // armée de l'Assaillant : place de garde, cercle autour du soldat
+      if(!this.cfg.boss&&this.roarT>0)this.roarT-=dt;
+      const ag=this.army?armyGoal(this,dist):this.fetch&&!this.fetch.gone?{x:this.fetch.root.position.x,z:this.fetch.root.position.z,hold:false}:this.idle?idleGoal(this,dist,dt):null;   /* le Cuirassé va chercher un titan à te lancer */   // armée de l'Assaillant : place de garde, cercle autour du soldat
       const lead=(ab?.15:this.cfg.boss?.7:.35)*clamp(dist/60,0,1),tx=(ag?ag.x:pc.x+player.vel.x*lead)-r.position.x,tz=(ag?ag.z:pc.z+player.vel.z*lead)-r.position.z;
       let target=Math.atan2(tx,tz)+(!this.cfg.boss&&!this.army&&dist>45?this.flank*clamp((dist-45)/60,0,1):0);if(this.avoid>0){this.avoid-=dt;target+=this.avoidDir*1.2;}if(this.blindT>0)target=this.blindDir;   /* aveuglé : il marche au hasard */
       const turn=(ab?3:1.7)*(this.state==='attack'?.6:this.state==='stomp'?0:1)*this.turnK*(this.dashT>0&&(this.type==='cuirasse'||this.type==='agile')?.13:1);   // les géants pivotent lentement ; en pleine charge, le Cuirassé tient sa ligne
@@ -3655,8 +3656,20 @@ function spawnTitan(type){
     if(gameMode!=='rumbling'&&insideDepth(x,z)<10)continue;   // les titans envahissent le district
     if(Math.hypot(x-player.pos.x,z-player.pos.z)<70)continue;
     if(pointBlocked(x,groundY(x,z)+1,z))continue;
-    const t=new Titan(type,x,z);t.root.rotation.y=Math.atan2(player.pos.x-x,player.pos.z-z);if(modOn('rapides'))t.speed*=1.35;if(modOn('coriaces')){t.maxHp*=1.5;t.hp=t.maxHp;}titans.push(t);return t;}
+    const t=new Titan(type,x,z);t.root.rotation.y=Math.atan2(player.pos.x-x,player.pos.z-z);if(modOn('rapides'))t.speed*=1.35;if(modOn('coriaces')){t.maxHp*=1.5;t.hp=t.maxHp;}titans.push(t);
+    if(type==='abnormal'&&!t.cfg.boss&&gameMode!=='tuto'&&Math.random()<.28)idleStart(t);   /* certains déviants se fichent de toi... jusqu'à ce que tu t'approches */
+    return t;}
 }
+/* ----- déviants indifférents : ils errent au hasard ou restent plantés là, sans s'occuper du soldat ; s'il s'approche (ou les touche), ils deviennent fous et lui foncent dessus ----- */
+function idleStart(t){const still=Math.random()<.45;t.idle={mode:still?'still':'wander',t:0,goal:null,face:t.root.rotation.y+(Math.random()-.5)*3,trig:(17+Math.random()*16)*Math.max(1,t.s*.55),hp0:t.hp};t.speed0=t.speed;t.speed*=still?1:.4;}
+function idleWake(t){if(!t.idle)return;t.idle=null;t.speed=(t.speed0||t.speed)*1.35;t.aggr*=1.45;t.atkCd=Math.min(t.atkCd,.4);t.roarT=1;t.flank=0;sfx.stomp(.7);shake=Math.max(shake,.35);
+  if(t.root.position.distanceTo(player.pos)<120){toastT=0;toast('Un déviant devient fou : il te fonce dessus !');}}
+function idleGoal(t,dist,dt){const I=t.idle,r=t.root.position;
+  if(dist<I.trig||t.hp<I.hp0||t.limbHit>0||t.blindT>0||t.stagger>.4){idleWake(t);return null;}
+  I.t-=dt;
+  if(I.mode==='still'){if(I.t<=0){I.t=3+Math.random()*5;I.face+=(Math.random()-.5)*2.2;}return {x:r.x+Math.sin(I.face)*6,z:r.z+Math.cos(I.face)*6,hold:true};}   // planté là, il regarde ailleurs de temps en temps
+  if(I.t<=0||!I.goal||Math.hypot(I.goal.x-r.x,I.goal.z-r.z)<5){I.t=4+Math.random()*7;const a=Math.random()*TAU,d=18+Math.random()*45;I.goal={x:clamp(r.x+Math.sin(a)*d,-450,450),z:clamp(r.z+Math.cos(a)*d,-450,450)};}
+  return {x:I.goal.x,z:I.goal.z,hold:Math.random()<.002};}   // il erre au hasard
 function clearTitans(){endGrab();for(const t of titans)if(!t.gone)t.remove();titans=[];clearBossFx();clearPieces();clearSpears();clearOriginel();}
 
 /* ================= BOUTEILLES DE GAZ ================= */

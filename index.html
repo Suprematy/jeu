@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124212829">
+<meta name="build" content="20261124213347">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -3010,7 +3010,7 @@ function eyePatch(P,sd){const cx=sd*.35,W=.5,H=.44,x0=cx-W/2,y0=.15-.375*H,nx=10
 // expressions des titans ordinaires (yeux + bouche) ; les boss restent sérieux, la Bête garde son sourire
 const FACES=[['stare','grin'],['stare','grimace'],['stare','gape'],['normal','smile'],['sleepy','blank'],['worried','grimace'],['normal','grin'],['worried','gape'],['sleepy','grin']];
 const MOUTH={grin:{mc:.12,mth:.05,teeth:true},grimace:{mc:.03,mth:.075,teeth:true,g:.34},smile:{mc:.15,mth:.012,closed:true,g:.32},blank:{mc:0,mth:.012,closed:true,g:.24},
-  gape:{mc:0,mth:.05,gape:true,g:.24},serious:{mc:-.03,mth:.012,closed:true,g:.26}};
+  gape:{mc:0,mth:.05,gape:true,g:.24},serious:{mc:-.03,mth:.012,closed:true,g:.26},laugh:{mc:.12,mth:.07,gape:true,g:.3}};   /* rire béat, bouche grande ouverte (déviant qui regarde le ciel) */
 /* ----- (ancienne coque à jointures, remplacée par l'armure sculptée) ----- */
 /* ----- Cuirassé : armure sculptée en relief, casque à facettes, contour encré ----- */
 // rainures et zones de muscle à nu de l'armure (repère de repos du corps) : la plaque est un volume, la rainure y est creusée
@@ -3282,7 +3282,7 @@ class Titan{
       this.root.updateMatrixWorld(true);g.applyMatrix4(new THREE.Matrix4().copy(sm.matrixWorld).invert().multiply(topB.matrixWorld));
       sm.bind(new THREE.Skeleton([topB,midB]));return sm;};
     // jambes : cuisse, genou, mollet d'une seule pièce ; pied ; volumes invisibles pour les coups et grappins
-    const BK=this.bodyKind=(!c.boss&&type!=='rumble')?pickBodyKind():undefined;   /* les déviants aussi : gros, maigres ou longilignes */
+    const BK=this.bodyKind=BODY_FORCE?BODY_FORCE:(!c.boss&&type!=='rumble')?pickBodyKind():undefined;   /* les déviants aussi : gros, maigres ou longilignes */
     if(ab)this.abRun=['flail','plane','reach','pump','hang','oneUp'][Math.floor(Math.random()*6)];   /* chaque déviant a sa propre façon de courir */
     this.legs=[];this.knees=[];const lt=BK==='gros'?1:BK==='maigre'?.62:(c.lt||(ab?.66:.86));
     for(const sd of [-1,1]){
@@ -3583,7 +3583,7 @@ class Titan{
     if(this.vy===0&&this.state!=='dead'){const fl=titanFloor(r.position.x,r.position.z,r.position.y);if(r.position.y-fl<1.5)r.position.y=lerp(r.position.y,fl,.3);}   /* au bord d'un toit : il tombe vraiment (gravité), au lieu de glisser vers la rue */
     const big=this.H>25,res=big?{hit:false}:collideBoxes(tC,tD,1.7*this.s,false);if(!big)collideTrees(tC,tD,1.7*this.s);
     if(res.hit&&this.avoid<=0){this.avoid=1.3;this.avoidDir=Math.random()<.5?-1:1;}
-    r.position.x=clamp(tC.x,-478,478);r.position.z=clamp(tC.z,-478,478);if(this.idle&&this.idle.pose)idlePose(this,dt);else if(this.snapT>0||this.crazyT>0)crazyPose(this,dt);this.extremities(dt);
+    r.position.x=clamp(tC.x,-478,478);r.position.z=clamp(tC.z,-478,478);if(this.snapT>0||this.crazyT>0)crazyPose(this,dt);this.extremities(dt);if(this.idle&&this.idle.pose)idlePose(this,dt);   /* pose étrange appliquée en dernier : poignets et doigts compris */
   }
   eyePos(out){const eb=this.eyeballs;if(eb&&eb.length){out.set(0,0,0);for(const e of eb)out.add(e.getWorldPosition(_eyT));return out.multiplyScalar(1/eb.length);}   // entre les deux yeux
     this.headG.getWorldPosition(out);out.x+=Math.sin(this.root.rotation.y)*.8*this.s;out.z+=Math.cos(this.root.rotation.y)*.8*this.s;return out;}
@@ -3664,16 +3664,19 @@ function spawnTitan(type){
     if(gameMode!=='rumbling'&&insideDepth(x,z)<10)continue;   // les titans envahissent le district
     if(Math.hypot(x-player.pos.x,z-player.pos.z)<70)continue;
     if(pointBlocked(x,groundY(x,z)+1,z))continue;
-    let idm=null;if(type==='abnormal'&&gameMode!=='tuto'&&Math.random()<.28){const q=Math.random();idm=q<.3?'still':q<.62?'wander':q<.75?'lying':'weird';}   /* certains déviants se fichent de toi... jusqu'à ce que tu t'approches */
-    if(idm==='lying')FACE_FORCE=['stare','grin'];const t=new Titan(type,x,z);FACE_FORCE=null;   /* couché, avec un grand sourire */
+    let idm=null,ipo=null;if(type==='abnormal'&&gameMode!=='tuto'&&Math.random()<.28){const q=Math.random();idm=q<.3?'still':q<.62?'wander':q<.75?'lying':'weird';}   /* certains déviants se fichent de toi... jusqu'à ce que tu t'approches */
+    if(idm==='weird')ipo=IDLE_POSES[Math.floor(Math.random()*IDLE_POSES.length)];
+    if(idm==='lying')FACE_FORCE=['stare','grin'];   /* couché, avec un grand sourire */
+    if(ipo==='skyGaze'){FACE_FORCE=['sleepy','laugh'];if(Math.random()<.75)BODY_FORCE='gros';}   /* le regard au ciel : rondouillard, yeux plissés, rire béat */
+    const t=new Titan(type,x,z);FACE_FORCE=null;BODY_FORCE=null;
     t.root.rotation.y=Math.atan2(player.pos.x-x,player.pos.z-z);if(modOn('rapides'))t.speed*=1.35;if(modOn('coriaces')){t.maxHp*=1.5;t.hp=t.maxHp;}titans.push(t);
-    if(idm)idleStart(t,idm);else if(type==='abnormal'&&gameMode!=='tuto'&&Math.random()<.16){t.stalk={t:0};t.marker.style.display='none';}   /* rôdeur : il s'approche quand tu ne le regardes pas, puis attaque dans le dos */
+    if(idm)idleStart(t,idm,ipo);else if(type==='abnormal'&&gameMode!=='tuto'&&Math.random()<.16){t.stalk={t:0};t.marker.style.display='none';}   /* rôdeur : il s'approche quand tu ne le regardes pas, puis attaque dans le dos */
     return t;}
 }
 /* ----- déviants indifférents : ils errent au hasard ou restent plantés là, sans s'occuper du soldat ; s'il s'approche (ou les touche), ils deviennent fous et lui foncent dessus ----- */
-var FACE_FORCE=null;
+var FACE_FORCE=null,BODY_FORCE=null;
 const IDLE_POSES=['armsUp','oneLeg','headCock','sit','skyGaze','skyGaze','squat','spin'];   /* le regard au ciel, mains levées : la pose la plus fréquente */
-function idleStart(t,mode){mode=mode||(Math.random()<.45?'still':'wander');const I=t.idle={mode,t:0,goal:null,face:t.root.rotation.y+(Math.random()-.5)*3,trig:(17+Math.random()*16)*Math.max(1,t.s*.55),hp0:t.hp,pose:mode==='lying'?'lying':mode==='weird'?IDLE_POSES[Math.floor(Math.random()*IDLE_POSES.length)]:null,ph:Math.random()*10};
+function idleStart(t,mode,pose){mode=mode||(Math.random()<.45?'still':'wander');const I=t.idle={mode,t:0,goal:null,face:t.root.rotation.y+(Math.random()-.5)*3,trig:(17+Math.random()*16)*Math.max(1,t.s*.55),hp0:t.hp,pose:mode==='lying'?'lying':mode==='weird'?(pose||IDLE_POSES[Math.floor(Math.random()*IDLE_POSES.length)]):null,ph:Math.random()*10};
   if(mode==='lying')t.root.rotation.y=Math.random()*TAU;t.speed0=t.speed;t.speed*=mode==='wander'?.4:1;}
 /* réveil : tout passe par l'animation, sans effet ajouté. Il se fige un instant, sa tête se tourne d'un coup vers le soldat (avec une saccade),
    puis il se redresse brutalement et fonce, plié en avant, les bras tendus vers lui */
@@ -3703,12 +3706,16 @@ function idlePose(t,dt){const I=t.idle;if(!I||!I.pose)return;I.ph+=dt;const p=I.
     L[0].rotation.x=-1.25;K[0].rotation.x=1.95;for(let i=0;i<2;i++){const sd=i?1:-1;A[i].rotation.set(Math.sin(p*1.9+i)*.15,0,sd*1.35);E[i].rotation.x=-.15;}}
   else if(I.pose==='headCock'){t.body.rotation.x=.3;t.neck.rotation.z=.75;t.headG.rotation.z=.65+Math.sin(p*.5)*.1;t.neck.rotation.y=face;   // tête penchée à angle droit, il te fixe sans bouger
     for(let i=0;i<2;i++){A[i].rotation.set(-.25,0,(i?1:-1)*.05);E[i].rotation.x=-.2;}}
-  else if(I.pose==='skyGaze'){const b=Math.sin(p*2.6);t.tilt.position.y=Math.abs(b)*.12;t.body.rotation.x=-.12;t.body.rotation.z=Math.sin(p*1.3)*.05;t.neck.rotation.x=-.45;t.headG.rotation.x=-.55+Math.sin(p*1.1)*.06;t.headG.rotation.z=Math.sin(p*.9)*.12;   // la tête renversée vers le ciel, l'air ravi
-    for(let i=0;i<2;i++){const sd=i?1:-1,w=Math.sin(p*3.1+i*1.7)*.12;A[i].rotation.set(CPOSE.sky.ax+w,0,sd*CPOSE.sky.az);E[i].rotation.x=CPOSE.sky.ex+w;t.wrists[i].rotation.x=-.6;}}   // coudes au corps, mains levées à hauteur d'épaule, poignets cassés
+  else if(I.pose==='skyGaze'){const C=CPOSE.sky,b=Math.sin(p*2.4),s2=Math.sin(p*1.2);   // la tête renversée vers le ciel, rire béat : il se dandine de joie
+    t.tilt.position.y=Math.abs(b)*.1;t.tilt.rotation.z=s2*.05;t.body.rotation.x=-.2;t.body.rotation.z=s2*.07;t.body.rotation.y=Math.sin(p*.6)*.12;   // petits rebonds, poids d'une jambe sur l'autre, buste bombé
+    t.neck.rotation.x=C.nx;t.neck.rotation.z=-s2*.08;t.neck.rotation.y=0;t.headG.rotation.x=C.hx+Math.sin(p*2.4+1)*.05;t.headG.rotation.z=s2*.12;   // visage levé vers le ciel, encore visible de face
+    for(let i=0;i<2;i++){const sd=i?1:-1,ph=p*2.4+i*Math.PI,w=Math.sin(ph)*.08;K[i].rotation.x=.1+Math.max(0,Math.sin(p*1.2+i*Math.PI))*.28;L[i].rotation.x=-K[i].rotation.x*.45;
+      A[i].rotation.set(C.ax+w,A[i].rotation.y,sd*(C.az+Math.sin(p*1.2)*.04));E[i].rotation.x=C.ex+Math.sin(ph+.6)*.1;E[i].rotation.y=-C.ey;   // coudes contre le ventre, avant-bras dressés, mains à hauteur d'épaule
+      t.wrists[i].rotation.x=-.75+Math.sin(p*3.6+i)*.18;t.wrists[i].rotation.z=sd*Math.sin(p*3+i*2)*.3;t.fingers[i].rotation.z=-sd*(.35+Math.sin(p*4.2+i)*.25);}}   // poignets cassés qui gigotent, doigts écartés
   else if(I.pose==='squat'){t.tilt.position.y=CPOSE.sq.ty;t.body.rotation.x=.55;t.headG.rotation.x=-.6;t.neck.rotation.y=face;t.headG.rotation.z=Math.sin(p*.7)*.25;   // accroupi, les mains au sol, il te regarde par en dessous
     for(let i=0;i<2;i++){const sd=i?1:-1;L[i].rotation.x=-1.25;L[i].rotation.z=sd*.35;K[i].rotation.x=2.25;A[i].rotation.set(-.95+Math.sin(p*1.5+i)*.08,0,sd*.12);E[i].rotation.x=-.15;}}
   else if(I.pose==='spin'){t.headG.rotation.z=.4;t.neck.rotation.x=-.25;for(let i=0;i<2;i++){const sd=i?1:-1;A[i].rotation.set(-.2,0,sd*(1.45+Math.sin(p*4+i)*.1));E[i].rotation.x=-.1;}}}   // il tourne lentement sur lui-même, bras écartés
-const CPOSE={ly:{tx:-1.45,ty:-.2},sit:{ty:-4.1},sky:{ax:-.12,az:.32,ex:-2.25},sq:{ty:-3.0}};   /* mesuré sur le squelette : bassin au ras du sol */
+const CPOSE={ly:{tx:-1.45,ty:-.2},sit:{ty:-4.1},sky:{ax:-.16,az:.38,ex:-2.5,ey:.55,nx:-.1,hx:-.3},sq:{ty:-3.0}};   /* mesuré sur le squelette : bassin au ras du sol */
 /* rôdeur : il se fige dès que tu regardes dans sa direction, avance quand tu as le dos tourné, puis fonce sur toi par derrière */
 const _stF=new V3();
 function stalkGoal(t,dist,dt){const S=t.stalk,r=t.root.position,p=player.pos;camera.getWorldDirection(_stF);_stF.y=0;_stF.normalize();

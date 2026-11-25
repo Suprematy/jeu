@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124213347">
+<meta name="build" content="20261124230408">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -3336,7 +3336,7 @@ class Titan{
     // nuque : le point faible
     this.nape=new THREE.Object3D();this.nape.position.set(0,4.05,-.58);this.body.add(this.nape);
     // bras : épaule, coude, avant-bras d'une seule pièce (skinning) ; main, quatre doigts et pouce
-    this.arms=[];this.elbows=[];const at=BK==='gros'?1:BK==='maigre'?.6:(c.at||(ab?.66:.86)),al=BK==='gros'?1.12:BK==='maigre'?1.18:(c.al||(ab?1.4:1.12));
+    this.arms=[];this.elbows=[];const at=BK==='gros'?1:BK==='maigre'?.6:(c.at||(ab?.66:.86)),al=BK==='gros'?1.12:BK==='maigre'?1.18:(c.al||(ab?1.4:1.12));this.at_=at;this.al_=al;
     for(const sd of [-1,1]){
       const sh=new THREE.Bone();sh.position.set(sd*1.85,3.2,0);sh.userData.side=sd;this.body.add(sh);
       const el=new THREE.Bone();el.position.set(0,-2.15*al,0);sh.add(el);
@@ -3677,10 +3677,24 @@ function spawnTitan(type){
 var FACE_FORCE=null,BODY_FORCE=null;
 const IDLE_POSES=['armsUp','oneLeg','headCock','sit','skyGaze','skyGaze','squat','spin'];   /* le regard au ciel, mains levées : la pose la plus fréquente */
 function idleStart(t,mode,pose){mode=mode||(Math.random()<.45?'still':'wander');const I=t.idle={mode,t:0,goal:null,face:t.root.rotation.y+(Math.random()-.5)*3,trig:(17+Math.random()*16)*Math.max(1,t.s*.55),hp0:t.hp,pose:mode==='lying'?'lying':mode==='weird'?(pose||IDLE_POSES[Math.floor(Math.random()*IDLE_POSES.length)]):null,ph:Math.random()*10};
-  if(mode==='lying')t.root.rotation.y=Math.random()*TAU;t.speed0=t.speed;t.speed*=mode==='wander'?.4:1;}
+  if(mode==='lying')t.root.rotation.y=Math.random()*TAU;t.speed0=t.speed;t.speed*=mode==='wander'?.4:1;
+  if(I.pose==='skyGaze')pointFingers(t);}
+/* index pointés du déviant qui regarde le ciel : variante du corps sculpté où le VRAI index suit la main (os du poignet) au lieu de l'os des doigts ;
+   les trois autres doigts se replient en poing, l'index reste tendu. Même modèle, même peau, même trait d'encre */
+const PT_GEO=new Map();
+function pointGeo(t){const g0=t.bodyMesh.geometry;if(PT_GEO.has(g0))return PT_GEO.get(g0);
+  const al=t.al_||1.12,A=t.at_||.86,ey=7.8-2.15*al,fy=ey-2.35*al,zb=.02+.17*A,g=g0.clone(),P=g.attributes.position,si=g.attributes.skinIndex.array.slice(),sw=g.attributes.skinWeight.array.slice();
+  const ss=(a,b,x)=>{const u=clamp((x-a)/(b-a),0,1);return u*u*(3-2*u);};
+  for(let q=0;q<P.count;q++){const y=P.getY(q),z=P.getZ(q),f=ss(zb-.07,zb+.05,z)*ss(fy+.2,fy-.06,y);if(f<=0)continue;   // l'index (côté pouce, sous la ligne des doigts), avec une transition douce vers le majeur et la paume
+    for(let k=0;k<4;k++){const b=si[q*4+k];if(b!==15&&b!==17)continue;const wr=b-1,w=sw[q*4+k]*f;let j=-1;for(let m=0;m<4;m++)if(m!==k&&si[q*4+m]===wr)j=m;
+      if(j<0)for(let m=0;m<4;m++)if(m!==k&&sw[q*4+m]===0){j=m;si[q*4+m]=wr;break;}
+      if(j>=0){sw[q*4+j]+=w;sw[q*4+k]-=w;}else if(f>.5)si[q*4+k]=wr;}}
+  g.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(si,4));g.setAttribute('skinWeight',new THREE.BufferAttribute(sw,4));PT_GEO.set(g0,g);return g;}
+function pointFingers(t){if(t.ptG0)return;t.ptG0=t.bodyMesh.geometry;const g=pointGeo(t);t.bodyMesh.geometry=g;if(t.inkMesh)t.inkMesh.geometry=g;}
+function dropFingers(t){if(!t.ptG0)return;t.bodyMesh.geometry=t.ptG0;if(t.inkMesh)t.inkMesh.geometry=t.ptG0;t.ptG0=null;for(const f of t.fingers)f.rotation.x=0;}
 /* réveil : tout passe par l'animation, sans effet ajouté. Il se fige un instant, sa tête se tourne d'un coup vers le soldat (avec une saccade),
    puis il se redresse brutalement et fonce, plié en avant, les bras tendus vers lui */
-function idleWake(t){if(!t.idle)return;const I=t.idle;t.idle=null;t.wakePose=I.pose;t.speed=(t.speed0||t.speed)*1.35;t.aggr*=1.45;t.atkCd=Math.max(t.atkCd,.9);t.flank=0;
+function idleWake(t){if(!t.idle)return;const I=t.idle;t.idle=null;dropFingers(t);t.wakePose=I.pose;t.speed=(t.speed0||t.speed)*1.35;t.aggr*=1.45;t.atkCd=Math.max(t.atkCd,.9);t.flank=0;
   t.snapT=I.pose==='lying'||I.pose==='sit'?.55:.38;t.speedC=t.speed;t.speed=0;t.wph=0;}
 function crazyTick(t,dt){
   if(t.snapT>0){t.snapT-=dt;if(t.snapT<=0){const r=t.root.position,d=Math.hypot(player.pos.x-r.x,player.pos.z-r.z);t.root.rotation.y=Math.atan2(player.pos.x-r.x,player.pos.z-r.z);
@@ -3711,11 +3725,11 @@ function idlePose(t,dt){const I=t.idle;if(!I||!I.pose)return;I.ph+=dt;const p=I.
     t.neck.rotation.x=C.nx;t.neck.rotation.z=-s2*.08;t.neck.rotation.y=0;t.headG.rotation.x=C.hx+Math.sin(p*2.4+1)*.05;t.headG.rotation.z=s2*.12;   // visage levé vers le ciel, encore visible de face
     for(let i=0;i<2;i++){const sd=i?1:-1,ph=p*2.4+i*Math.PI,w=Math.sin(ph)*.08;K[i].rotation.x=.1+Math.max(0,Math.sin(p*1.2+i*Math.PI))*.28;L[i].rotation.x=-K[i].rotation.x*.45;
       A[i].rotation.set(C.ax+w,A[i].rotation.y,sd*(C.az+Math.sin(p*1.2)*.04));E[i].rotation.x=C.ex+Math.sin(ph+.6)*.1;E[i].rotation.y=-C.ey;   // coudes contre le ventre, avant-bras dressés, mains à hauteur d'épaule
-      t.wrists[i].rotation.x=-.75+Math.sin(p*3.6+i)*.18;t.wrists[i].rotation.z=sd*Math.sin(p*3+i*2)*.3;t.fingers[i].rotation.z=-sd*(.35+Math.sin(p*4.2+i)*.25);}}   // poignets cassés qui gigotent, doigts écartés
+      t.wrists[i].rotation.x=CPOSE.sky.wx+Math.sin(p*3.6+i)*.14;t.wrists[i].rotation.z=sd*(CPOSE.sky.wz+Math.sin(p*3+i*2)*.12);t.fingers[i].rotation.z=0;t.fingers[i].rotation.x=CPOSE.sky.fx;}}   // poings fermés, l'index pointé vers le ciel, qui remue avec le poignet
   else if(I.pose==='squat'){t.tilt.position.y=CPOSE.sq.ty;t.body.rotation.x=.55;t.headG.rotation.x=-.6;t.neck.rotation.y=face;t.headG.rotation.z=Math.sin(p*.7)*.25;   // accroupi, les mains au sol, il te regarde par en dessous
     for(let i=0;i<2;i++){const sd=i?1:-1;L[i].rotation.x=-1.25;L[i].rotation.z=sd*.35;K[i].rotation.x=2.25;A[i].rotation.set(-.95+Math.sin(p*1.5+i)*.08,0,sd*.12);E[i].rotation.x=-.15;}}
   else if(I.pose==='spin'){t.headG.rotation.z=.4;t.neck.rotation.x=-.25;for(let i=0;i<2;i++){const sd=i?1:-1;A[i].rotation.set(-.2,0,sd*(1.45+Math.sin(p*4+i)*.1));E[i].rotation.x=-.1;}}}   // il tourne lentement sur lui-même, bras écartés
-const CPOSE={ly:{tx:-1.45,ty:-.2},sit:{ty:-4.1},sky:{ax:-.16,az:.38,ex:-2.5,ey:.55,nx:-.1,hx:-.3},sq:{ty:-3.0}};   /* mesuré sur le squelette : bassin au ras du sol */
+const CPOSE={ly:{tx:-1.45,ty:-.2},sit:{ty:-4.1},sky:{ax:-.16,az:.38,ex:-2.5,ey:.55,nx:-.1,hx:-.3,wx:-.3,wz:0,fx:1.15},sq:{ty:-3.0}};   /* mesuré sur le squelette : bassin au ras du sol */
 /* rôdeur : il se fige dès que tu regardes dans sa direction, avance quand tu as le dos tourné, puis fonce sur toi par derrière */
 const _stF=new V3();
 function stalkGoal(t,dist,dt){const S=t.stalk,r=t.root.position,p=player.pos;camera.getWorldDirection(_stF);_stF.y=0;_stF.normalize();

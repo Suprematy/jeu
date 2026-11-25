@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261125012217">
+<meta name="build" content="20261125012324">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -881,14 +881,15 @@ function applyWeather(){const k=wxKind(),n=!!save.night;if(!WX.mesh)buildRain();
   skyDome.material.needsUpdate=true;WX.exp0=renderer.toneMappingExposure;WX.hemi0=hemi.intensity;wxFog();
   if(WX.rainG&&sfx.ctx)WX.rainG.gain.setTargetAtTime(on?rainVol(st):0,sfx.ctx.currentTime,.4);}
 function rainVolK(){const g=save.gfx||{};return g.rainVol!==undefined?clamp(+g.rainVol,0,1):g.rainSnd===false?0:1;}
-function rainVol(st){return (st?.16:.1)*rainVolK();}   /* volume du son de la pluie : réglable dans les options */
+function rainVol(st){return (st?.16:.1)*rainVolK();}
+function thunderVolK(){const g=save.gfx||{};return g.thunderVol!==undefined?clamp(+g.thunderVol,0,1):1;}   /* volume du tonnerre : réglable dans les options */   /* volume du son de la pluie : réglable dans les options */
 function updWeather(rdt){if(!WX.on||!WX.mesh)return;const dt=Math.min(rdt,.05),P=WX.mesh.geometry.attributes.position,a=P.array,c=camera.position,n=WX.st?WX.N:Math.round(WX.N*.55),vy=WX.vel*dt,vx=WX.wind*dt,sl=-WX.wind*.04;
   for(let i=0;i<n;i++){const o=i*6;let x=a[o]+vx,y=a[o+1]-vy,z=a[o+2];
     if(y<c.y-20)y+=40;else if(y>c.y+20)y-=40;if(x<c.x-35)x+=70;else if(x>c.x+35)x-=70;if(z<c.z-35)z+=70;else if(z>c.z+35)z-=70;
     a[o]=x;a[o+1]=y;a[o+2]=z;a[o+3]=x+sl;a[o+4]=y-.95;a[o+5]=z;}
   P.needsUpdate=true;
   if(sfx.ctx&&!WX.rainG){try{const C=sfx.ctx,s=C.createBufferSource();s.buffer=sfx.noise;s.loop=true;const f=C.createBiquadFilter();f.type='bandpass';f.frequency.value=2300;f.Q.value=.45;const g=C.createGain();g.gain.value=0;s.connect(f);f.connect(g);g.connect(sfx.master);s.start();WX.rainG=g;g.gain.setTargetAtTime(rainVol(WX.st),C.currentTime,.6);}catch(e){WX.rainG={gain:{setTargetAtTime(){}}};}}   // bruit de pluie
-  if(WX.st){WX.nextBolt-=dt;if(WX.nextBolt<=0){WX.nextBolt=5+Math.random()*10;WX.flashT=.42;const d=.3+Math.random()*1.8;sfx.burst(140,2.4,.75,'lowpass',.5,.6,40,d);sfx.burst(60,3.2,.7,'lowpass',.3,.5,0,d+.15);}   // éclair, puis le tonnerre
+  if(WX.st){WX.nextBolt-=dt;if(WX.nextBolt<=0){WX.nextBolt=5+Math.random()*10;WX.flashT=.42;const d=.3+Math.random()*1.8,tv=thunderVolK();if(tv>0){sfx.burst(140,2.4,.75*tv,'lowpass',.5,.6,40,d);sfx.burst(60,3.2,.7*tv,'lowpass',.3,.5,0,d+.15);}}   // éclair, puis le tonnerre
     if(WX.flashT>0){WX.flashT-=dt;const f=WX.flashT>.3?1:WX.flashT>.22?.2:WX.flashT>.12?.7:Math.max(0,WX.flashT/.12)*.4;renderer.toneMappingExposure=WX.exp0*(1+1.6*f);hemi.intensity=WX.hemi0*(1+2.2*f);if(WX.flashT<=0){renderer.toneMappingExposure=WX.exp0;hemi.intensity=WX.hemi0;}}}}
 const grassT=tex(256,256,(g,w,h)=>{g.fillStyle='#4a7230';g.fillRect(0,0,w,h);speck(g,w,h,6000,'34,58,20',.55);speck(g,w,h,3000,'104,146,58',.45);speck(g,w,h,400,'96,82,52',.3);},180,180);
 const cobT=tex(256,256,(g,w,h)=>{g.fillStyle='#564d43';g.fillRect(0,0,w,h);
@@ -4527,7 +4528,7 @@ function renderMenu(){
       h+=rng('fov','Champ de vision',60,110,1,O.fov,'°');
       h+='</div><p class="note">Pour la caméra « 1re personne » (touche 4). La coupe choisie vaut aussi en 3e personne.</p>';}
     h+=grp('Son');
-    {const rv=Math.round(rainVolK()*100);h+=sub('Ambiance')+`<label for="g_rainVol">Volume de la pluie <input id="g_rainVol" type="range" min="0" max="100" step="5" value="${rv}"> <b id="g_rainVolV">${rv} %</b></label></div>`;}
+    {const rv=Math.round(rainVolK()*100);const tv=Math.round(thunderVolK()*100);h+=sub('Ambiance')+`<label for="g_rainVol">Volume de la pluie <input id="g_rainVol" type="range" min="0" max="100" step="5" value="${rv}"> <b id="g_rainVolV">${rv} %</b></label>`+`<label for="g_thunderVol">Volume du tonnerre <input id="g_thunderVol" type="range" min="0" max="100" step="5" value="${tv}"> <b id="g_thunderVolV">${tv} %</b></label></div>`;}
   }else{
     h+='<div class="sect">Commandes</div><div class="ctltab">'+CONTROLS.map(([k,v])=>`<div><kbd>${k}</kbd><span>${v}</span></div>`).join('')+'</div>';
   }
@@ -4550,7 +4551,8 @@ $('menuBody').addEventListener('click',e=>{
 function fpSet(el){const k=el.id.slice(3),O=save.gfx.fp||(save.gfx.fp=FP_DEF());
   O[k]=el.type==='checkbox'?el.checked:el.type==='range'?+el.value:/^\d+$/.test(el.value)?+el.value:el.value;
   const v=$('fpv_'+k);if(v)v.textContent=el.value+(k==='fov'?'°':k==='shDist'?' m':' %');persist();}
-$('menuBody').addEventListener('input',e=>{if(e.target.id&&e.target.id.startsWith('fp_')){fpSet(e.target);return;}if(e.target.id==='g_rainVol'){save.gfx.rainVol=+e.target.value/100;const b=$('g_rainVolV');if(b)b.textContent=e.target.value+' %';if(WX.rainG&&sfx.ctx)WX.rainG.gain.setTargetAtTime(WX.on?rainVol(WX.st):0,sfx.ctx.currentTime,.15);persist();return;}if(e.target.id==='sens'){save.sens=+e.target.value;persist();}if(e.target.id==='follow'){save.follow=+e.target.value;persist();}});
+$('menuBody').addEventListener('input',e=>{if(e.target.id&&e.target.id.startsWith('fp_')){fpSet(e.target);return;}if(e.target.id==='g_thunderVol'){save.gfx.thunderVol=+e.target.value/100;const b=$('g_thunderVolV');if(b)b.textContent=e.target.value+' %';persist();return;}
+  if(e.target.id==='g_rainVol'){save.gfx.rainVol=+e.target.value/100;const b=$('g_rainVolV');if(b)b.textContent=e.target.value+' %';if(WX.rainG&&sfx.ctx)WX.rainG.gain.setTargetAtTime(WX.on?rainVol(WX.st):0,sfx.ctx.currentTime,.15);persist();return;}if(e.target.id==='sens'){save.sens=+e.target.value;persist();}if(e.target.id==='follow'){save.follow=+e.target.value;persist();}});
 $('menuBody').addEventListener('change',e=>{const id=e.target.id,g=save.gfx;if(id&&id.startsWith('fp_')){fpSet(e.target);return;}
   if(id==='aimA'){save.aimAssist=e.target.checked;persist();return;}
   if(id==='fs'){save.fullscreen=e.target.checked;persist();if(!save.fullscreen&&document.fullscreenElement)document.exitFullscreen().catch(()=>{});return;}

@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124203357">
+<meta name="build" content="20261124203853">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -5075,7 +5075,7 @@ const CFG={
   spearCount:6,          // lances par réapprovisionnement
   spearSpeed:95,         // vitesse de la lance foudroyante (m/s)
   spearGravity:5,        // chute de la lance en vol
-  spearFuse:.55,         // délai entre l'impact et la détonation (s)
+  spearFuse:.75,         // lances Mk2 : délai entre le moment où la lance se plante et la détonation (s)
   spearDamage:483,   /* +15 % */       // dégâts de base sur la nuque au centre de l'explosion
   spearNapeMult:1.6,     // bonus quand la lance explose sur la nuque
   spearLimbDamage:1035,   /* +15 % */   // dégâts sur un membre proche de l'explosion

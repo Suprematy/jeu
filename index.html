@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124203853">
+<meta name="build" content="20261124204842">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -1504,6 +1504,8 @@ function collideBoxes(p,v,r,isPlayer){
     const ry=roofY(b,p.x,p.z);if(p.y<ry&&p.y>R.y0-1.2){p.y=ry;if(v.y<0)v.y=0;landed=true;}}
   return{landed,hit};
 }
+/* sol sous un titan : la rue, ou le dessus d'un bâtiment s'il est arrivé par au-dessus (titan lancé, chute) ; il en tombe en marchant au bord */
+function titanFloor(x,z,y){let f=groundY(x,z);if(y<f+.5)return f;for(const b of colliders){if(b.small||x<b.x0||x>b.x1||z<b.z0||z>b.z1)continue;let top=b.h;const ry=roofY(b,x,z);if(ry>top)top=ry;if(top<=y+.8&&top>f)f=top;}return f;}
 function roofY(b,x,z){const R=b.roof;if(!R)return -1;const ax=Math.abs(x-R.cx)/R.hw,az=Math.abs(z-R.cz)/R.hd;if(ax>1||az>1)return -1;const u=R.axis==='x'?az:R.axis==='z'?ax:Math.max(ax,az);return u>=1?-1:R.y0+R.rh*(1-u);}
 function collideTrees(p,v,r,isPlayer){
   let hit=false;
@@ -2707,7 +2709,7 @@ function callTen(t,title,dev){   // dev : des déviants peuvent répondre au cri
 if(ORIG&&!ORIG.dead){t.armyCalled=true;return;}   // pendant la vague du Titan Originel, personne d'autre n'appelle de titans
 t.armyCalled=true;bigMsg(title,'Dix titans répondent à son cri');sfx.bossHorn();shake=Math.max(shake,.8);steamBurst(t.headG.getWorldPosition(new V3()),6,t.s*.7);
   for(let i=0;i<10;i++)setTimeout(()=>{if(t.state!=='dead'&&!t.gone&&state==='play'){const r=Math.random();spawnTitan(dev&&r<.25?'abnormal':r<.45?'large':r<.75?'medium':'small');}},300+i*450);}
-function bossUpdate(t,dt,dist){const k=t.type,p=player;t.bt=(t.bt===undefined?3:t.bt)-dt;
+function bossUpdate(t,dt,dist){const k=t.type,p=player;t.bt=(t.bt===undefined?3:t.bt)-dt;if(k!=='assaillant'&&t.roarT>0)t.roarT-=dt;   /* le cri (bras écartés) se termine aussi pour les autres boss : plus de pose en T après un lancer */
   // phase 2 sous la moitié de ses PV : plus rapide, attaques plus fréquentes
   if(!t.enraged&&t.cfg.boss&&t.hp<t.maxHp*.5&&k!=='assaillant'){t.enraged=true;t.speed*=1.35;t.aggr*=1.3;bigMsg(t.cfg.name.toUpperCase()+' ENRAGÉ','Ses attaques s\'enchaînent plus vite');sfx.bossHorn();shake=Math.max(shake,.8);}
   const R=t.enraged?.65:1,mv=s=>{t.root.position.x+=Math.sin(t.root.rotation.y)*s*dt;t.root.position.z+=Math.cos(t.root.rotation.y)*s*dt;};
@@ -2716,7 +2718,7 @@ function bossUpdate(t,dt,dist){const k=t.type,p=player;t.bt=(t.bt===undefined?3:
       for(let i=0;i<7;i++){const pp=t.parts[Math.floor(Math.random()*t.parts.length)].getWorldPosition(tC);emit(pp,tD.set((Math.random()-.5)*16,6+Math.random()*12,(Math.random()-.5)*16).clone(),2.6,6,30,Math.random()<.3?0xffe6d0:0xf6f6f4,.55,-2,.6);}
       const r=t.root.position,dx=p.pos.x-r.x,dz=p.pos.z-r.z,dd=Math.hypot(dx,dz)||1;
       // dans la vapeur : la vie descend doucement mais sûrement (environ 3,5 % par seconde), sans repousser le joueur
-      const inSteam=dd<5.5*t.s&&p.pos.y<t.H*1.15;t.inSteam=inSteam;
+      const inSteam=dd<5.5*t.s&&p.pos.y-t.root.position.y<t.H*1.15;t.inSteam=inSteam;
       if(inSteam&&!(NET&&NET.on)){const sr=ST.hpMax*.06*(.35+.65*Math.pow(1-dd/(5.5*t.s),1.5));p.hp-=sr*dt;   /* plus on est près de son corps, plus la vapeur brûle (2 % à 6 % de la vie par seconde), pas de régénération dedans */
         p.lastHit=0;t.steamTick=(t.steamTick||0)+dt;if(t.steamTick>.6){t.steamTick=0;popNum(p.center,'-'+Math.max(1,Math.round(sr*.6)),'hurt');}
         $('flash').style.transition='none';$('flash').style.opacity=.1+.05*Math.sin(performance.now()/120);ACH.inSt=1;DC='vapeur';deathCheck();DC='';}
@@ -2759,7 +2761,7 @@ function bossUpdate(t,dt,dist){const k=t.type,p=player;t.bt=(t.bt===undefined?3:
       if(t.prepT<=0&&t.state==='walk'&&t.stagger<=0){t.dashT=1.6;t.wasDash=true;sfx.stomp(.9);shake=Math.max(shake,.6);toast('Le Cuirassé charge !');}}
     if(t.wasDash&&t.dashT<=0){t.wasDash=false;t.recoverT=1.3;const f=t.root.position;for(let i=0;i<26;i++)emit(tC.set(f.x+(Math.random()-.5)*3*t.s,f.y+.4,f.z+(Math.random()-.5)*3*t.s),rv(6).clone().add(tD.set(0,4,0)),1.6,2*t.s,7*t.s,0x9a8f80,.55,-1,.6);sfx.stomp(.6);}
     if(t.dashT>0){t.dashT-=dt;if(t.state==='walk'&&t.stagger<=0){mv(t.speed*3.2);t.phase+=dt*t.speed*3.2/(t.s*1.5);
-      if(Math.random()<dt*28){const f=t.root.position;emit(tC.set(f.x+(Math.random()-.5)*2.5*t.s,f.y+.4,f.z+(Math.random()-.5)*2.5*t.s),rv(3).clone().add(tD.set(0,2.5,0)),1.2,1.6*t.s,5*t.s,0x9a8f80,.45,-1,.7);}if(Math.random()<dt*8)sfx.stomp(.3);if(dist<4*t.s&&p.pos.y<t.H)hurtPlayer(t);}}}
+      if(Math.random()<dt*28){const f=t.root.position;emit(tC.set(f.x+(Math.random()-.5)*2.5*t.s,f.y+.4,f.z+(Math.random()-.5)*2.5*t.s),rv(3).clone().add(tD.set(0,2.5,0)),1.2,1.6*t.s,5*t.s,0x9a8f80,.45,-1,.7);}if(Math.random()<dt*8)sfx.stomp(.3);if(dist<4*t.s&&p.pos.y-t.root.position.y<t.H)hurtPlayer(t);}}}
 }
 var dmgSrc='';
 function forgeSpikes(t){if(t.spikeT>=0||t.state==='dead')return;t.spikeT=0;t.spikeHit=false;t.spikeCd=t.enraged?2.4:3.4;sfx.crystal();if(!t.spikeWarned){t.spikeWarned=true;toast('Recule ! Des pics vont jaillir de son corps');}}
@@ -3432,7 +3434,7 @@ class Titan{
     if(this.stRing&&this.state!=='stomp')this.endStomp();
     const pc=player.center,dx=pc.x-r.position.x,dz=pc.z-r.position.z,dist=Math.hypot(dx,dz),ab=this.type==='abnormal';
     this.atkCd-=dt;this.jumpCd-=dt;this.armOff[0]-=dt;this.armOff[1]-=dt;
-    const tgy=groundY(r.position.x,r.position.z);if(r.position.y>tgy+.05||this.vy>0){this.vy-=24*dt;r.position.y+=this.vy*dt;
+    const tgy=titanFloor(r.position.x,r.position.z,r.position.y);if(r.position.y>tgy+.05||this.vy>0){this.vy-=24*dt;r.position.y+=this.vy*dt;
       if(this.thrV){r.position.x+=this.thrV.x*dt;r.position.z+=this.thrV.z*dt;this.tilt.rotation.x+=dt*7;   /* titan lancé par le Cuirassé : il tourne sur lui-même en volant */
         if(!this.thrHit&&r.position.distanceTo(player.pos)<3.2*this.s+1.5&&player.inv<=0){this.thrHit=true;hurtPlayer(this,1.6);feed('Percuté par le titan lancé !','');}}
       if(r.position.y<=tgy){r.position.y=tgy;this.vy=0;sfx.stomp();if(dist<50)shake=Math.max(shake,.5);if(this.thrV){this.thrV=null;this.tilt.rotation.x=0;this.stagger=Math.max(this.stagger,1.2);}}}
@@ -3482,11 +3484,11 @@ class Titan{
         if(this.type==='colosse'&&this.introT>0){}
         else if(this.type==='colosse'&&facing&&this.atkCd<=0){const low=player.pos.y-groundY(player.pos.x,player.pos.z)<3.5;
           if(low&&dist<7*this.s&&!this.legLoss)this.startStomp();                         // au sol près de lui : il cherche à te piétiner
-          else if(!low&&dist<reach&&pc.y<this.H*1.25&&Math.random()<.18)this.startAttack(); // en l'air : les mains, rarement
+          else if(!low&&dist<reach&&pc.y-r.position.y<this.H*1.25&&Math.random()<.18)this.startAttack(); // en l'air : les mains, rarement
           else this.atkCd=1.4;}
         else if(this.type==='forgeron'&&facing&&this.atkCd<=0&&dist<reach*1.25&&this.weaponK>.8&&Math.random()<.55&&this.startSlam()){}   // coup de marteau du Forgeron
         else if(this.type==='assaillant'&&facing&&this.atkCd<=0&&assaillantDecide(this,dist,reach)){}
-        else if(dist<reach&&pc.y<this.H*1.25&&facing&&this.atkCd<=0&&this.type!=='assaillant'&&this.type!=='rumble'){   /* les colossaux du Rumbling ne frappent pas : seuls leur vapeur et leurs pas sont dangereux */if((this.type==='agile'||this.type==='cuirasse')&&!this.legLoss&&!this.combo&&Math.random()<(this.type==='cuirasse'?.35:.45)){this.startKick();if(this.type==='cuirasse')this.kSpin=false;}else this.startAttack();}
+        else if(dist<reach&&pc.y-r.position.y<this.H*1.25&&facing&&this.atkCd<=0&&this.type!=='assaillant'&&this.type!=='rumble'){   /* les colossaux du Rumbling ne frappent pas : seuls leur vapeur et leurs pas sont dangereux */if((this.type==='agile'||this.type==='cuirasse')&&!this.legLoss&&!this.combo&&Math.random()<(this.type==='cuirasse'?.35:.45)){this.startKick();if(this.type==='cuirasse')this.kSpin=false;}else this.startAttack();}
         else if(this.type==='bete'&&dist>40&&dist<34&&!this.legLoss){   // la Bête garde ses distances pour lancer ses rochers
           const sp=this.speed*.55;r.position.x-=Math.sin(r.rotation.y)*sp*dt;r.position.z-=Math.cos(r.rotation.y)*sp*dt;this.phase-=dt*sp/(this.s*1.5);moving=true;}
         else if(ag?!ag.hold:(dist>(this.type==='bete'?(dist<40?reach*.55:62):reach*.55)||(this.type==='rumble'&&dist>2))){   // les colossaux avancent sans s'arrêter : ils piétinent tout
@@ -3495,7 +3497,7 @@ class Titan{
           r.position.x+=Math.sin(r.rotation.y)*sp*dt;r.position.z+=Math.cos(r.rotation.y)*sp*dt;
           this.phase+=dt*sp/(this.s*1.5);moving=sp>.05;const sg=Math.sin(this.phase)>0;
           if(sg!==this.lastSg){this.lastSg=sg;if(moving&&dist<140){sfx.stomp(clamp(1-dist/140,0,1)*.22*Math.min(2.5,this.s));
-            if(this.H>9){const f=this.knees[sg?0:1].localToWorld(tC.set(0,-2.3,.3));f.y=groundY(f.x,f.z)+.3;
+            if(this.H>9){const f=this.knees[sg?0:1].localToWorld(tC.set(0,-2.3,.3));f.y=Math.max(groundY(f.x,f.z),this.root.position.y)+.3;
               if((this.type==='rumble'||this.type==='colosse')&&Math.hypot(player.pos.x-f.x,player.pos.z-f.z)<1.7*this.s&&player.pos.y-f.y<2.6*this.s&&player.inv<=0){hurtPlayer(fakeHit(f.clone(),2.6));feed('Écrasé sous le pied d\'un titan colossal !','');shake=Math.max(shake,1.2);}   /* ne reste pas sous ses pieds */
               for(let q=0;q<3;q++)emit(f,rv(3).clone().add(tD.set(0,2,0)),1,this.s*.6,this.s*2.2,0x9a8f80,.35,-1,.6);}}}   // poussière sous le pied
           if(ab&&!this.legLoss&&this.jumpCd<=0&&this.vy===0&&dist<55&&dist>12&&pc.y>4){this.vy=15+Math.random()*5;this.jumpCd=5+Math.random()*3;}
@@ -3503,7 +3505,7 @@ class Titan{
       }
       // géants (colossaux du Rumbling, Colosse) : un pied qui descend ou qui est posé écrase tout ce qui est dessous, à chaque instant
       if(this.type==='rumble'||this.type==='colosse'){if(!this.footPrev)this.footPrev=[9,9];
-        for(let i=0;i<2;i++){const f=this.knees[i].localToWorld(new V3(0,-2.3,.3)),gy=groundY(f.x,f.z),fy=f.y-gy,down=fy<=this.footPrev[i]+.01;this.footPrev[i]=fy;
+        for(let i=0;i<2;i++){const f=this.knees[i].localToWorld(new V3(0,-2.3,.3)),gy=Math.max(groundY(f.x,f.z),this.root.position.y),fy=f.y-gy,down=fy<=this.footPrev[i]+.01;this.footPrev[i]=fy;
           if(fy<1.0*this.s&&down&&player.inv<=0&&Math.hypot(player.pos.x-f.x,player.pos.z-f.z)<1.7*this.s&&player.pos.y-gy<2.6*this.s){hurtPlayer(fakeHit(new V3(f.x,gy,f.z),2.6));feed('Écrasé sous le pied d\'un titan colossal !','');shake=Math.max(shake,1.2);}}}
       if(!moving)this.phase+=dt*(this.turning?2.2:.8);   // en pivotant sur place, il piétine
       const G=this.gait,rt=performance.now()/1000,charging=this.type==='cuirasse'&&(this.dashT>0||this.prepT>0)&&this.state==='walk',amp=(moving||charging)?1:this.turning?.45:.15,ph=this.phase,sw=Math.sin(ph)*(ab?.85:G.stride)*amp,kb=(ab?1.3:.85)*amp;
@@ -3564,9 +3566,9 @@ class Titan{
       this.tilt.rotation.x=lerp(this.tilt.rotation.x,this.fallT>0?1.0:this.legLoss===2?1.05:this.legLoss===1?.24:0,1-Math.exp(-(this.fallT>0?7:3)*dt));
       if(this.legLoss===1){const sdL=this.sev.leg[0]>4?-1:1;this.tilt.rotation.z=lerp(this.tilt.rotation.z,sdL*.16+Math.sin(ph)*.08,1-Math.exp(-4*dt));}   // il penche du côté de la jambe perdue
     }
-    tC.set(r.position.x,0,r.position.z);tD.set(0,0,0);
+    tC.set(r.position.x,Math.max(0,r.position.y-groundY(r.position.x,r.position.z)+.01),r.position.z);tD.set(0,0,0);   /* sur un toit, il ne se cogne plus aux murs du bâtiment sous ses pieds */
     for(const o of titans){if(o===this||o.state==='dead'||o.gone)continue;const ox=tC.x-o.root.position.x,oz=tC.z-o.root.position.z,dd=Math.hypot(ox,oz),mn=(this.s+o.s)*1.5;if(dd<mn&&dd>.01){const pu=(mn-dd)*Math.min(1,dt*4)*(o.s/(this.s+o.s));tC.x+=ox/dd*pu;tC.z+=oz/dd*pu;}}
-    if(this.vy===0&&this.state!=='dead')r.position.y=lerp(r.position.y,groundY(r.position.x,r.position.z),.3);
+    if(this.vy===0&&this.state!=='dead'){const fl=titanFloor(r.position.x,r.position.z,r.position.y);if(r.position.y-fl<1.5)r.position.y=lerp(r.position.y,fl,.3);}   /* au bord d'un toit : il tombe vraiment (gravité), au lieu de glisser vers la rue */
     const big=this.H>25,res=big?{hit:false}:collideBoxes(tC,tD,1.7*this.s,false);if(!big)collideTrees(tC,tD,1.7*this.s);
     if(res.hit&&this.avoid<=0){this.avoid=1.3;this.avoidDir=Math.random()<.5?-1:1;}
     r.position.x=clamp(tC.x,-478,478);r.position.z=clamp(tC.z,-478,478);this.extremities(dt);
@@ -7193,7 +7195,7 @@ var NET={mode:'normal',on:false,host:false,lobby:false,started:false,welcomed:fa
   // boss, pour le soldat local de chaque joueur : vapeur brûlante et pieds du Colosse, pics du Forgeron (l'hôte ne les juge que pour la cible du boss)
   bossLocal(t,dt){const p=player,k=t.type,flashOff=()=>{t.inSL=false;$('flash').style.transition='opacity .6s';$('flash').style.opacity=0;};
     if(this.dead||state!=='play'){if(t.inSL)flashOff();return;}
-    if(k==='colosse'||k==='rumble'){const r=t.root.position,dd=Math.hypot(p.pos.x-r.x,p.pos.z-r.z)||1,inS=t.steam>0&&dd<5.5*t.s&&p.pos.y<t.H*1.15;
+    if(k==='colosse'||k==='rumble'){const r=t.root.position,dd=Math.hypot(p.pos.x-r.x,p.pos.z-r.z)||1,inS=t.steam>0&&dd<5.5*t.s&&p.pos.y-t.root.position.y<t.H*1.15;
       if(inS){const sr=ST.hpMax*.06*(.35+.65*Math.pow(1-dd/(5.5*t.s),1.5));p.hp-=sr*dt;p.lastHit=0;t.stL=(t.stL||0)+dt;if(t.stL>.6){t.stL=0;popNum(p.center,'-'+Math.max(1,Math.round(sr*.6)),'hurt');}
         $('flash').style.transition='none';$('flash').style.opacity=.1+.05*Math.sin(performance.now()/120);t.inSL=true;ACH.inSt=1;DC='vapeur';deathCheck();DC='';}
       else if(t.inSL)flashOff();

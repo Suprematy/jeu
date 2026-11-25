@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261125012324">
+<meta name="build" content="20261125012602">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -3680,7 +3680,7 @@ function spawnTitan(type){
 var FACE_FORCE=null,BODY_FORCE=null;
 const IDLE_POSES=['armsUp','oneLeg','headCock','sit','squat','spin'];   /* le regard au ciel, index pointés, est devenu une COURSE (coureur joyeux), comme dans l'anime */
 /* ----- courses de déviants, d'après l'anime : chacune a sa posture, sa foulée et sa cadence ----- */
-const AB_RUNS=[['skyRun',3],['lunge',3],['plane',3],['leap',2],['pump',3],['flail',2],['oneUp',1],['hang',1]];
+const AB_RUNS=[['skyRun',2],['lunge',2],['plane',2],['leap',1.5],['pump',1.5],['flail',3],['reach',2],['oneUp',2],['hang',2]];   /* les courses tirées de l'anime : environ la moitié des déviants, les autres gardent les anciennes */
 const AB_GAIT={skyRun:{st:.4,kn:.95,cad:1.6,bob:.34},lunge:{st:1.05,kn:1.55,cad:.8,bob:.16},plane:{st:.9,kn:1.2,cad:.95,bob:.24},leap:{st:.95,kn:1.4,cad:.9,bob:.3},pump:{st:.55,kn:1.1,cad:1.45,bob:.2}};
 function pickAbRun(){let n=0;for(const r of AB_RUNS)n+=r[1];let x=Math.random()*n;for(const r of AB_RUNS){x-=r[1];if(x<=0)return r[0];}return 'flail';}
 function abRunPose(t,dt){const S=t.abRun,r=t.root.position,pv=t._pp||(t._pp=r.clone()),v=Math.hypot(r.x-pv.x,r.z-pv.z)/Math.max(dt,1e-3);pv.copy(r);

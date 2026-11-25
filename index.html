@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261125012602">
+<meta name="build" content="20261125015524">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -2753,11 +2753,14 @@ function bossUpdate(t,dt,dist){const k=t.type,p=player;t.bt=(t.bt===undefined?3:
     t.throwCd=(t.throwCd===undefined?3:t.throwCd)-dt;
     const onRoof=p.pos.y-groundY(p.pos.x,p.pos.z)>6,host=!(NET&&NET.on&&!NET.host);
     if(t.fetch&&(t.fetch.state==='dead'||t.fetch.gone||t.fetch.thrV||!onRoof||!t.enraged||dist>140))t.fetch=null;   /* plus de raison d'aller le chercher */
-    if(t.enraged&&t.throwCd<=0&&host&&t.state==='walk'&&t.stagger<=0&&onRoof&&dist>12&&dist<110){
+    if(t.enraged&&t.throwCd<=0&&host&&t.state==='walk'&&t.stagger<=0&&onRoof&&dist>12&&dist<150){
       let best=null,bd=160;for(const o of titans){if(o===t||o.cfg.boss||o.state==='dead'||o.gone||o.thrV||o.H>11||o.army)continue;const d=o.root.position.distanceTo(t.root.position);if(d<bd){bd=d;best=o;}}   /* même loin : il va le chercher */
       if(best&&bd>11*t.s){if(t.fetch!==best){t.fetch=best;if(!t.fetchSaid){t.fetchSaid=true;toastT=0;toast('Le Cuirassé va chercher un titan pour te le lancer !');}}best=null;}
-      if(best){t.throwCd=7*R;t.fetch=null;const o=best,r=o.root.position,st=t.root.position.clone().add(tA.set(0,t.H*.85,0));r.copy(st);const T=clamp(dist/34,.9,1.9),g=24,tg=p.pos.clone().addScaledVector(p.vel,T*.6);
-        o.thrV=new V3((tg.x-r.x)/T,0,(tg.z-r.z)/T);o.vy=(tg.y-r.y+.5*g*T*T)/T;o.thrHit=false;o.stagger=Math.max(o.stagger,T+1);if(o.state!=='walk')o.state='walk';
+      if(best){t.throwCd=7*R;t.fetch=null;const o=best,r=o.root.position,st=t.root.position.clone().add(tA.set(0,t.H*.85,0));r.copy(st);const g=24,tg=p.pos.clone();
+        /* lancer en cloche : il lance d'où il est, assez haut pour passer au-dessus des maisons, et le titan retombe sur ton toit */
+        let top=Math.max(st.y,tg.y);for(let i=1;i<14;i++){const f=i/14,x=st.x+(tg.x-st.x)*f,z=st.z+(tg.z-st.z)*f;top=Math.max(top,titanFloor(x,z,1e4)+(f<.88?4+2*o.s:0));}
+        const vy0=Math.sqrt(2*g*Math.max(2,top+3-st.y)),T=vy0/g+Math.sqrt(2*Math.max(.5,top+3-tg.y)/g);tg.addScaledVector(p.vel,T*.5);
+        o.thrV=new V3((tg.x-r.x)/T,0,(tg.z-r.z)/T);o.vy=vy0;o.thrHit=false;o.stagger=Math.max(o.stagger,T+1);if(o.state!=='walk')o.state='walk';
         t.roarT=.8;sfx.woosh();sfx.stomp(.5);toastT=0;toast('Le Cuirassé te lance un titan !');}}
     if(t.recoverT>0){t.recoverT-=dt;if(Math.random()<dt*14){const hp=t.headG.getWorldPosition(tC);emit(hp,rv(2).clone().add(tD.set(0,2.5,0)),1,t.s*.4,t.s*1.4,0xf4f4f2,.4,-1,.6);}}
     const aim=Math.abs(wrapA(Math.atan2(p.pos.x-t.root.position.x,p.pos.z-t.root.position.z)-t.root.rotation.y));
@@ -2776,7 +2779,7 @@ function armored(t){const k=t.type;return k==='cuirasse'||(k==='agile'&&t.enrage
 var CROC_G={ax:-2.5,az:-1.95,ex:-2.3,bx:.5,hx:.5},CROC_GT={bete:{ax:-2.2,az:-1.8,ex:-2.3,bx:.3,hx:.5}};   /* la Bête a d'autres proportions */   /* pose de garde (ajustée sur le squelette) */
 const GUARD_BOSS={croc:1,bete:1,agile:1,forgeron:1,assaillant:1};   /* boss qui protègent leur nuque une fois aveuglés ou à genoux (pas le Colosse, l'Originel ni le Cuirassé) */
 /* le Cuirassé, à genoux sous la moitié de sa vie, protège sa nuque d'UNE main : lance foudroyante ou coupe chargée lancée à pleine vitesse pour lui trancher le tendon */
-function crocDown(t){if(t.army||t.state==='dead')return false;const kn=t.tend[0]>0||t.tend[1]>0;return GUARD_BOSS[t.type]?(t.blindT>0||kn):t.type==='cuirasse'&&kn&&t.hp<=t.maxHp*.5;}
+function crocDown(t){if(t.army||t.state==='dead')return false;const kn=t.tend[0]>0||t.tend[1]>0;return GUARD_BOSS[t.type]?(t.blindT>0||kn):t.type==='cuirasse'&&(t.blindT>0||kn&&t.hp<=t.maxHp*.5);}   /* Cuirassé : aveuglé, ou à genoux une fois enragé */
 function guardArms(t){return t.type==='cuirasse'?[t.gArm|0]:[0,1];}
 function crocArmFree(t,i){return !(t.armT&&t.armT[i]>0)&&!(t.sev.arm[i]>0)&&!(t.armOff[i]>0);}
 function crocGuarding(t){return crocDown(t)&&guardArms(t).some(i=>crocArmFree(t,i));}
@@ -3595,7 +3598,7 @@ class Titan{
     const kp=this.knees[i].getWorldPosition(new V3());spray(kp,tD.subVectors(kp,player.center).setY(.4).normalize().clone(),14,9,.5,Math.min(1,.3+this.s*.15));steamBurst(kp,2,this.s*.4);sfx.hit();popNum(kp,'Tendon','');
     feed(two?'Tendons tranchés : il ne se relève plus de sitôt':'Tendon tranché : le titan tombe à genoux','gold');addStyle('Tendon',.35);addXP(4);carnetEv('tendon');}
   // yeux tranchés : aveuglé quelques secondes, il frappe au hasard et se frotte les yeux
-  blindEyes(){if(this.state==='dead')return;const boss=!!this.cfg.boss,cr=!!GUARD_BOSS[this.type]&&!this.army;this.blindT=cr?6:boss?3:7.5;this.rubT=cr?0:boss?1:2.2;this.flailT=.9;this.blindDir=this.root.rotation.y;this.stagger=Math.max(this.stagger,cr?6:.6);   /* le Croc aveuglé se recroqueville à genoux, les mains sur la nuque */
+  blindEyes(){if(this.state==='dead')return;const boss=!!this.cfg.boss,cr=!!GUARD_BOSS[this.type]&&!this.army||this.type==='cuirasse';if(this.type==='cuirasse')this.gArm=Math.random()<.5?0:1;this.blindT=this.type==='cuirasse'?5:cr?6:boss?3:7.5;this.rubT=cr?0:boss?1:2.2;this.flailT=.9;this.blindDir=this.root.rotation.y;this.stagger=Math.max(this.stagger,cr?6:.6);   /* le Croc aveuglé se recroqueville à genoux, les mains sur la nuque */
     const E=this.eyePos(new V3());slashBlood(E,this.s*.5,false);steamBurst(E,2,this.s*.35);sfx.hit();popNum(E,'Aveuglé','');
     feed('Yeux tranchés : il frappe à l\'aveugle','gold');addStyle('Aveuglé',.35);addXP(4);carnetEv('blind');}
   hurt(dmg){
@@ -3673,7 +3676,7 @@ function spawnTitan(type){
     if(ipo==='skyGaze'){FACE_FORCE=['sleepy','laugh'];if(Math.random()<.75)BODY_FORCE='gros';}   /* le regard au ciel : rondouillard, yeux plissés, rire béat */
     const t=new Titan(type,x,z);FACE_FORCE=null;BODY_FORCE=null;
     t.root.rotation.y=Math.atan2(player.pos.x-x,player.pos.z-z);if(modOn('rapides'))t.speed*=1.35;if(modOn('coriaces')){t.maxHp*=1.5;t.hp=t.maxHp;}titans.push(t);
-    if(idm)idleStart(t,idm,ipo);else if(type==='abnormal'&&gameMode!=='tuto'&&Math.random()<.16){t.stalk={t:0};t.marker.style.display='none';}   /* rôdeur : il s'approche quand tu ne le regardes pas, puis attaque dans le dos */
+    if(idm)idleStart(t,idm,ipo);else if(type==='abnormal'&&gameMode!=='tuto'&&Math.random()<.16){t.stalk={t:0};t.mkHide=true;t.marker.style.display='none';}   /* rôdeur : il s'approche quand tu ne le regardes pas, puis attaque dans le dos */
     return t;}
 }
 /* ----- déviants indifférents : ils errent au hasard ou restent plantés là, sans s'occuper du soldat ; s'il s'approche (ou les touche), ils deviennent fous et lui foncent dessus ----- */
@@ -3757,7 +3760,7 @@ const CPOSE={ly:{tx:-1.45,ty:-.2},sit:{ty:-4.1},sky:{ax:-.16,az:.38,ex:-2.5,ey:.
 const _stF=new V3();
 function stalkGoal(t,dist,dt){const S=t.stalk,r=t.root.position,p=player.pos;camera.getWorldDirection(_stF);_stF.y=0;_stF.normalize();
   const tx=r.x-p.x,tz=r.z-p.z,l=Math.hypot(tx,tz)||1,seen=(tx*_stF.x+tz*_stF.z)/l>.35;S.t+=dt;
-  if(t.hp<t.maxHp||t.limbHit>0||t.blindT>0||S.t>90||(dist<24&&!seen)||dist<10){t.stalk=null;t.marker.style.display='';t.wakePose=null;t.speedC=t.speed*1.3;t.aggr*=1.4;t.snapT=.01;t.flank=0;return null;}   // il fonce
+  if(t.hp<t.maxHp||t.limbHit>0||t.blindT>0||S.t>90||(dist<24&&!seen)||dist<10){t.stalk=null;t.wakePose=null;t.speedC=t.speed*1.3;t.aggr*=1.4;t.snapT=.01;t.flank=0;return null;}   // il fonce
   if(seen&&dist<130){S.froze=true;return {x:r.x+Math.sin(t.root.rotation.y)*5,z:r.z+Math.cos(t.root.rotation.y)*5,hold:true};}   // regardé : il se fige
   S.froze=false;return {x:p.x-_stF.x*16,z:p.z-_stF.z*16,hold:false};}   // il vise ton dos
 /* un titan voit-il le soldat ? dans son champ de vision (sauf couché : il voit tout autour) et sans mur ni bâtiment entre eux */
@@ -3856,7 +3859,7 @@ function bladeHit(range,mult,kind){if(gameMode==='pvp')return pvMyMelee(range,mu
     if(t.state==='dead')continue;
     const np=t.nape.getWorldPosition(tA);
     if(np.distanceTo(pc)<range+1.05*t.s){
-      if(t.type==='cuirasse'&&crocGuarding(t)){if(kind==='charge'&&elanK()>=.6)t.cutArmTendon(t.gArm|0);else{toastT=0;toast('Sa main protège sa nuque : lance foudroyante, ou coupe chargée à pleine vitesse');sfx.crystal();}any=true;continue;}
+      if(t.type==='cuirasse'&&crocGuarding(t)){if(kind==='charge'&&(elanK()>=.35||CHG_L>=.5))t.cutArmTendon(t.gArm|0);else{toastT=0;toast('Sa main protège sa nuque : lance foudroyante, ou coupe chargée à pleine vitesse');sfx.crystal();}any=true;continue;}
       if(crocGuarding(t)){let bi=-1,bd2=1e9;for(let i=0;i<2;i++){if(!crocArmFree(t,i))continue;const d=t.elbows[i].getWorldPosition(tC).distanceTo(pc);if(d<bd2){bd2=d;bi=i;}}   /* les mains couvrent la nuque : la lame tranche le tendon du bras le plus proche */
         if(bi>=0){t.cutArmTendon(bi);if(kind!=='spin'&&kind!=='charge'&&kind!=='spiral')wearBlades(CFG.bladeWearLimb);any=true;continue;}}
       if(isBehind(t,np,pc)){const perf=elanK()>=.9&&kind!=='spiral';t.hurt(ST.dmg*mult*spf*(perf?1.25:1));if(perf){addStyle('Coupe parfaite',.45);elanFlash();carnetEv('perfect');}   /* coupe parfaite : nuque tranchée à pleine vitesse */if(kind!=='spin'&&kind!=='charge'&&kind!=='spiral')wearBlades(CFG.bladeWearNape);any=true;continue;}   /* tourbillon et coupe chargée : leur coût fixe remplace l'usure */
@@ -3868,7 +3871,7 @@ function bladeHit(range,mult,kind){if(gameMode==='pvp')return pvMyMelee(range,mu
     let tnd=false;if(best&&best.userData.limb==='leg'&&t.type!=='rumble'){const li=t.legs.findIndex(h=>isDesc(best,h));   // derrière le genou : le tendon
       if(li>=0&&!(t.tend[li]>0)&&!(t.sev.leg[li]>0)&&t.knees[li].visible&&(t.type!=='cuirasse'||kind==='charge')){   /* Cuirassé : seule une coupe chargée tranche ses tendons */const kp=t.knees[li].getWorldPosition(tC),fx=Math.sin(t.root.rotation.y),fz=Math.cos(t.root.rotation.y);
         if(kp.distanceTo(pc)<range+1.1*t.s&&(pc.x-kp.x)*fx+(pc.z-kp.z)*fz<-.3*t.s){t.cutTendon(li);tnd=true;}}}
-    if(best&&best.userData.limb==='arm'&&crocDown(t)){let g=best.parent;while(g&&g.userData.side===undefined)g=g.parent;const ai=(g?g.userData.side:1)>0?1:0;if(crocArmFree(t,ai)&&(t.type!=='cuirasse'||(ai===(t.gArm|0)&&kind==='charge'&&elanK()>=.6))){t.cutArmTendon(ai);if(kind!=='spin'&&kind!=='charge'&&kind!=='spiral')wearBlades(CFG.bladeWearLimb);any=true;continue;}}   /* Croc immobilisé : le bras se tranche facilement */
+    if(best&&best.userData.limb==='arm'&&crocDown(t)){let g=best.parent;while(g&&g.userData.side===undefined)g=g.parent;const ai=(g?g.userData.side:1)>0?1:0;if(crocArmFree(t,ai)&&(t.type!=='cuirasse'||(ai===(t.gArm|0)&&kind==='charge'&&(elanK()>=.35||CHG_L>=.5)))){t.cutArmTendon(ai);if(kind!=='spin'&&kind!=='charge'&&kind!=='spiral')wearBlades(CFG.bladeWearLimb);any=true;continue;}}   /* Croc immobilisé : le bras se tranche facilement */
     if(best){t.hitLimb(best,ST.dmg*mult*spf*ST.limbMult*(tnd?.5:1));if(kind!=='spin'&&kind!=='charge'&&kind!=='spiral')wearBlades(CFG.bladeWearLimb);any=true;}
   }
   return any;
@@ -3900,13 +3903,16 @@ function updCharge(rdt){const p=player;CHG.gt=p.grounded?(CHG.gt||0)+rdt:0;updEl
   const l=CHG.on?CHG.lv:0;chgRing.style.opacity=CHG.on?1:0;
   if(CHG.on){const c=CHG.full?'rgba(255,248,225,.98)':'rgba(255,214,140,.95)',pu=CHG.full?1+.08*Math.sin(performance.now()/60):1;chgRing.style.background=`conic-gradient(${c} ${l*360}deg,rgba(255,255,255,.14) 0)`;chgRing.style.transform=`scale(${pu})`;}
   chgGlow.style.opacity=save.gfx&&save.gfx.chgGlow===false?0:(l*l*.4+(CHG.full?.1+.06*Math.sin(performance.now()/90):0)).toFixed(3);}
+var CHG_L=0;const _chR=new THREE.Raycaster();
 function chargeRelease(){const p=player,l=CHG.lv,full=CHG.full;chgCancel();if(!canChg())return;
   const cost=l;   // pleine charge : une paire ; usée seulement si le coup touche
   p.slashCd=.45;p.chgA=.001;p.slashSide=-p.slashSide;p.chgSd=p.slashSide;p.slashT=.001;p.slashA=0;
   sfx.slash();sfx.woosh();   /* mêmes sons que la coupe et le tourbillon */
   // élan : ruée vers la nuque la plus proche (plus loin si l'attaque est bien chargée)
-  let best=null,bd=1e9;const R=ST.range*(2.4+2.2*l);
-  for(const t of titans){if(t.state==='dead')continue;const np=t.nape.getWorldPosition(tA),d=np.distanceTo(p.center);if(d<R+2.5*t.s&&d<bd){bd=d;best=np.clone();}}
+  let best=null,bd=1e9;const R=ST.range*(2.4+2.2*l);CHG_L=l;
+  {const ad=aimDir(0,0,new V3());_chR.set(camera.position,ad);_chR.far=R+40;const h=_chR.intersectObjects(hookables,false).find(x=>shown(x.object));   /* la coupe chargée file vers ce que tu vises sur un titan (derrière un genou, une main…) */
+    if(h&&h.object.userData.titan&&h.point.distanceTo(p.center)<R+3*h.object.userData.titan.s){best=h.point.clone();bd=0;}}
+  if(!best)for(const t of titans){if(t.state==='dead')continue;const np=t.nape.getWorldPosition(tA),d=np.distanceTo(p.center);if(d<R+2.5*t.s&&d<bd){bd=d;best=np.clone();}}   // sinon : la nuque la plus proche
   if(ORIG&&!ORIG.dead&&ORIG.nape){const np=ORIG.nape.getWorldPosition?ORIG.nape.getWorldPosition(tA):null;if(np){const d=np.distanceTo(p.center);if(d<R+6&&d<bd){bd=d;best=np.clone();}}}
   if(gameMode==='pvp'){const fe=PV.nearestEnemy(p.center,R+3);if(fe)best=fe.center.clone();}
   if(best){tB.subVectors(best,p.center);const d=tB.length();tB.divideScalar(d||1);const mv=Math.min(3+5*l,Math.max(0,d-ST.range*.5));p.pos.addScaledVector(tB,mv);p.center.addScaledVector(tB,mv);p.vel.addScaledVector(tB,10+16*l);}
@@ -3996,7 +4002,7 @@ function mkMarker(){const d=document.createElement('div');d.className='mk';d.inn
 function updMarkers(){
   const W=innerWidth,H=innerHeight;
   for(const t of titans){if(t.state==='dead'||t.gone)continue;const np=t.nape.getWorldPosition(tA);const dist=np.distanceTo(player.center);
-    if(t.stalk){const nv=dist<45;if(t._mkV!==nv){t._mkV=nv;t.marker.style.display=nv?'':'none';}if(!nv)continue;}   /* le rôdeur n'a de marqueur que lorsqu'il est tout près */
+    if(t.mkHide){if(Math.hypot(player.pos.x-t.root.position.x,player.pos.z-t.root.position.z)<10){t.mkHide=false;t.marker.style.display='';}else{if(t.marker.style.display!=='none')t.marker.style.display='none';continue;}}   /* rôdeur : pas de marqueur tant que tu n'as pas été à moins de 10 m de lui, ensuite il reste affiché */
     tB.copy(np).project(camera);let x=(tB.x*.5+.5)*W,y=(-tB.y*.5+.5)*H,edge=false;
     if(tB.z>1){x=W-x;y=H-y;edge=true;}
     if(x<28||x>W-28||y<28||y>H-28)edge=true;

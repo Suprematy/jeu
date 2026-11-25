@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124200220">
+<meta name="build" content="20261124201436">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -2730,6 +2730,13 @@ function bossUpdate(t,dt,dist){const k=t.type,p=player;t.bt=(t.bt===undefined?3:
     // bond guidé : il corrige sa trajectoire vers toi en l'air
     if(t.vy!==0&&t.stagger<=0){const r=t.root.position,dx=p.pos.x-r.x,dz=p.pos.z-r.z,dd=Math.hypot(dx,dz)||1;r.x+=dx/dd*18*dt;r.z+=dz/dd*18*dt;}}
   else if(k==='cuirasse'){if(t.dashCd===undefined)t.dashCd=5;t.dashCd-=dt;napeGuard(t,dt,.8,8,.6);
+    /* enragé : si tu te crois à l'abri sur un toit, à moyenne distance, il te lance les petits titans qui l'entourent */
+    t.throwCd=(t.throwCd===undefined?3:t.throwCd)-dt;
+    if(t.enraged&&t.throwCd<=0&&!(NET&&NET.on&&!NET.host)&&t.state==='walk'&&t.stagger<=0&&dist>18&&dist<75&&p.pos.y-groundY(p.pos.x,p.pos.z)>6){t.throwCd=7*R;
+      let best=null,bd=26*t.s;for(const o of titans){if(o===t||o.cfg.boss||o.state==='dead'||o.gone||o.thrV||o.H>11||o.army)continue;const d=o.root.position.distanceTo(t.root.position);if(d<bd){bd=d;best=o;}}
+      if(best){const o=best,r=o.root.position,st=t.root.position.clone().add(tA.set(0,t.H*.85,0));r.copy(st);const T=clamp(dist/34,.9,1.9),g=24,tg=p.pos.clone().addScaledVector(p.vel,T*.6);
+        o.thrV=new V3((tg.x-r.x)/T,0,(tg.z-r.z)/T);o.vy=(tg.y-r.y+.5*g*T*T)/T;o.thrHit=false;o.stagger=Math.max(o.stagger,T+1);if(o.state!=='walk')o.state='walk';
+        t.roarT=.8;sfx.woosh();sfx.stomp(.5);toastT=0;toast('Le Cuirassé te lance un titan !');}}
     if(t.recoverT>0){t.recoverT-=dt;if(Math.random()<dt*14){const hp=t.headG.getWorldPosition(tC);emit(hp,rv(2).clone().add(tD.set(0,2.5,0)),1,t.s*.4,t.s*1.4,0xf4f4f2,.4,-1,.6);}}
     const aim=Math.abs(wrapA(Math.atan2(p.pos.x-t.root.position.x,p.pos.z-t.root.position.z)-t.root.rotation.y));
     if(t.dashCd<=0&&dist>22&&dist<90&&aim<.25&&!(t.recoverT>0)&&t.state==='walk'&&!t.legLoss&&t.stagger<=0){t.dashCd=6*R;t.prepT=.8;toast('Le Cuirassé se ramasse pour charger !');}
@@ -2746,14 +2753,16 @@ function armored(t){const k=t.type;return k==='cuirasse'||(k==='agile'&&t.enrage
 /* ----- le Croc immobilisé (aveuglé ou à genoux) protège sa nuque de ses deux mains : il faut d'abord trancher les tendons de ses bras ----- */
 var CROC_G={ax:-2.5,az:-1.95,ex:-2.3,bx:.5,hx:.5},CROC_GT={bete:{ax:-2.2,az:-1.8,ex:-2.3,bx:.3,hx:.5}};   /* la Bête a d'autres proportions */   /* pose de garde (ajustée sur le squelette) */
 const GUARD_BOSS={croc:1,bete:1,agile:1,forgeron:1,assaillant:1};   /* boss qui protègent leur nuque une fois aveuglés ou à genoux (pas le Colosse, l'Originel ni le Cuirassé) */
-function crocDown(t){return !!GUARD_BOSS[t.type]&&!t.army&&t.state!=='dead'&&(t.blindT>0||t.tend[0]>0||t.tend[1]>0);}
+/* le Cuirassé, à genoux sous la moitié de sa vie, protège sa nuque d'UNE main : lance foudroyante ou coupe chargée lancée à pleine vitesse pour lui trancher le tendon */
+function crocDown(t){if(t.army||t.state==='dead')return false;const kn=t.tend[0]>0||t.tend[1]>0;return GUARD_BOSS[t.type]?(t.blindT>0||kn):t.type==='cuirasse'&&kn&&t.hp<=t.maxHp*.5;}
+function guardArms(t){return t.type==='cuirasse'?[t.gArm|0]:[0,1];}
 function crocArmFree(t,i){return !(t.armT&&t.armT[i]>0)&&!(t.sev.arm[i]>0)&&!(t.armOff[i]>0);}
-function crocGuarding(t){return crocDown(t)&&(crocArmFree(t,0)||crocArmFree(t,1));}
-function crocCutArm(t,i){if(!t.armT)t.armT=[0,0];if(!crocArmFree(t,i))return;t.armT[i]=10;t.armOff[i]=Math.max(t.armOff[i],.3);t.flinchT=.35;
+function crocGuarding(t){return crocDown(t)&&guardArms(t).some(i=>crocArmFree(t,i));}
+function crocCutArm(t,i){if(!t.armT)t.armT=[0,0];if(!crocArmFree(t,i))return;t.armT[i]=t.type==='cuirasse'?15:10;t.armOff[i]=Math.max(t.armOff[i],.3);t.flinchT=.35;
   const p=t.elbows[i].getWorldPosition(new V3());spray(p,tD.subVectors(p,player.center).setY(.5).normalize().clone(),14,9,.5,Math.min(1,.3+t.s*.15));steamBurst(p,2,t.s*.4);sfx.hit();popNum(p,'Tendon','');
-  const two=!crocArmFree(t,1-i);feed(two?'Ses deux bras tombent : sa nuque est à découvert !':'Tendon du bras tranché : encore l\'autre bras','gold');addStyle('Tendon',.35);addXP(4);if(two)elanFlash&&elanFlash();}
+  const two=!guardArms(t).some(j=>crocArmFree(t,j));feed(two?t.type==='cuirasse'?'Sa main tombe : sa nuque est à découvert !':'Ses deux bras tombent : sa nuque est à découvert !':'Tendon du bras tranché : encore l\'autre bras','gold');addStyle('Tendon',.35);addXP(4);if(two)elanFlash&&elanFlash();}
 function bossDamage(t,dmg,limb){const k=t.type,sp=dmgSrc==='spear';
-  if(GUARD_BOSS[k]&&!limb&&crocGuarding(t)){sfx.hit();toastT=0;toast('Ses mains protègent sa nuque : tranche d\'abord les tendons de ses bras');dmg*=sp?.05:.08;}   /* les lances ne passent pas tant que les mains couvrent la nuque */
+  if(!limb&&crocGuarding(t)){sfx.hit();toastT=0;toast(k==='cuirasse'?'Sa main protège sa nuque : tranche son tendon (lance, ou coupe chargée à pleine vitesse)':'Ses mains protègent sa nuque : tranche d\'abord les tendons de ses bras');dmg*=sp?.05:.08;}   /* les lances ne passent pas tant que les mains couvrent la nuque */
   if(k!=='assaillant'&&!limb&&t.state==='guard'&&t.guardUp){sfx.hit();toast('Sa main protège sa nuque');dmg*=sp?.6:.15;}
   if(k==='agile'&&t.state==='walk'&&!(t.hopT>0)&&Math.random()<.4)t.hopT=.45;   // elle esquive en reculant
   if(k==='assaillant'){t.lastHitT=0;if(!sp)forgeSpikes(t);
@@ -2770,7 +2779,7 @@ function bossDamage(t,dmg,limb){const k=t.type,sp=dmgSrc==='spear';
     forgeSpikes(t);if(t.armorT>0){sfx.crystal();toast('Armure de cristal : la lame glisse, recule !');return dmg*.1;}
     return dmg*.25;}
   if(armored(t)&&(limb?k!=='agile':true)){
-    if(sp)return dmg*.5;
+    if(sp)return dmg*.5*(k==='cuirasse'&&t.hp>t.maxHp*.5?4/3:1);   /* Cuirassé : sa première moitié de vie fond plus vite (comme 25 % de vie en moins) ; enragé, il redevient bien plus résistant */
     sfx.crystal();
     if(k==='cuirasse')toast(spearsOK()?'Invincible aux lames : prends les lances foudroyantes (B)':'Invincible aux lames : il faut les lances foudroyantes');
     else toast('Nuque cristallisée : seules les lances foudroyantes la percent');
@@ -3408,7 +3417,10 @@ class Titan{
     if(this.stRing&&this.state!=='stomp')this.endStomp();
     const pc=player.center,dx=pc.x-r.position.x,dz=pc.z-r.position.z,dist=Math.hypot(dx,dz),ab=this.type==='abnormal';
     this.atkCd-=dt;this.jumpCd-=dt;this.armOff[0]-=dt;this.armOff[1]-=dt;
-    const tgy=groundY(r.position.x,r.position.z);if(r.position.y>tgy+.05||this.vy>0){this.vy-=24*dt;r.position.y+=this.vy*dt;if(r.position.y<=tgy){r.position.y=tgy;this.vy=0;sfx.stomp();if(dist<50)shake=Math.max(shake,.5);}}
+    const tgy=groundY(r.position.x,r.position.z);if(r.position.y>tgy+.05||this.vy>0){this.vy-=24*dt;r.position.y+=this.vy*dt;
+      if(this.thrV){r.position.x+=this.thrV.x*dt;r.position.z+=this.thrV.z*dt;this.tilt.rotation.x+=dt*7;   /* titan lancé par le Cuirassé : il tourne sur lui-même en volant */
+        if(!this.thrHit&&r.position.distanceTo(player.pos)<3.2*this.s+1.5&&player.inv<=0){this.thrHit=true;hurtPlayer(this,1.6);feed('Percuté par le titan lancé !','');}}
+      if(r.position.y<=tgy){r.position.y=tgy;this.vy=0;sfx.stomp();if(dist<50)shake=Math.max(shake,.5);if(this.thrV){this.thrV=null;this.tilt.rotation.x=0;this.stagger=Math.max(this.stagger,1.2);}}}
     this.look(dt);if(this.state!=='snap'&&this.marker.classList.contains('bite'))this.marker.classList.remove('bite');
     if(this.biter&&this.state==='walk')this.snapCheck(dt,dist);
     if(this.cfg.boss||this.type==='rumble')bossUpdate(this,dt,dist);
@@ -3422,7 +3434,7 @@ class Titan{
       for(const l of this.legs)l.rotation.x=lerp(l.rotation.x,-.25,k);
       for(const kn of this.knees)kn.rotation.x=lerp(kn.rotation.x,1.6,k);
       const cd=crocDown(this),cg=CROC_GT[this.type]||CROC_G;if(cd&&this.blindT>0)this.blindT-=dt;   /* à genoux, les yeux du Croc se reforment au même rythme */
-      for(let i=0;i<2;i++){if(cd&&!(this.sev.arm[i]>0)){const sd=i?1:-1;
+      for(let i=0;i<2;i++){if(cd&&!(this.sev.arm[i]>0)&&(this.type!=='cuirasse'||i===(this.gArm|0))){const sd=i?1:-1;
           if(crocArmFree(this,i)){const w=Math.sin(performance.now()/90+i)*.03;this.arms[i].rotation.x=lerp(this.arms[i].rotation.x,cg.ax+w,k);this.arms[i].rotation.z=lerp(this.arms[i].rotation.z,sd*cg.az,k);this.elbows[i].rotation.x=lerp(this.elbows[i].rotation.x,cg.ex,k);}   // mains croisées sur la nuque
           else{this.arms[i].rotation.x=lerp(this.arms[i].rotation.x,.15,k);this.arms[i].rotation.z=lerp(this.arms[i].rotation.z,sd*.05,k);this.elbows[i].rotation.x=lerp(this.elbows[i].rotation.x,-.05,k);}   // bras inerte, tendon tranché
           continue;}
@@ -3547,7 +3559,7 @@ class Titan{
   eyePos(out){const eb=this.eyeballs;if(eb&&eb.length){out.set(0,0,0);for(const e of eb)out.add(e.getWorldPosition(_eyT));return out.multiplyScalar(1/eb.length);}   // entre les deux yeux
     this.headG.getWorldPosition(out);out.x+=Math.sin(this.root.rotation.y)*.8*this.s;out.z+=Math.cos(this.root.rotation.y)*.8*this.s;return out;}
   // tendon tranché derrière le genou : il tombe à genoux (la nuque est à portée), le temps que ça se répare
-  cutTendon(i){if(this.state==='dead'||this.tend[i]>0||this.sev.leg[i]>0)return;const two=this.tend[1-i]>0,d=GUARD_BOSS[this.type]&&!this.army?6:this.cfg.boss?2.2:two?7:5;this.tend[i]=d;this.stagger=Math.max(this.stagger,d);
+  cutTendon(i){if(this.state==='dead'||this.tend[i]>0||this.sev.leg[i]>0)return;const two=this.tend[1-i]>0,d=this.type==='cuirasse'?11:GUARD_BOSS[this.type]&&!this.army?6:this.cfg.boss?2.2:two?7:5;if(this.type==='cuirasse')this.gArm=Math.random()<.5?0:1;   /* Cuirassé : 5 s de plus que les autres boss */this.tend[i]=d;this.stagger=Math.max(this.stagger,d);
     const kp=this.knees[i].getWorldPosition(new V3());spray(kp,tD.subVectors(kp,player.center).setY(.4).normalize().clone(),14,9,.5,Math.min(1,.3+this.s*.15));steamBurst(kp,2,this.s*.4);sfx.hit();popNum(kp,'Tendon','');
     feed(two?'Tendons tranchés : il ne se relève plus de sitôt':'Tendon tranché : le titan tombe à genoux','gold');addStyle('Tendon',.35);addXP(4);carnetEv('tendon');}
   // yeux tranchés : aveuglé quelques secondes, il frappe au hasard et se frotte les yeux
@@ -3604,7 +3616,7 @@ class Titan{
   die(oneShot){
     if(grab&&grab.t===this)releaseGrab();this.state='dead';this.deadT=0;save.kills++;carnetKill(this);cineKill(this);
     const AVGH={small:9.3,medium:13.9,large:20.2,abnormal:12.8},base=this.cfg.boss||this.cfg.fixedH||!AVGH[this.type]?this.cfg.xp:this.cfg.xp*Math.pow(this.H/AVGH[this.type],1.2);   /* expérience d'origine par type ; un titan plus grand que la moyenne de son type rapporte un peu plus (même total en moyenne) */
-    let xp=base*(1+.1*(wave-1));if(oneShot)xp*=1.5;xp=Math.round(xp*combo);
+    let xp=base*(1+.125*(wave-1));if(oneShot)xp*=1.5;xp=Math.round(xp*combo);
     addStyle('Nuque',.5,true);
     if(this.silent)xp=Math.round(xp*.5);
     {const xs=Math.round(xp*(NET&&NET.on?coopXP():1));feed(this.silent?`Son armée s'effondre  +${xs} XP`:`${oneShot?'ONE SHOT ! ':''}${this.cfg.name} abattu  +${xs} XP`,oneShot?'gold':'');}
@@ -3708,18 +3720,19 @@ function bladeHit(range,mult,kind){if(gameMode==='pvp')return pvMyMelee(range,mu
     if(t.state==='dead')continue;
     const np=t.nape.getWorldPosition(tA);
     if(np.distanceTo(pc)<range+1.05*t.s){
+      if(t.type==='cuirasse'&&crocGuarding(t)){if(kind==='charge'&&elanK()>=.6)t.cutArmTendon(t.gArm|0);else{toastT=0;toast('Sa main protège sa nuque : lance foudroyante, ou coupe chargée à pleine vitesse');sfx.crystal();}any=true;continue;}
       if(crocGuarding(t)){let bi=-1,bd2=1e9;for(let i=0;i<2;i++){if(!crocArmFree(t,i))continue;const d=t.elbows[i].getWorldPosition(tC).distanceTo(pc);if(d<bd2){bd2=d;bi=i;}}   /* les mains couvrent la nuque : la lame tranche le tendon du bras le plus proche */
         if(bi>=0){t.cutArmTendon(bi);if(kind!=='spin'&&kind!=='charge'&&kind!=='spiral')wearBlades(CFG.bladeWearLimb);any=true;continue;}}
       if(isBehind(t,np,pc)){const perf=elanK()>=.9&&kind!=='spiral';t.hurt(ST.dmg*mult*spf*(perf?1.25:1));if(perf){addStyle('Coupe parfaite',.45);elanFlash();carnetEv('perfect');}   /* coupe parfaite : nuque tranchée à pleine vitesse */if(kind!=='spin'&&kind!=='charge'&&kind!=='spiral')wearBlades(CFG.bladeWearNape);any=true;continue;}   /* tourbillon et coupe chargée : leur coût fixe remplace l'usure */
       else if(kind==='slash')toast('De face ! Passe derrière pour viser la nuque');
     }
-    if(!(t.blindT>0)&&t.type!=='rumble'&&t.state!=='dead'){const hp=t.headG.getWorldPosition(tB),E=t.eyePos(tC),fx=Math.sin(t.root.rotation.y),fz=Math.cos(t.root.rotation.y);   // les yeux : de face, au niveau du visage
+    if(!(t.blindT>0)&&t.type!=='rumble'&&t.type!=='cuirasse'&&t.state!=='dead'){const hp=t.headG.getWorldPosition(tB),E=t.eyePos(tC),fx=Math.sin(t.root.rotation.y),fz=Math.cos(t.root.rotation.y);   // les yeux : de face, au niveau du visage
       if(E.distanceTo(pc)<range+.5*t.s&&(pc.x-hp.x)*fx+(pc.z-hp.z)*fz>0){t.blindEyes();if(kind!=='spin'&&kind!=='charge'&&kind!=='spiral')wearBlades(CFG.bladeWearLimb);any=true;continue;}}
     let best=null,bd=1e9;for(const m of t.parts){const lb=m.userData.limb;if(lb!=='leg'&&lb!=='arm'||!shown(m))continue;const d=m.getWorldPosition(tB).distanceTo(pc);if(d<range+.9*t.s&&d<bd){bd=d;best=m;}}
     let tnd=false;if(best&&best.userData.limb==='leg'&&t.type!=='rumble'){const li=t.legs.findIndex(h=>isDesc(best,h));   // derrière le genou : le tendon
-      if(li>=0&&!(t.tend[li]>0)&&!(t.sev.leg[li]>0)&&t.knees[li].visible){const kp=t.knees[li].getWorldPosition(tC),fx=Math.sin(t.root.rotation.y),fz=Math.cos(t.root.rotation.y);
+      if(li>=0&&!(t.tend[li]>0)&&!(t.sev.leg[li]>0)&&t.knees[li].visible&&(t.type!=='cuirasse'||kind==='charge')){   /* Cuirassé : seule une coupe chargée tranche ses tendons */const kp=t.knees[li].getWorldPosition(tC),fx=Math.sin(t.root.rotation.y),fz=Math.cos(t.root.rotation.y);
         if(kp.distanceTo(pc)<range+1.1*t.s&&(pc.x-kp.x)*fx+(pc.z-kp.z)*fz<-.3*t.s){t.cutTendon(li);tnd=true;}}}
-    if(best&&best.userData.limb==='arm'&&crocDown(t)){let g=best.parent;while(g&&g.userData.side===undefined)g=g.parent;const ai=(g?g.userData.side:1)>0?1:0;if(crocArmFree(t,ai)){t.cutArmTendon(ai);if(kind!=='spin'&&kind!=='charge'&&kind!=='spiral')wearBlades(CFG.bladeWearLimb);any=true;continue;}}   /* Croc immobilisé : le bras se tranche facilement */
+    if(best&&best.userData.limb==='arm'&&crocDown(t)){let g=best.parent;while(g&&g.userData.side===undefined)g=g.parent;const ai=(g?g.userData.side:1)>0?1:0;if(crocArmFree(t,ai)&&(t.type!=='cuirasse'||(ai===(t.gArm|0)&&kind==='charge'&&elanK()>=.6))){t.cutArmTendon(ai);if(kind!=='spin'&&kind!=='charge'&&kind!=='spiral')wearBlades(CFG.bladeWearLimb);any=true;continue;}}   /* Croc immobilisé : le bras se tranche facilement */
     if(best){t.hitLimb(best,ST.dmg*mult*spf*ST.limbMult*(tnd?.5:1));if(kind!=='spin'&&kind!=='charge'&&kind!=='spiral')wearBlades(CFG.bladeWearLimb);any=true;}
   }
   return any;
@@ -5338,8 +5351,11 @@ function spearExplode(p,hitT){if(NET&&NET.on&&!NET.fxOnly)NET.ev({k:'boom',p:[p.
   let hitAny=!!(ORIG&&!ORIG.dead&&ORIG.root&&ORIG.root.position.distanceTo(p)<60);ACH.spk=0;
   for(const t of titans){if(t.state==='dead'||t.gone)continue;
     const R=CFG.spearRadius*(.7+.3*t.s),np=t.nape.getWorldPosition(new V3()),dn=np.distanceTo(p);
+    const cutH=t.type==='cuirasse'&&crocGuarding(t)&&t.wrists[t.gArm|0].getWorldPosition(new V3()).distanceTo(p)<R*1.1;   /* la lance tranche le tendon de la main qui protège la nuque (cette explosion-là ne passe pas) */
+    if(t.type==='cuirasse'&&!(t.blindT>0)&&t.eyePos(new V3()).distanceTo(p)<R*.7)t.blindEyes();   /* ses yeux ne se crèvent qu'à la lance */
     if(t.type==='cuirasse')breakArmor(t,p);
-    if(dn<R){hitAny=true;const f=1-dn/R;dmgSrc='spear';t.hurt(CFG.spearDamage*f*(dn<2.2*t.s?CFG.spearNapeMult:1)+1);dmgSrc='';continue;}
+    if(dn<R){hitAny=true;const f=1-dn/R;dmgSrc='spear';t.hurt(CFG.spearDamage*f*(dn<2.2*t.s?CFG.spearNapeMult:1)+1);dmgSrc='';if(cutH&&t.state!=='dead')t.cutArmTendon(t.gArm|0);continue;}
+    if(cutH)t.cutArmTendon(t.gArm|0);
     if(t===hitT||t.root.position.distanceTo(p)<R+2.5*t.s){hitAny=true;
       dmgSrc='spear';for(const m of t.parts){const lb=m.userData.limb;if((lb==='leg'||lb==='arm')&&shown(m)&&m.getWorldPosition(tB).distanceTo(p)<R)t.hitLimb(m,CFG.spearLimbDamage);}dmgSrc='';
       t.stagger=Math.max(t.stagger,1.4);bloodBurst(p,12,t.s*.6);}

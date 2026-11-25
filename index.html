@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124201436">
+<meta name="build" content="20261124202832">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -852,9 +852,22 @@ function bloodOnMe(src,k,s){if(!vrm||!vrmBones.spine||state!=='play')return;bloo
 /* ----- météo : ciel clair, pluie ou orage (choisis avant chaque partie, comme le jour et la nuit) ----- */
 const WX={mesh:null,N:3600,vel:22,wind:2,flashT:0,nextBolt:7,exp0:1.05,hemi0:1,rainG:null,on:false,st:false};
 let _skyRain=null;function skyRainTex(){if(_skyRain)return _skyRain;const c=document.createElement('canvas');c.width=1024;c.height=512;const g=c.getContext('2d');   // ciel couvert : gris, nuages bas et lourds
-  const gr=g.createLinearGradient(0,0,0,512);gr.addColorStop(0,'#59616a');gr.addColorStop(.4,'#7d868e');gr.addColorStop(.5,'#a3abb2');gr.addColorStop(1,'#a3abb2');g.fillStyle=gr;g.fillRect(0,0,1024,512);
-  let s=7;const R=()=>(s=(s*16807)%2147483647)/2147483647;
-  for(let i=0;i<260;i++){const x=R()*1024,y=20+R()*235,r=40+R()*120,dk=R()<.55,rg=g.createRadialGradient(x,y,0,x,y,r);rg.addColorStop(0,dk?'rgba(52,58,66,.32)':'rgba(170,176,182,.26)');rg.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=rg;g.fillRect(x-r,y-r,2*r,2*r);}
+  /* couche nuageuse vue en perspective (projetée sur un plafond de nuages), calculée point par point sur la sphère : plus de tourbillon au zénith,
+     des nuages qui rapetissent vers l'horizon, et une brume grise à l'horizon qui rejoint le brouillard */
+  const W=1024,H=512,img=g.createImageData(W,H),D=img.data,HS=new Float32Array(256*256);let s=7;const R=()=>(s=(s*16807)%2147483647)/2147483647;for(let i=0;i<HS.length;i++)HS[i]=R();
+  const vn=(x,y)=>{const xi=Math.floor(x),yi=Math.floor(y),fx=x-xi,fy=y-yi,ux=fx*fx*(3-2*fx),uy=fy*fy*(3-2*fy),a=xi&255,b=yi&255,a1=(a+1)&255,b1=(b+1)&255;
+    const v00=HS[b*256+a],v10=HS[b*256+a1],v01=HS[b1*256+a],v11=HS[b1*256+a1];return (v00+(v10-v00)*ux)+((v01+(v11-v01)*ux)-(v00+(v10-v00)*ux))*uy;};
+  const fbm=(x,y)=>{let v=0,amp=.5,f=1;for(let o=0;o<5;o++){v+=vn(x*f,y*f)*amp;f*=2.03;amp*=.5;}return v/.97;};
+  const HZ=[124,133,142],DK=[64,70,78],LT=[150,156,162];
+  for(let j=0;j<H;j++){const th=(j+.5)/H*Math.PI,el=Math.cos(th),sn=Math.sin(th);
+    for(let i=0;i<W;i++){const o=(j*W+i)*4;let r=HZ[0],gg=HZ[1],b=HZ[2];
+      if(el>0){const ph=(i+.5)/W*TAU,dx=-Math.cos(ph)*sn,dz=Math.sin(ph)*sn,t=1/(el+.08),px=dx*t*1.6,pz=dz*t*1.6;
+        let n=fbm(px+11.3,pz+4.7);const n2=fbm(px*.35+40,pz*.35+9);n=clamp((n-.5)*1.8+.5+(n2-.5)*.9,0,1);   // gros bancs sombres et trouées plus claires
+        const c=n<.5?n*2:1,k=n<.5?0:(n-.5)*2;let cr=DK[0]+(HZ[0]-DK[0])*c+(LT[0]-HZ[0])*k,cg=DK[1]+(HZ[1]-DK[1])*c+(LT[1]-HZ[1])*k,cb=DK[2]+(HZ[2]-DK[2])*c+(LT[2]-HZ[2])*k;
+        const top=Math.pow(el,1.5)*14;cr-=top;cg-=top;cb-=top;   // un peu plus sombre au zénith
+        const hz=Math.exp(-el*5.5);r=cr+(HZ[0]-cr)*hz;gg=cg+(HZ[1]-cg)*hz;b=cb+(HZ[2]-cb)*hz;}   // brume vers l'horizon
+      D[o]=r;D[o+1]=gg;D[o+2]=b;D[o+3]=255;}}
+  g.putImageData(img,0,0);
   const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.wrapS=THREE.RepeatWrapping;return _skyRain=t;}
 function wxKind(){return save.weather==='pluie'||save.weather==='orage'?save.weather:'clair';}
 function buildRain(){const N=WX.N,g=new THREE.BufferGeometry(),P=new Float32Array(N*6);for(let i=0;i<N;i++){const x=(Math.random()-.5)*70,y=(Math.random()-.5)*40,z=(Math.random()-.5)*70;P[i*6]=P[i*6+3]=x;P[i*6+1]=y;P[i*6+4]=y-.9;P[i*6+2]=P[i*6+5]=z;}
@@ -866,13 +879,14 @@ function applyWeather(){const k=wxKind(),n=!!save.night;if(!WX.mesh)buildRain();
     hemi.intensity*=st?.62:.74;sun.intensity*=st?.28:.42;}
   else skyDome.material.color.setScalar(1);
   skyDome.material.needsUpdate=true;WX.exp0=renderer.toneMappingExposure;WX.hemi0=hemi.intensity;wxFog();
-  if(WX.rainG&&sfx.ctx)WX.rainG.gain.setTargetAtTime(on?(st?.16:.1):0,sfx.ctx.currentTime,.4);}
+  if(WX.rainG&&sfx.ctx)WX.rainG.gain.setTargetAtTime(on?rainVol(st):0,sfx.ctx.currentTime,.4);}
+function rainVol(st){return save.gfx&&save.gfx.rainSnd===false?0:(st?.16:.1);}   /* son de la pluie : désactivable dans les options */
 function updWeather(rdt){if(!WX.on||!WX.mesh)return;const dt=Math.min(rdt,.05),P=WX.mesh.geometry.attributes.position,a=P.array,c=camera.position,n=WX.st?WX.N:Math.round(WX.N*.55),vy=WX.vel*dt,vx=WX.wind*dt,sl=-WX.wind*.04;
   for(let i=0;i<n;i++){const o=i*6;let x=a[o]+vx,y=a[o+1]-vy,z=a[o+2];
     if(y<c.y-20)y+=40;else if(y>c.y+20)y-=40;if(x<c.x-35)x+=70;else if(x>c.x+35)x-=70;if(z<c.z-35)z+=70;else if(z>c.z+35)z-=70;
     a[o]=x;a[o+1]=y;a[o+2]=z;a[o+3]=x+sl;a[o+4]=y-.95;a[o+5]=z;}
   P.needsUpdate=true;
-  if(sfx.ctx&&!WX.rainG){try{const C=sfx.ctx,s=C.createBufferSource();s.buffer=sfx.noise;s.loop=true;const f=C.createBiquadFilter();f.type='bandpass';f.frequency.value=2300;f.Q.value=.45;const g=C.createGain();g.gain.value=0;s.connect(f);f.connect(g);g.connect(sfx.master);s.start();WX.rainG=g;g.gain.setTargetAtTime(WX.st?.16:.1,C.currentTime,.6);}catch(e){WX.rainG={gain:{setTargetAtTime(){}}};}}   // bruit de pluie
+  if(sfx.ctx&&!WX.rainG){try{const C=sfx.ctx,s=C.createBufferSource();s.buffer=sfx.noise;s.loop=true;const f=C.createBiquadFilter();f.type='bandpass';f.frequency.value=2300;f.Q.value=.45;const g=C.createGain();g.gain.value=0;s.connect(f);f.connect(g);g.connect(sfx.master);s.start();WX.rainG=g;g.gain.setTargetAtTime(rainVol(WX.st),C.currentTime,.6);}catch(e){WX.rainG={gain:{setTargetAtTime(){}}};}}   // bruit de pluie
   if(WX.st){WX.nextBolt-=dt;if(WX.nextBolt<=0){WX.nextBolt=5+Math.random()*10;WX.flashT=.42;const d=.3+Math.random()*1.8;sfx.burst(140,2.4,.75,'lowpass',.5,.6,40,d);sfx.burst(60,3.2,.7,'lowpass',.3,.5,0,d+.15);}   // éclair, puis le tonnerre
     if(WX.flashT>0){WX.flashT-=dt;const f=WX.flashT>.3?1:WX.flashT>.22?.2:WX.flashT>.12?.7:Math.max(0,WX.flashT/.12)*.4;renderer.toneMappingExposure=WX.exp0*(1+1.6*f);hemi.intensity=WX.hemi0*(1+2.2*f);if(WX.flashT<=0){renderer.toneMappingExposure=WX.exp0;hemi.intensity=WX.hemi0;}}}}
 const grassT=tex(256,256,(g,w,h)=>{g.fillStyle='#4a7230';g.fillRect(0,0,w,h);speck(g,w,h,6000,'34,58,20',.55);speck(g,w,h,3000,'104,146,58',.45);speck(g,w,h,400,'96,82,52',.3);},180,180);
@@ -4353,7 +4367,7 @@ function renderMenu(){
     const sel=(id,label,opts,val)=>`<label for="${id}">${label} <select id="${id}">${opts.map(([v,l])=>`<option value="${v}" ${String(val)===String(v)?'selected':''}>${l}</option>`).join('')}</select></label>`;
     const chk=(id,label,val)=>`<label for="${id}"><input id="${id}" type="checkbox" ${val?'checked':''}> ${label}</label>`;
     h+='<div class="sect">Image</div><div class="opts">';
-    h+=sel('g_fps','Images par seconde (limite)',[[0,'Illimitées'],[30,'30'],[60,'60'],[120,'120'],[144,'144']],g.fps===undefined?60:g.fps)+chk('g_showFps','Afficher les images par seconde',!!g.showFps);
+    h+=sel('g_fps','Images par seconde (limite)',[[0,'Illimitées'],[30,'30'],[60,'60'],[120,'120'],[144,'144']],g.fps===undefined?60:g.fps)+chk('g_showFps','Afficher les images par seconde',!!g.showFps)+chk('g_rainSnd','Son de la pluie',g.rainSnd!==false);
     h+=sel('g_sh','Shaders',[[0,'Désactivés'],[1,'Légers (couleurs, netteté, vignette)'],[2,'Complets (+ éclat lumineux)']],g.shaders===undefined?0:g.shaders)+sel('g_tex','Textures',[['bas','Basses (1K)'],['normal','Normales (2K)'],['haut','Hautes (2K, filtrage maximal)']],g.tex||'normal');
     h+=sel('g_dyn','Résolution dynamique',[[0,'Désactivée (sauf sous 20 images/s)'],[30,'Garder au moins 30 images/s'],[45,'Garder au moins 45 images/s'],[60,'Garder au moins 60 images/s']],g.dyn===undefined?30:g.dyn);
     h+=sel('g_pr','Résolution',[[.75,'Basse (75 %)'],[1,'Normale'],[1.25,'Haute (125 %)'],[1.5,'Très haute (150 %)'],[2,'Maximale (200 %)']],g.pr);
@@ -4416,7 +4430,7 @@ $('menuBody').addEventListener('change',e=>{const id=e.target.id,g=save.gfx;if(i
   if(id==='camSel'){save.camMode=e.target.value;persist();if(save.camMode==='lock')pickLock(false);return;}
   if(id==='shadows'){save.shadows=e.target.checked;scene.traverse(o=>{if(o.material)o.material.needsUpdate=true;});}
   if(id==='g_pr')g.pr=+e.target.value;if(id==='g_sf')g.shadowFar=+e.target.value;if(id==='g_view')g.view=+e.target.value;if(id==='g_sq')g.shadowQ=+e.target.value;
-  if(id==='g_grass'){g.grass=e.target.value;grassReset();}if(id==='g_blur')g.blur=e.target.checked;if(id==='g_lines')g.lines=e.target.checked;if(id==='g_decals')g.decals=e.target.checked;if(id==='g_fps')g.fps=+e.target.value;if(id==='g_dyn'){g.dyn=+e.target.value;}if(id==='g_sh')g.shaders=+e.target.value;if(id==='g_run')g.runStyle=e.target.value;if(id==='g_tex'){g.tex=e.target.value;applyTexQ();}if(id==='g_showFps')g.showFps=e.target.checked;if(id==='g_chgGlow')g.chgGlow=e.target.checked;
+  if(id==='g_grass'){g.grass=e.target.value;grassReset();}if(id==='g_blur')g.blur=e.target.checked;if(id==='g_lines')g.lines=e.target.checked;if(id==='g_decals')g.decals=e.target.checked;if(id==='g_fps')g.fps=+e.target.value;if(id==='g_dyn'){g.dyn=+e.target.value;}if(id==='g_sh')g.shaders=+e.target.value;if(id==='g_run')g.runStyle=e.target.value;if(id==='g_tex'){g.tex=e.target.value;applyTexQ();}if(id==='g_showFps')g.showFps=e.target.checked;if(id==='g_rainSnd'){g.rainSnd=e.target.checked;if(WX.rainG&&sfx.ctx)WX.rainG.gain.setTargetAtTime(WX.on?rainVol(WX.st):0,sfx.ctx.currentTime,.3);}if(id==='g_chgGlow')g.chgGlow=e.target.checked;
   applyGfx();persist();});
 
 /* ================= UPDATE ================= */

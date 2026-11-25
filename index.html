@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124202832">
+<meta name="build" content="20261124203357">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -880,7 +880,8 @@ function applyWeather(){const k=wxKind(),n=!!save.night;if(!WX.mesh)buildRain();
   else skyDome.material.color.setScalar(1);
   skyDome.material.needsUpdate=true;WX.exp0=renderer.toneMappingExposure;WX.hemi0=hemi.intensity;wxFog();
   if(WX.rainG&&sfx.ctx)WX.rainG.gain.setTargetAtTime(on?rainVol(st):0,sfx.ctx.currentTime,.4);}
-function rainVol(st){return save.gfx&&save.gfx.rainSnd===false?0:(st?.16:.1);}   /* son de la pluie : désactivable dans les options */
+function rainVolK(){const g=save.gfx||{};return g.rainVol!==undefined?clamp(+g.rainVol,0,1):g.rainSnd===false?0:1;}
+function rainVol(st){return (st?.16:.1)*rainVolK();}   /* volume du son de la pluie : réglable dans les options */
 function updWeather(rdt){if(!WX.on||!WX.mesh)return;const dt=Math.min(rdt,.05),P=WX.mesh.geometry.attributes.position,a=P.array,c=camera.position,n=WX.st?WX.N:Math.round(WX.N*.55),vy=WX.vel*dt,vx=WX.wind*dt,sl=-WX.wind*.04;
   for(let i=0;i<n;i++){const o=i*6;let x=a[o]+vx,y=a[o+1]-vy,z=a[o+2];
     if(y<c.y-20)y+=40;else if(y>c.y+20)y-=40;if(x<c.x-35)x+=70;else if(x>c.x+35)x-=70;if(z<c.z-35)z+=70;else if(z>c.z+35)z-=70;
@@ -4007,8 +4008,8 @@ const TUTO={on:false,i:0,okT:0,mv:0,d0:null,flip:false,roll:false,cam0:null,paus
     {t:'Commence par le <b>menu</b> : appuie sur <b class="k">Tab</b>. Le jeu se met en pause.',ok:()=>state==='pause'},
     {tab:'up',t:'<b>Améliorations</b> : ton grade, ta spécialisation (débloquée au niveau 5) et tes statistiques. Chaque niveau gagné te donne un point à placer avec <b>+</b>.',ok:T=>state==='pause'&&menuTab==='up'&&T.st>3.5},
     {tab:'tech',t:'Clique sur l\'onglet <b>Techniques</b> : l\'arbre des techniques (mobilité, combat, survie, lances). En mode RPG, chaque nouveau grade rapporte 3 points pour les acheter.',ok:T=>state==='pause'&&menuTab==='tech'&&T.st>1},
-    {tab:'gfx',t:'Clique sur l\'onglet <b>Graphismes</b> : qualité d\'image, ombres, réglages de la première personne et style de course. Si le jeu rame, baisse les ombres ou la distance de vue.',ok:T=>state==='pause'&&menuTab==='gfx'&&T.st>1},
-    {tab:'ctl',t:'Clique sur l\'onglet <b>Commandes</b> : choix de la caméra, sensibilité de la souris et liste de toutes les touches.',ok:T=>state==='pause'&&menuTab==='ctl'&&T.st>1},
+    {tab:'gfx',t:'Clique sur l\'onglet <b>Options</b> : graphismes, jouabilité (caméra, souris, style de course), première personne et son. Si le jeu rame, baisse les ombres ou la distance de vue.',ok:T=>state==='pause'&&menuTab==='gfx'&&T.st>1},
+    {tab:'ctl',t:'Clique sur l\'onglet <b>Commandes</b> : la liste de toutes les touches.',ok:T=>state==='pause'&&menuTab==='ctl'&&T.st>1},
     {target:'#resumeBtn',t:'Reviens au jeu : <b class="k">Tab</b> ou le bouton <b>Reprendre</b>.',ok:()=>state==='play'},
     {cam:'libre',t:'Les vues : <b class="k">1</b> à <b class="k">4</b> (ou <b class="k">V</b> pour passer à la suivante). Appuie sur <b class="k">1</b> : vue <b>Libre</b>, tu tournes la caméra avec la souris, le viseur reste au centre.',ok:T=>T.camT>1.5},
     {cam:'lock',t:'Appuie sur <b class="k">2</b> : vue <b>Verrouillage</b>, la caméra reste fixée sur un titan (<b class="k">T</b> ou clic molette pour en viser un autre).',ok:T=>T.camT>1.5},
@@ -4346,7 +4347,7 @@ function renderMenu(){
   const r=rank(),nx=RANKS.find(k=>k.lv>save.level),s=save.stats,g=save.gfx;ST=calcStats();
   const tab=(k,l)=>`<button class="ghost tabb${menuTab===k?' on':''}" data-tab="${k}">${l}</button>`;
   const techOK=gameMode==='rpg'||gameMode==='normal'||gameMode==='tuto';if(menuTab==='tech'&&!techOK)menuTab='up';if(TUTO.on)TUTO.tabs.add(menuTab);
-  let h=`<div class="tabs">${tab('up','Améliorations')}${techOK?tab('tech','Techniques'+(gameMode==='rpg'&&save.tp?' · '+save.tp+' pt':'')):''}${tab('gfx','Graphismes')}${tab('ctl','Commandes')}</div>`;
+  let h=`<div class="tabs">${tab('up','Améliorations')}${techOK?tab('tech','Techniques'+(gameMode==='rpg'&&save.tp?' · '+save.tp+' pt':'')):''}${tab('gfx','Options')}${tab('ctl','Commandes')}</div>`;
   if(TUTO.on&&TUTO.cur()&&TUTO.cur().id==='menu')h+='<p class="sub" style="color:var(--gold);margin:6px 0 0">Didacticiel : onglets ouverts '+TUTO.tabs.size+' / 4'+(TUTO.tabs.size>=4?' · reviens au jeu avec Tab':'')+'</p>';
   if(menuTab==='up'){
     h+=`<div class="mhead"><div><div class="eyebrow">Grade</div><div class="rank">${r.name}</div><div class="sub">Niveau ${save.level} · ${Math.floor(save.xp)} / ${need(save.level)} XP${nx?` · prochain grade : ${nx.name} au niveau ${nx.lv}`:' · grade maximum'}</div></div><div class="pts"><b>${save.points}</b><span>points à dépenser</span></div></div>`;
@@ -4366,22 +4367,32 @@ function renderMenu(){
   }else if(menuTab==='gfx'){
     const sel=(id,label,opts,val)=>`<label for="${id}">${label} <select id="${id}">${opts.map(([v,l])=>`<option value="${v}" ${String(val)===String(v)?'selected':''}>${l}</option>`).join('')}</select></label>`;
     const chk=(id,label,val)=>`<label for="${id}"><input id="${id}" type="checkbox" ${val?'checked':''}> ${label}</label>`;
-    h+='<div class="sect">Image</div><div class="opts">';
-    h+=sel('g_fps','Images par seconde (limite)',[[0,'Illimitées'],[30,'30'],[60,'60'],[120,'120'],[144,'144']],g.fps===undefined?60:g.fps)+chk('g_showFps','Afficher les images par seconde',!!g.showFps)+chk('g_rainSnd','Son de la pluie',g.rainSnd!==false);
-    h+=sel('g_sh','Shaders',[[0,'Désactivés'],[1,'Légers (couleurs, netteté, vignette)'],[2,'Complets (+ éclat lumineux)']],g.shaders===undefined?0:g.shaders)+sel('g_tex','Textures',[['bas','Basses (1K)'],['normal','Normales (2K)'],['haut','Hautes (2K, filtrage maximal)']],g.tex||'normal');
-    h+=sel('g_dyn','Résolution dynamique',[[0,'Désactivée (sauf sous 20 images/s)'],[30,'Garder au moins 30 images/s'],[45,'Garder au moins 45 images/s'],[60,'Garder au moins 60 images/s']],g.dyn===undefined?30:g.dyn);
+    const grp=t=>`<div class="sect" style="font-size:15px;color:var(--gold);border-bottom:1px solid rgba(214,170,90,.35);padding-bottom:4px;margin-top:18px">${t}</div>`,sub=t=>`<div class="sect">${t}</div><div class="opts">`;   /* grandes familles d'options, puis sous-sections */
+    h+=grp('Graphismes');
+    h+=sub('Image');
     h+=sel('g_pr','Résolution',[[.75,'Basse (75 %)'],[1,'Normale'],[1.25,'Haute (125 %)'],[1.5,'Très haute (150 %)'],[2,'Maximale (200 %)']],g.pr);
+    h+=sel('g_dyn','Résolution dynamique',[[0,'Désactivée (sauf sous 20 images/s)'],[30,'Garder au moins 30 images/s'],[45,'Garder au moins 45 images/s'],[60,'Garder au moins 60 images/s']],g.dyn===undefined?30:g.dyn);
+    h+=sel('g_fps','Images par seconde (limite)',[[0,'Illimitées'],[30,'30'],[60,'60'],[120,'120'],[144,'144']],g.fps===undefined?60:g.fps)+chk('g_showFps','Afficher les images par seconde',!!g.showFps);
+    h+=sel('g_sh','Shaders',[[0,'Désactivés'],[1,'Légers (couleurs, netteté, vignette)'],[2,'Complets (+ éclat lumineux)']],g.shaders===undefined?0:g.shaders)+sel('g_tex','Textures',[['bas','Basses (1K)'],['normal','Normales (2K)'],['haut','Hautes (2K, filtrage maximal)']],g.tex||'normal');
     h+=sel('g_view','Distance de vue',[[600,'Proche'],[900,'Normale'],[1300,'Lointaine']],g.view);
-    h+=sel('g_night','Moment',[[0,'Jour'],[1,'Nuit']],save.night?1:0);
     h+=chk('fs','Plein écran',save.fullscreen)+'</div>';
-    h+='<div class="sect">Ombres</div><div class="opts">';
+    h+=sub('Ombres');
     h+=chk('shadows','Ombres',save.shadows)+sel('g_sq','Ombres proches',[[2048,'Basses'],[4096,'Moyennes'],[8192,'Hautes']],g.shadowQ)+sel('g_sf','Ombres lointaines',[[0,'Désactivées'],[1024,'Basses'],[2048,'Moyennes'],[4096,'Hautes']],g.shadowFar===undefined?1024:g.shadowFar)+'</div>';
-    h+='<div class="sect">Effets</div><div class="opts">';
+    h+=sub('Effets visuels');
     h+=sel('g_grass','Herbe',[['off','Désactivée'],['low','Légère'],['mid','Normale'],['high','Dense']],g.grass||'mid');
-    h+=sel('g_run','Course lames en main',[['real','Garde basse : lames basses vers l\'avant (par défaut)'],['auto','Automatique : garde basse, puis ninja d\'un coup passé une certaine vitesse'],['ninja','Ninja : lames tenues derrière, de plus en plus hautes avec la vitesse']],g.runStyle||'auto');
     h+=chk('g_blur','Flou de mouvement',g.blur)+chk('g_lines','Traits de vitesse',g.lines)+chk('g_decals','Marques de sang au sol et sur les murs',g.decals)+chk('g_chgGlow','Halo d\'écran pendant la coupe chargée',g.chgGlow!==false)+'</div>';
+    h+='<p class="note">La résolution dynamique baisse un peu l\'image seulement quand le jeu passe sous le seuil choisi, puis la remonte ; sous 20 images/s elle intervient toujours. Si le jeu manque encore de fluidité : baisse la qualité des ombres, la distance de vue ou les shaders.</p>';
+    h+=grp('Jouabilité');
+    h+=sub('Caméra et souris');
+    h+=`<label for="camSel">Caméra <select id="camSel">${Object.entries(CAM_NAMES).filter(([k])=>k!=='cine'||save.camMode==='cine').map(([k,v])=>`<option value="${k}" ${save.camMode===k?'selected':''}>${v}</option>`).join('')}</select></label>`;
+    h+=`<label for="follow">Suivi auto <input id="follow" type="range" min="0" max="2" step="0.1" value="${save.follow}"></label>`;
+    h+=`<label for="sens">Sensibilité <input id="sens" type="range" min="0.3" max="2.5" step="0.1" value="${save.sens}"></label>`;
+    h+=`<label for="aimA"><input id="aimA" type="checkbox" ${save.aimAssist!==false?'checked':''}> Aide à la visée (pistolets et lances)</label></div>`;
+    h+=sub('Soldat et partie');
+    h+=sel('g_run','Course lames en main',[['real','Garde basse : lames basses vers l\'avant (par défaut)'],['auto','Automatique : garde basse, puis ninja d\'un coup passé une certaine vitesse'],['ninja','Ninja : lames tenues derrière, de plus en plus hautes avec la vitesse']],g.runStyle||'auto');
+    h+=sel('g_night','Moment',[[0,'Jour'],[1,'Nuit']],save.night?1:0)+'</div>';
     {const O=FPO(),rng=(id,label,mn,mx,st,val,un)=>`<label for="fp_${id}">${label} <input id="fp_${id}" type="range" min="${mn}" max="${mx}" step="${st}" value="${val}"> <b id="fpv_${id}">${val}${un}</b></label>`;
-      h+='<div class="sect">Première personne</div><div class="opts">';
+      h+=grp('Première personne')+'<div class="opts">';
       h+=sel('fp_trick','Pendant les figures',[['fp','Rester en 1re personne'],['epaule','Vue par-dessus l\'épaule'],['3p','Passer en 3e personne']],O.trick);
       h+=rng('trickRot','Rotation de la vue (salto, vrille, roulade)',0,100,5,O.trickRot,' %');
       h+=rng('spin','Rotation de la vue au tourbillon',0,100,5,O.spin,' %');
@@ -4394,13 +4405,9 @@ function renderMenu(){
       h+=rng('land','Secousse à l\'atterrissage',0,100,5,O.land,' %');
       h+=rng('fov','Champ de vision',60,110,1,O.fov,'°');
       h+='</div><p class="note">Pour la caméra « 1re personne » (touche 4). La coupe choisie vaut aussi en 3e personne.</p>';}
-    h+='<p class="note">La résolution dynamique baisse un peu l\'image seulement quand le jeu passe sous le seuil choisi, puis la remonte ; sous 20 images/s elle intervient toujours. Si le jeu manque encore de fluidité : baisse la qualité des ombres, la distance de vue ou les shaders.</p>';
+    h+=grp('Son');
+    {const rv=Math.round(rainVolK()*100);h+=sub('Ambiance')+`<label for="g_rainVol">Volume de la pluie <input id="g_rainVol" type="range" min="0" max="100" step="5" value="${rv}"> <b id="g_rainVolV">${rv} %</b></label></div>`;}
   }else{
-    h+='<div class="sect">Caméra et souris</div><div class="opts">';
-    h+=`<label for="camSel">Caméra <select id="camSel">${Object.entries(CAM_NAMES).filter(([k])=>k!=='cine'||save.camMode==='cine').map(([k,v])=>`<option value="${k}" ${save.camMode===k?'selected':''}>${v}</option>`).join('')}</select></label>`;
-    h+=`<label for="follow">Suivi auto <input id="follow" type="range" min="0" max="2" step="0.1" value="${save.follow}"></label>`;
-    h+=`<label for="sens">Sensibilité <input id="sens" type="range" min="0.3" max="2.5" step="0.1" value="${save.sens}"></label>`;
-    h+=`<label for="aimA"><input id="aimA" type="checkbox" ${save.aimAssist!==false?'checked':''}> Aide à la visée (pistolets et lances)</label></div>`;
     h+='<div class="sect">Commandes</div><div class="ctltab">'+CONTROLS.map(([k,v])=>`<div><kbd>${k}</kbd><span>${v}</span></div>`).join('')+'</div>';
   }
   $('menuBody').innerHTML=h;
@@ -4422,7 +4429,7 @@ $('menuBody').addEventListener('click',e=>{
 function fpSet(el){const k=el.id.slice(3),O=save.gfx.fp||(save.gfx.fp=FP_DEF());
   O[k]=el.type==='checkbox'?el.checked:el.type==='range'?+el.value:/^\d+$/.test(el.value)?+el.value:el.value;
   const v=$('fpv_'+k);if(v)v.textContent=el.value+(k==='fov'?'°':k==='shDist'?' m':' %');persist();}
-$('menuBody').addEventListener('input',e=>{if(e.target.id&&e.target.id.startsWith('fp_')){fpSet(e.target);return;}if(e.target.id==='sens'){save.sens=+e.target.value;persist();}if(e.target.id==='follow'){save.follow=+e.target.value;persist();}});
+$('menuBody').addEventListener('input',e=>{if(e.target.id&&e.target.id.startsWith('fp_')){fpSet(e.target);return;}if(e.target.id==='g_rainVol'){save.gfx.rainVol=+e.target.value/100;const b=$('g_rainVolV');if(b)b.textContent=e.target.value+' %';if(WX.rainG&&sfx.ctx)WX.rainG.gain.setTargetAtTime(WX.on?rainVol(WX.st):0,sfx.ctx.currentTime,.15);persist();return;}if(e.target.id==='sens'){save.sens=+e.target.value;persist();}if(e.target.id==='follow'){save.follow=+e.target.value;persist();}});
 $('menuBody').addEventListener('change',e=>{const id=e.target.id,g=save.gfx;if(id&&id.startsWith('fp_')){fpSet(e.target);return;}
   if(id==='aimA'){save.aimAssist=e.target.checked;persist();return;}
   if(id==='fs'){save.fullscreen=e.target.checked;persist();if(!save.fullscreen&&document.fullscreenElement)document.exitFullscreen().catch(()=>{});return;}

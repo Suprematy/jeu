@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261124210629">
+<meta name="build" content="20261124212829">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -3282,7 +3282,8 @@ class Titan{
       this.root.updateMatrixWorld(true);g.applyMatrix4(new THREE.Matrix4().copy(sm.matrixWorld).invert().multiply(topB.matrixWorld));
       sm.bind(new THREE.Skeleton([topB,midB]));return sm;};
     // jambes : cuisse, genou, mollet d'une seule pièce ; pied ; volumes invisibles pour les coups et grappins
-    const BK=this.bodyKind=(!c.boss&&!ab&&type!=='rumble')?pickBodyKind():undefined;
+    const BK=this.bodyKind=(!c.boss&&type!=='rumble')?pickBodyKind():undefined;   /* les déviants aussi : gros, maigres ou longilignes */
+    if(ab)this.abRun=['flail','plane','reach','pump','hang','oneUp'][Math.floor(Math.random()*6)];   /* chaque déviant a sa propre façon de courir */
     this.legs=[];this.knees=[];const lt=BK==='gros'?1:BK==='maigre'?.62:(c.lt||(ab?.66:.86));
     for(const sd of [-1,1]){
       const hip=new THREE.Bone();hip.position.set(sd*.85,4.6,0);this.tilt.add(hip);
@@ -3468,7 +3469,7 @@ class Titan{
     }else{
       // vise où le soldat va être (anticipation limitée, sans tourner plus vite) ; les titans ordinaires l'encerclent au lieu de faire la queue
       if(!this.cfg.boss&&this.roarT>0)this.roarT-=dt;if(this.snapT>0||this.crazyT>0)crazyTick(this,dt);   /* réveil du déviant : instant figé, puis bond de folie */
-      const ag=this.army?armyGoal(this,dist):this.fetch&&!this.fetch.gone?{x:this.fetch.root.position.x,z:this.fetch.root.position.z,hold:false}:this.idle?idleGoal(this,dist,dt):null;   /* le Cuirassé va chercher un titan à te lancer */   // armée de l'Assaillant : place de garde, cercle autour du soldat
+      const ag=this.army?armyGoal(this,dist):this.fetch&&!this.fetch.gone?{x:this.fetch.root.position.x,z:this.fetch.root.position.z,hold:false}:this.idle?idleGoal(this,dist,dt):this.stalk?stalkGoal(this,dist,dt):null;   /* le Cuirassé va chercher un titan à te lancer */   // armée de l'Assaillant : place de garde, cercle autour du soldat
       const lead=(ab?.15:this.cfg.boss?.7:.35)*clamp(dist/60,0,1),tx=(ag?ag.x:pc.x+player.vel.x*lead)-r.position.x,tz=(ag?ag.z:pc.z+player.vel.z*lead)-r.position.z;
       let target=Math.atan2(tx,tz)+(!this.cfg.boss&&!this.army&&dist>45?this.flank*clamp((dist-45)/60,0,1):0);if(this.avoid>0){this.avoid-=dt;target+=this.avoidDir*1.2;}if(this.blindT>0)target=this.blindDir;   /* aveuglé : il marche au hasard */
       const turn=(ab?3:1.7)*(this.state==='attack'?.6:this.state==='stomp'?0:1)*this.turnK*(this.dashT>0&&(this.type==='cuirasse'||this.type==='agile')?.13:1);   // les géants pivotent lentement ; en pleine charge, le Cuirassé tient sa ligne
@@ -3541,7 +3542,14 @@ class Titan{
           if(charging){a.rotation.x=lerp(a.rotation.x,i?-1.55:-1.15,k8);a.rotation.z=lerp(a.rotation.z,-sd*.55,k8);e.rotation.x=lerp(e.rotation.x,-1.95,k8);continue;}   // bras croisés devant le visage
           if(stance){const b=Math.sin(rt*3.2+i)*.06,lead=this.type!=='cuirasse'?(i?-.85:-1.3):(i?-1.12:-.95);a.rotation.x=lerp(a.rotation.x,lead+b,k8);a.rotation.z=lerp(a.rotation.z,-sd*.42,k8);e.rotation.x=lerp(e.rotation.x,(this.type!=='cuirasse'&&!i?-1.7:-2.1)+b,k8);continue;}   // garde de boxeur / d'art martial
           if(this.recoverT>0){a.rotation.x=lerp(a.rotation.x,-.25,k8);a.rotation.z=lerp(a.rotation.z,sd*.2,k8);e.rotation.x=lerp(e.rotation.x,-.5,k8);continue;}   // il reprend son souffle après la charge
-          if(ab&&moving){a.rotation.x=lerp(a.rotation.x,-1.2+Math.sin(ph*2+i*2),k8);a.rotation.z=lerp(a.rotation.z,sd*.5,k8);e.rotation.x=lerp(e.rotation.x,-.6+Math.sin(ph*2+i)*.5,k8);}
+          if(ab&&moving){const S=this.abRun,w=Math.sin(ph*2+i*Math.PI);let ax,az,ex;   // course de déviant : un style par titan
+            if(S==='plane'){ax=.3+w*.12;az=sd*1.35;ex=-.12;}   // bras grands ouverts en arrière, comme des ailes
+            else if(S==='reach'){ax=i?.85+w*.15:-1.55+w*.12;az=i?sd*.3:-sd*.08;ex=i?-.25:-.08;}   // un bras tendu devant, l'autre jeté en arrière
+            else if(S==='pump'){ax=w*1.35-.2;az=sd*.18;ex=-1.25;}   // il pompe des bras comme un sprinteur fou
+            else if(S==='hang'){ax=w*.35+.12;az=sd*.08;ex=-.05;}   // bras ballants qui battent mollement
+            else if(S==='oneUp'){ax=i?-2.75+w*.2:w*.7;az=i?-sd*.1:sd*.15;ex=i?-.15:-.4;}   // un bras levé au ciel
+            else{ax=-1.2+Math.sin(ph*2+i*2);az=sd*.5;ex=-.6+Math.sin(ph*2+i)*.5;}   // bras qui moulinent
+            a.rotation.x=lerp(a.rotation.x,ax,k8);a.rotation.z=lerp(a.rotation.z,az,k8);e.rotation.x=lerp(e.rotation.x,ex,k8);}
           else if(!ab&&i===this.reachI&&dist<rD&&dist>reach*.7){const kk=k8*.5;a.rotation.x=lerp(a.rotation.x,-1.15+Math.sin(rt*1.7+i)*.12,kk);a.rotation.z=lerp(a.rotation.z,-sd*.18,kk);e.rotation.x=lerp(e.rotation.x,-.35+Math.sin(rt*2.3)*.1,kk);}
           else{a.rotation.x=lerp(a.rotation.x,s2*.7*G.arm-G.hang+(moving?0:Math.sin(rt*.8+i*1.7+this.phase0)*.04),k8);a.rotation.z=lerp(a.rotation.z,sd*(.08+G.splay),k8);e.rotation.x=lerp(e.rotation.x,-.25-Math.max(0,s2)*.5*G.arm-G.hang*.7,k8);}   // balancier des bras, coude en retard
         }
@@ -3659,12 +3667,12 @@ function spawnTitan(type){
     let idm=null;if(type==='abnormal'&&gameMode!=='tuto'&&Math.random()<.28){const q=Math.random();idm=q<.3?'still':q<.62?'wander':q<.75?'lying':'weird';}   /* certains déviants se fichent de toi... jusqu'à ce que tu t'approches */
     if(idm==='lying')FACE_FORCE=['stare','grin'];const t=new Titan(type,x,z);FACE_FORCE=null;   /* couché, avec un grand sourire */
     t.root.rotation.y=Math.atan2(player.pos.x-x,player.pos.z-z);if(modOn('rapides'))t.speed*=1.35;if(modOn('coriaces')){t.maxHp*=1.5;t.hp=t.maxHp;}titans.push(t);
-    if(idm)idleStart(t,idm);
+    if(idm)idleStart(t,idm);else if(type==='abnormal'&&gameMode!=='tuto'&&Math.random()<.16){t.stalk={t:0};t.marker.style.display='none';}   /* rôdeur : il s'approche quand tu ne le regardes pas, puis attaque dans le dos */
     return t;}
 }
 /* ----- déviants indifférents : ils errent au hasard ou restent plantés là, sans s'occuper du soldat ; s'il s'approche (ou les touche), ils deviennent fous et lui foncent dessus ----- */
 var FACE_FORCE=null;
-const IDLE_POSES=['armsUp','oneLeg','headCock','sit'];
+const IDLE_POSES=['armsUp','oneLeg','headCock','sit','skyGaze','skyGaze','squat','spin'];   /* le regard au ciel, mains levées : la pose la plus fréquente */
 function idleStart(t,mode){mode=mode||(Math.random()<.45?'still':'wander');const I=t.idle={mode,t:0,goal:null,face:t.root.rotation.y+(Math.random()-.5)*3,trig:(17+Math.random()*16)*Math.max(1,t.s*.55),hp0:t.hp,pose:mode==='lying'?'lying':mode==='weird'?IDLE_POSES[Math.floor(Math.random()*IDLE_POSES.length)]:null,ph:Math.random()*10};
   if(mode==='lying')t.root.rotation.y=Math.random()*TAU;t.speed0=t.speed;t.speed*=mode==='wander'?.4:1;}
 /* réveil : tout passe par l'animation, sans effet ajouté. Il se fige un instant, sa tête se tourne d'un coup vers le soldat (avec une saccade),
@@ -3694,12 +3702,24 @@ function idlePose(t,dt){const I=t.idle;if(!I||!I.pose)return;I.ph+=dt;const p=I.
   else if(I.pose==='oneLeg'){t.body.rotation.z=Math.sin(p*1.9)*.08;t.headG.rotation.z=-.4;t.neck.rotation.y=face;   // sur une jambe, en équilibre, bras écartés
     L[0].rotation.x=-1.25;K[0].rotation.x=1.95;for(let i=0;i<2;i++){const sd=i?1:-1;A[i].rotation.set(Math.sin(p*1.9+i)*.15,0,sd*1.35);E[i].rotation.x=-.15;}}
   else if(I.pose==='headCock'){t.body.rotation.x=.3;t.neck.rotation.z=.75;t.headG.rotation.z=.65+Math.sin(p*.5)*.1;t.neck.rotation.y=face;   // tête penchée à angle droit, il te fixe sans bouger
-    for(let i=0;i<2;i++){A[i].rotation.set(-.25,0,(i?1:-1)*.05);E[i].rotation.x=-.2;}}}
-const CPOSE={ly:{tx:-1.45,ty:-.2},sit:{ty:-4.1}};   /* mesuré sur le squelette : bassin au ras du sol */
+    for(let i=0;i<2;i++){A[i].rotation.set(-.25,0,(i?1:-1)*.05);E[i].rotation.x=-.2;}}
+  else if(I.pose==='skyGaze'){const b=Math.sin(p*2.6);t.tilt.position.y=Math.abs(b)*.12;t.body.rotation.x=-.12;t.body.rotation.z=Math.sin(p*1.3)*.05;t.neck.rotation.x=-.45;t.headG.rotation.x=-.55+Math.sin(p*1.1)*.06;t.headG.rotation.z=Math.sin(p*.9)*.12;   // la tête renversée vers le ciel, l'air ravi
+    for(let i=0;i<2;i++){const sd=i?1:-1,w=Math.sin(p*3.1+i*1.7)*.12;A[i].rotation.set(CPOSE.sky.ax+w,0,sd*CPOSE.sky.az);E[i].rotation.x=CPOSE.sky.ex+w;t.wrists[i].rotation.x=-.6;}}   // coudes au corps, mains levées à hauteur d'épaule, poignets cassés
+  else if(I.pose==='squat'){t.tilt.position.y=CPOSE.sq.ty;t.body.rotation.x=.55;t.headG.rotation.x=-.6;t.neck.rotation.y=face;t.headG.rotation.z=Math.sin(p*.7)*.25;   // accroupi, les mains au sol, il te regarde par en dessous
+    for(let i=0;i<2;i++){const sd=i?1:-1;L[i].rotation.x=-1.25;L[i].rotation.z=sd*.35;K[i].rotation.x=2.25;A[i].rotation.set(-.95+Math.sin(p*1.5+i)*.08,0,sd*.12);E[i].rotation.x=-.15;}}
+  else if(I.pose==='spin'){t.headG.rotation.z=.4;t.neck.rotation.x=-.25;for(let i=0;i<2;i++){const sd=i?1:-1;A[i].rotation.set(-.2,0,sd*(1.45+Math.sin(p*4+i)*.1));E[i].rotation.x=-.1;}}}   // il tourne lentement sur lui-même, bras écartés
+const CPOSE={ly:{tx:-1.45,ty:-.2},sit:{ty:-4.1},sky:{ax:-.12,az:.32,ex:-2.25},sq:{ty:-3.0}};   /* mesuré sur le squelette : bassin au ras du sol */
+/* rôdeur : il se fige dès que tu regardes dans sa direction, avance quand tu as le dos tourné, puis fonce sur toi par derrière */
+const _stF=new V3();
+function stalkGoal(t,dist,dt){const S=t.stalk,r=t.root.position,p=player.pos;camera.getWorldDirection(_stF);_stF.y=0;_stF.normalize();
+  const tx=r.x-p.x,tz=r.z-p.z,l=Math.hypot(tx,tz)||1,seen=(tx*_stF.x+tz*_stF.z)/l>.35;S.t+=dt;
+  if(t.hp<t.maxHp||t.limbHit>0||t.blindT>0||S.t>90||(dist<24&&!seen)||dist<10){t.stalk=null;t.marker.style.display='';t.wakePose=null;t.speedC=t.speed*1.3;t.aggr*=1.4;t.snapT=.01;t.flank=0;return null;}   // il fonce
+  if(seen&&dist<130){S.froze=true;return {x:r.x+Math.sin(t.root.rotation.y)*5,z:r.z+Math.cos(t.root.rotation.y)*5,hold:true};}   // regardé : il se fige
+  S.froze=false;return {x:p.x-_stF.x*16,z:p.z-_stF.z*16,hold:false};}   // il vise ton dos
 function idleGoal(t,dist,dt){const I=t.idle,r=t.root.position;
   if(dist<I.trig||t.hp<I.hp0||t.limbHit>0||t.blindT>0||t.stagger>.4){idleWake(t);return null;}
   I.t-=dt;
-  if(I.mode!=='wander'){if(I.mode==='still'&&I.t<=0){I.t=3+Math.random()*5;I.face+=(Math.random()-.5)*2.2;}if(I.mode==='lying')I.face=t.root.rotation.y;return {x:r.x+Math.sin(I.face)*6,z:r.z+Math.cos(I.face)*6,hold:true};}   // planté là, il regarde ailleurs de temps en temps
+  if(I.mode!=='wander'){if(I.mode==='still'&&I.t<=0){I.t=3+Math.random()*5;I.face+=(Math.random()-.5)*2.2;}if(I.pose==='spin')I.face=t.root.rotation.y+.6;if(I.mode==='lying')I.face=t.root.rotation.y;return {x:r.x+Math.sin(I.face)*6,z:r.z+Math.cos(I.face)*6,hold:true};}   // planté là, il regarde ailleurs de temps en temps
   if(I.t<=0||!I.goal||Math.hypot(I.goal.x-r.x,I.goal.z-r.z)<5){I.t=4+Math.random()*7;const a=Math.random()*TAU,d=18+Math.random()*45;I.goal={x:clamp(r.x+Math.sin(a)*d,-450,450),z:clamp(r.z+Math.cos(a)*d,-450,450)};}
   return {x:I.goal.x,z:I.goal.z,hold:Math.random()<.002};}   // il erre au hasard
 function clearTitans(){endGrab();for(const t of titans)if(!t.gone)t.remove();titans=[];clearBossFx();clearPieces();clearSpears();clearOriginel();}
@@ -3924,7 +3944,7 @@ function updPops(dt){for(let i=pops.length-1;i>=0;i--){const q=pops[i];q.age+=dt
 function mkMarker(){const d=document.createElement('div');d.className='mk';d.innerHTML='<div class="hb"><i></i></div><div class="d"></div><div class="ds"></div>';$('markers').appendChild(d);return d;}
 function updMarkers(){
   const W=innerWidth,H=innerHeight;
-  for(const t of titans){if(t.state==='dead'||t.gone)continue;const np=t.nape.getWorldPosition(tA);const dist=np.distanceTo(player.center);
+  for(const t of titans){if(t.state==='dead'||t.gone||t.stalk)continue;const np=t.nape.getWorldPosition(tA);const dist=np.distanceTo(player.center);   /* le rôdeur n'a pas de marqueur */
     tB.copy(np).project(camera);let x=(tB.x*.5+.5)*W,y=(-tB.y*.5+.5)*H,edge=false;
     if(tB.z>1){x=W-x;y=H-y;edge=true;}
     if(x<28||x>W-28||y<28||y>H-28)edge=true;

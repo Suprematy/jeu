@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261125202154">
+<meta name="build" content="20261125202330">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -3663,7 +3663,7 @@ class Titan{
 }
 function pickType(){const r=Math.random(),w=wave;if(gameMode==='rumbling')return'rumble';if(modOn('deviants')&&gameMode!=='train'&&Math.random()<.5)return'abnormal';
   if(gameMode==='train'){const L=Object.keys(TRN.cfg.types).filter(k=>TRN.cfg.types[k]);return L.length?L[Math.floor(Math.random()*L.length)]:'small';}
-  if(w>=3&&r<Math.min(.7,.05+w*.008))return'abnormal';   /* part de déviants : vague 10 : 13 %, vague 20 : 21 %, vague 40 : 37 %, plafond de 70 % (vers la vague 81) : il reste toujours des titans normaux */if(w>=4&&r<.32)return'large';if(w>=2&&r<.62)return'medium';return'small';}
+  if(w>=3&&r<Math.min(.7,.06+w*.0095))return'abnormal';   /* part de déviants : vague 10 : 16 %, vague 20 : 25 %, vague 40 : 44 %, plafond de 70 % de déviants (vers la vague 68) : il reste toujours des titans normaux */if(w>=4&&r<.32)return'large';if(w>=2&&r<.62)return'medium';return'small';}
 function spawnTitan(type){
   for(let i=0;i<60;i++){const a=Math.random()*TAU,d=(gameMode==='rumbling'?140:85)+Math.random()*60;
     const x=clamp(player.pos.x+Math.sin(a)*d,-465,465),z=clamp(player.pos.z+Math.cos(a)*d,-465,465);

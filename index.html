@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261125015524">
+<meta name="build" content="20261125195559">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -3692,12 +3692,13 @@ function abRunPose(t,dt){const S=t.abRun,r=t.root.position,pv=t._pp||(t._pp=r.cl
   for(let i=0;i<2;i++){if(t.armOff[i]>0)continue;const sd=i?1:-1,w=Math.sin(ph+i*Math.PI),a=A[i],e=E[i];
     if(S==='skyRun'){const C=CPOSE.sky,b=Math.sin(ph*2);a.rotation.x=P(a.rotation.x,C.ax+b*.1);a.rotation.z=P(a.rotation.z,sd*C.az);e.rotation.x=P(e.rotation.x,C.ex+b*.08);e.rotation.y=-C.ey;t.wrists[i].rotation.x=C.wx+Math.sin(ph*2+i)*.12;t.fingers[i].rotation.z=0;t.fingers[i].rotation.x=C.fx;}   // mains levées, index pointés, qui sautillent avec le pas
     else if(S==='lunge'){if(i===0){a.rotation.x=P(a.rotation.x,2.3+w*.12);a.rotation.z=P(a.rotation.z,sd*.3);e.rotation.x=P(e.rotation.x,-.08);}else{a.rotation.x=P(a.rotation.x,-.55+w*.45);a.rotation.z=P(a.rotation.z,sd*.12);e.rotation.x=P(e.rotation.x,-.35);}}   // un bras lancé loin derrière, l'autre qui pend devant
-    else if(S==='plane'){a.rotation.x=P(a.rotation.x,.05+w*.06);a.rotation.z=P(a.rotation.z,sd*1.5);e.rotation.x=P(e.rotation.x,-.06);}   // bras tendus à l'horizontale, comme des ailes
+    else if(S==='plane'){const bk=t._bank||0;a.rotation.x=P(a.rotation.x,.08+w*.05);a.rotation.z=P(a.rotation.z,sd*(1.48+sd*bk*.45));e.rotation.x=P(e.rotation.x,-.06);}   // bras tendus en ailes, qui suivent le roulis
     else if(S==='leap'){if(air){a.rotation.x=P(a.rotation.x,i?1:-2.7);a.rotation.z=P(a.rotation.z,i?sd*.5:-sd*.2);e.rotation.x=P(e.rotation.x,-.15);}else{a.rotation.x=P(a.rotation.x,-1+Math.sin(ph*2+i*Math.PI)*.8);a.rotation.z=P(a.rotation.z,sd*.9);e.rotation.x=P(e.rotation.x,-.3);}}   // un bras jeté au ciel, l'autre en arrière
     else if(S==='pump'){a.rotation.x=P(a.rotation.x,w*1.25-.25);a.rotation.z=P(a.rotation.z,sd*.15);e.rotation.x=P(e.rotation.x,-1.45);t.fingers[i].rotation.x=0;}}   // il pompe des bras, mains à plat
   if(S==='skyRun'){t.body.rotation.x=P(t.body.rotation.x,-.18);t.neck.rotation.x=P(t.neck.rotation.x,-.2);t.headG.rotation.x=P(t.headG.rotation.x,-.55+Math.sin(ph*2)*.05);t.headG.rotation.z=P(t.headG.rotation.z,Math.sin(ph)*.1);}   // la tête renversée vers le ciel, rire béat
   else if(S==='lunge'){t.body.rotation.x=P(t.body.rotation.x,1.05);t.neck.rotation.x=P(t.neck.rotation.x,-.55);t.headG.rotation.x=P(t.headG.rotation.x,-.45);}   // plié presque à l'horizontale, la tête relevée vers sa proie
-  else if(S==='plane'){t.body.rotation.x=P(t.body.rotation.x,-.12);t.headG.rotation.x=P(t.headG.rotation.x,-.3);}   // droit, torse bombé, le visage levé
+  else if(S==='plane'){t._plT=(t._plT||Math.random()*6)+dt;const bk=Math.sin(t._plT*1.7)*.55+Math.sin(t._plT*.6)*.12;t._bank=bk;   // il « fait l'avion » comme un enfant : une aile monte, l'autre descend, en balancier (il court droit)
+    t.body.rotation.x=P(t.body.rotation.x,-.12);t.body.rotation.z=P(t.body.rotation.z,-bk);t.tilt.rotation.z=P(t.tilt.rotation.z,-bk*.3);t.headG.rotation.x=P(t.headG.rotation.x,-.3);t.headG.rotation.z=P(t.headG.rotation.z,bk*.4);}
   else if(S==='pump'){t.body.rotation.x=P(t.body.rotation.x,.42);t.headG.rotation.x=P(t.headG.rotation.x,-.4);}   // tassé vers l'avant
   else if(S==='leap'){t.leapCd=(t.leapCd===undefined?1:t.leapCd)-dt;
     if(!air&&m>.6&&t.leapCd<=0&&t.state==='walk'&&!(t.legLoss)){t.vy=(13+Math.random()*5)*Math.sqrt(t.s);t.leapCd=1.4+Math.random()*1.8;}   // grands bonds

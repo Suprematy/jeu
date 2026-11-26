@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261125200012">
+<meta name="build" content="20261125200932">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -3360,7 +3360,7 @@ class Titan{
     const LM=this.maxHp*.7*(type==='bete'?.5:1);this.limbMax=LM;this.limbHp={arm:[LM,LM],leg:[LM,LM]};this.sev={arm:[0,0],leg:[0,0]};this.tend=[0,0];this.blindT=0;this.rubT=0;this.flailT=0;this.blindDir=0;this.legLoss=0;this.limbHit=0;
     if(c.boss)decorateBoss(this);if(type==='rumble'){fibres(this.skin,'colosse',.7);fibres(this.headSkin,'colosse-tete',.7);}addWounds(this);mergeDeco(this);
     scene.add(r);hookables.push(...this.parts);
-    this.state='walk';this.phase=Math.random()*TAU;this.atkCd=1+Math.random()*2;this.turnK=clamp(Math.pow(1.05/this.s,.85),.2,1.25);this.aggr=1+Math.min(effWave(),40)*.03;this.lunge=0;this.atkT=0;this.stagger=0;this.armOff=[0,0];this.avoid=0;this.avoidDir=1;this.vy=0;this.jumpCd=3;this.deadT=0;this.gone=false;
+    this.state='walk';this.phase=Math.random()*TAU;this.atkCd=1+Math.random()*2;this.turnK=clamp(Math.pow(1.05/this.s,.85),.2,1.25);this.aggr=ab?1.2:1+Math.min(effWave(),40)*.03;this.lunge=0;this.atkT=0;this.stagger=0;this.armOff=[0,0];this.avoid=0;this.avoidDir=1;this.vy=0;this.jumpCd=3;this.deadT=0;this.gone=false;
     {const R_=Math.random,nb=!c.boss&&!ab&&type!=='rumble';this.phase0=R_()*TAU;this.flank=(R_()-.5)*1.1;
      this.gait=nb?{stride:.42+R_()*.2,bob:.16+R_()*.14,sway:.03+R_()*.06,shift:.08+R_()*.1,hang:R_()<.35?.22+R_()*.35:R_()*.08,arm:.6+R_()*.5,splay:R_()*.12,lean:R_()<.3?.1+R_()*.15:R_()*.05}
       :{stride:type==='agile'?.62:type==='assaillant'?.56:.5,bob:type==='colosse'||type==='rumble'?.34:type==='cuirasse'?.3:.22,sway:type==='bete'?.08:.05,shift:.12,hang:type==='bete'?.25:0,arm:type==='cuirasse'?.6:1,splay:type==='cuirasse'?.1:0,lean:0};}
@@ -3670,13 +3670,12 @@ function spawnTitan(type){
     if(gameMode!=='rumbling'&&insideDepth(x,z)<10)continue;   // les titans envahissent le district
     if(Math.hypot(x-player.pos.x,z-player.pos.z)<70)continue;
     if(pointBlocked(x,groundY(x,z)+1,z))continue;
-    let idm=null,ipo=null;if(type==='abnormal'&&gameMode!=='tuto'&&Math.random()<.28){const q=Math.random();idm=q<.3?'still':q<.62?'wander':q<.75?'lying':'weird';}   /* certains déviants se fichent de toi... jusqu'à ce que tu t'approches */
-    if(idm==='weird')ipo=IDLE_POSES[Math.floor(Math.random()*IDLE_POSES.length)];
+    const DP=type==='abnormal'&&gameMode!=='tuto'?deviantPlan():null;let idm=DP&&DP.mode||null,ipo=DP&&DP.pose||null;   /* le genre de déviant dépend de l'avancée dans la partie */
     if(idm==='lying')FACE_FORCE=['stare','grin'];   /* couché, avec un grand sourire */
     if(ipo==='skyGaze'){FACE_FORCE=['sleepy','laugh'];if(Math.random()<.75)BODY_FORCE='gros';}   /* le regard au ciel : rondouillard, yeux plissés, rire béat */
     const t=new Titan(type,x,z);FACE_FORCE=null;BODY_FORCE=null;
     t.root.rotation.y=Math.atan2(player.pos.x-x,player.pos.z-z);if(modOn('rapides'))t.speed*=1.35;if(modOn('coriaces')){t.maxHp*=1.5;t.hp=t.maxHp;}titans.push(t);
-    if(idm)idleStart(t,idm,ipo);else if(type==='abnormal'&&gameMode!=='tuto'&&Math.random()<.16){t.stalk={t:0};t.mkHide=true;t.marker.style.display='none';}   /* rôdeur : il s'approche quand tu ne le regardes pas, puis attaque dans le dos */
+    if(idm)idleStart(t,idm,ipo);else if(DP&&DP.stalk){t.stalk={t:0};t.mkHide=true;t.marker.style.display='none';}   /* rôdeur : il s'approche quand tu ne le regardes pas, puis attaque dans le dos */
     return t;}
 }
 /* ----- déviants indifférents : ils errent au hasard ou restent plantés là, sans s'occuper du soldat ; s'il s'approche (ou les touche), ils deviennent fous et lui foncent dessus ----- */
@@ -3685,7 +3684,21 @@ const IDLE_POSES=['armsUp','oneLeg','headCock','sit','squat','spin'];   /* le re
 /* ----- courses de déviants, d'après l'anime : chacune a sa posture, sa foulée et sa cadence ----- */
 const AB_RUNS=[['skyRun',2],['lunge',2],['plane',2],['leap',1.5],['pump',1.5],['flail',3],['reach',2],['oneUp',2],['hang',2]];   /* les courses tirées de l'anime : environ la moitié des déviants, les autres gardent les anciennes */
 const AB_GAIT={skyRun:{st:.4,kn:.95,cad:1.6,bob:.34},lunge:{st:1.05,kn:1.55,cad:.8,bob:.16},plane:{st:.9,kn:1.2,cad:.95,bob:.24},leap:{st:.95,kn:1.4,cad:.9,bob:.3},pump:{st:.55,kn:1.1,cad:1.45,bob:.2}};
-function pickAbRun(){let n=0;for(const r of AB_RUNS)n+=r[1];let x=Math.random()*n;for(const r of AB_RUNS){x-=r[1];if(x<=0)return r[0];}return 'flail';}
+function pickAbRun(){const u=devU(),W=r=>r[1]*(r[0]==='leap'?.35+1.3*u:r[0]==='lunge'?.7+.6*u:1);let n=0;for(const r of AB_RUNS)n+=W(r);let x=Math.random()*n;for(const r of AB_RUNS){x-=W(r);if(x<=0)return r[0];}return 'flail';}   // le bondisseur (le plus dur à toucher) se fait plus fréquent avec les vagues
+/* ----- mélange des déviants au fil des vagues (du plus facile au plus dur) :
+   immobile < qui erre < pose étrange (douce, puis vraiment bizarre) < poursuivant dès le départ (le bondisseur en tête) < rôdeur qui attaque dans le dos.
+   Au début : presque que des calmes ; ensuite de plus en plus de poursuivants et de rôdeurs, et des poses de plus en plus étranges ;
+   mais même tard, environ un tiers restent calmes, et deux déviants de suite n'ont jamais la même pose : chaque vague reste différente. ----- */
+function devU(){let w=1;try{w=gameMode==='train'?1:effWave();}catch(e){}return clamp((w-1)/32,0,1);}
+const POSE_W={sit:[1.3,-.6],headCock:[1.2,-.5],squat:[1,-.3],armsUp:[.45,.9],oneLeg:[.4,.9],spin:[.3,1]};   // [poids au début, gain avec l'avancée] : douces au début, bizarres plus tard
+let _lastPose='';
+function deviantPlan(){const u=devU(),w=(()=>{try{return effWave();}catch(e){return 1;}})(),R=Math.random();
+  const pStalk=w<4?0:.03+.13*u,pChase=.1+.42*u;   // poursuivants dès le départ : 10 % au début, ~52 % tard ; rôdeurs à partir de la vague 4, jusqu'à ~16 %
+  if(R<pStalk)return {stalk:true};if(R<pStalk+pChase)return {};
+  const wS=.48-.22*u,wW=.34-.08*u,wP=.13+.22*u,wL=.05+.08*u,q=Math.random()*(wS+wW+wP+wL);   // parmi les calmes : immobiles et errants d'abord, poses étranges et couchés de plus en plus
+  if(q<wS)return {mode:'still'};if(q<wS+wW)return {mode:'wander'};if(q<wS+wW+wL)return {mode:'lying'};
+  let pose=null;for(let k=0;k<2;k++){let n=0;for(const p in POSE_W)n+=Math.max(.05,POSE_W[p][0]+POSE_W[p][1]*u);let x=Math.random()*n;for(const p in POSE_W){x-=Math.max(.05,POSE_W[p][0]+POSE_W[p][1]*u);if(x<=0){pose=p;break;}}if(pose!==_lastPose)break;}
+  _lastPose=pose;return {mode:'weird',pose};}
 const _pwP=new V3(),_pwV=new V3(),_pwN=new V3();
 /* à l'étroit (ruelle, entre deux maisons) : l'avion replie ses ailes et ne zigzague plus */
 function planeNarrow(t,dt){t._nrT=(t._nrT||0)-dt;if(t._nrT>0)return t._narrow;t._nrT=.25;const r=t.root.position;_pwN.set(r.x,Math.max(0,r.y-groundY(r.x,r.z))+.01,r.z);_pwV.set(0,0,0);

@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261126040438">
+<meta name="build" content="20261126040630">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -8236,15 +8236,17 @@ function egWorld(on){if(!EG.wl){if(on)return;EG.wl=scene.children.filter(o=>{if(
 /* ----- sons de l'équipement tridimensionnel : découpés dans le fichier fourni puis nettoyés (filtrés) pour qu'une action = un seul son net :
    tir du grappin, ancre qui se plante, cliquetis du câble qui s'enroule, souffle de gaz (boucle), jet de gaz (ruée), lame qui fend l'air,
    lame dans la chair, morsure, chute du titan abattu, lames remplacées ----- */
-const ODS={buf:null,ld:false,ok:false,idx:{fire:[0,.58],attach:[.63,.44],clack:[1.12,.38],launch:[1.55,.77],gas:[2.37,1],reel:[3.42,.36],slash:[3.8301,.4],hit:[4.2801,.57],bite:[4.9001,.32],kill:[5.2701,1.12]}};
+const ODS={buf:null,ld:false,ok:false,idx:{fire:[0,.58],attach:[.63,.44],clack:[1.12,.38],launch:[1.55,.77],gas:[2.37,1],reel:[3.42,.36],slash:[3.8301,.4],hit:[4.2801,.32],bite:[4.6501,.32],kill:[5.0201,1.12]},
+  /* mixage : chaque son est normalisé à la même intensité perçue (puis limité en douceur) ; ici, son niveau dans le jeu et sa part de réverbération */
+  mix:{fire:[.55,.15],attach:[.45,.12],clack:[.32,.05],launch:[.42,.08],slash:[.5,.06],hit:[.68,.1],bite:[.62,.1],kill:[.8,.35]}};
 function odmLoad(){if(ODS.ld||!sfx.ctx)return;ODS.ld=true;const x=new XMLHttpRequest();x.open('GET','son/odm_sfx.wav');x.responseType='arraybuffer';x.onload=()=>{try{sfx.ctx.decodeAudioData(x.response,b=>{ODS.buf=b;odmLoops();},()=>{});}catch(e){}};x.send();}
 /* Options > Son : bruitages « classiques » (synthétiques, par défaut) ou « réalistes » (enregistrés, expérimental) */
 const odmOn=()=>!!save.gfx&&save.gfx.sndStyle==='real';
-function odmPlay(k,v,rate){const c=sfx.ctx,s=ODS.idx[k];if(!odmOn()||!c||!ODS.buf||!s)return false;try{const src=c.createBufferSource(),g=c.createGain();src.buffer=ODS.buf;if(rate)src.playbackRate.value=rate;g.gain.value=v||.7;src.connect(g);sfx.out(g,k==='kill'?.35:k==='fire'||k==='attach'?.15:.08);src.start(0,s[0],s[1]);}catch(e){return false;}return true;}
+function odmPlay(k,v,rate){const c=sfx.ctx,s=ODS.idx[k];if(!odmOn()||!c||!ODS.buf||!s)return false;try{const m=ODS.mix[k]||[.5,.08],src=c.createBufferSource(),g=c.createGain();src.buffer=ODS.buf;if(rate)src.playbackRate.value=rate;g.gain.value=m[0];src.connect(g);sfx.out(g,m[1]);src.start(0,s[0],s[1]);}catch(e){return false;}return true;}
 /* les boucles continues (gaz, treuil) prennent les sons enregistrés à la place du bruit synthétique, sur les mêmes réglages de volume */
 /* les deux versions des boucles (gaz, treuil) restent branchées sur les mêmes réglages de volume ; l'option choisit laquelle on entend */
 function odmLoops(){const c=sfx.ctx;if(!c||!ODS.buf||ODS.ok)return;ODS.ok=true;ODS.syn={};ODS.smp={};ODS.lv={};
-  for(const [k,gn,S,F,lv] of [['gas',sfx.gasG,'gasS','gasF',4.2],['reel',sfx.reelG,'reelS','reelF',1]]){try{if(!gn)continue;   /* niveaux alignés sur les anciens bruits synthétiques (mesurés) */
+  for(const [k,gn,S,F,lv] of [['gas',sfx.gasG,'gasS','gasF',2.2],['reel',sfx.reelG,'reelS','reelF',.65]]){try{if(!gn)continue;   /* niveaux alignés sur les anciens bruits synthétiques (mesurés) */
     if(sfx[S]&&sfx[F]){sfx[S].disconnect();const sg=c.createGain();sfx[S].connect(sg);sg.connect(sfx[F]);ODS.syn[k]=sg;}
     const s=ODS.idx[k],src=c.createBufferSource(),g=c.createGain();g.gain.value=0;src.buffer=ODS.buf;src.loop=true;src.loopStart=s[0];src.loopEnd=s[0]+s[1];src.connect(g);g.connect(gn);src.start(0,s[0]);ODS.smp[k]=g;ODS.lv[k]=lv;}catch(e){}}
   odmApplyStyle();}

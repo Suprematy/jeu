@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261125195737">
+<meta name="build" content="20261125200012">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -3686,19 +3686,26 @@ const IDLE_POSES=['armsUp','oneLeg','headCock','sit','squat','spin'];   /* le re
 const AB_RUNS=[['skyRun',2],['lunge',2],['plane',2],['leap',1.5],['pump',1.5],['flail',3],['reach',2],['oneUp',2],['hang',2]];   /* les courses tirées de l'anime : environ la moitié des déviants, les autres gardent les anciennes */
 const AB_GAIT={skyRun:{st:.4,kn:.95,cad:1.6,bob:.34},lunge:{st:1.05,kn:1.55,cad:.8,bob:.16},plane:{st:.9,kn:1.2,cad:.95,bob:.24},leap:{st:.95,kn:1.4,cad:.9,bob:.3},pump:{st:.55,kn:1.1,cad:1.45,bob:.2}};
 function pickAbRun(){let n=0;for(const r of AB_RUNS)n+=r[1];let x=Math.random()*n;for(const r of AB_RUNS){x-=r[1];if(x<=0)return r[0];}return 'flail';}
+const _pwP=new V3(),_pwV=new V3(),_pwN=new V3();
+/* à l'étroit (ruelle, entre deux maisons) : l'avion replie ses ailes et ne zigzague plus */
+function planeNarrow(t,dt){t._nrT=(t._nrT||0)-dt;if(t._nrT>0)return t._narrow;t._nrT=.25;const r=t.root.position;_pwN.set(r.x,Math.max(0,r.y-groundY(r.x,r.z))+.01,r.z);_pwV.set(0,0,0);
+  const span=4.6*t.s*TITAN_VIS,res=collideBoxes(_pwN,_pwV,span,false);return t._narrow=!!res.hit;}
 function abRunPose(t,dt){const S=t.abRun,r=t.root.position,pv=t._pp||(t._pp=r.clone()),v=Math.hypot(r.x-pv.x,r.z-pv.z)/Math.max(dt,1e-3);pv.copy(r);
   t._mv=lerp(t._mv||0,v>1.2?1:0,1-Math.exp(-6*dt));const m=t._mv,air=t.vy!==0;if(m<.04&&!air)return;
   const k=Math.max(m,air?1:0),A=t.arms,E=t.elbows,L=t.legs,K=t.knees,ph=t.phase,P=(o,v2)=>o+(v2-o)*k;
   for(let i=0;i<2;i++){if(t.armOff[i]>0)continue;const sd=i?1:-1,w=Math.sin(ph+i*Math.PI),a=A[i],e=E[i];
     if(S==='skyRun'){const C=CPOSE.sky,b=Math.sin(ph*2);a.rotation.x=P(a.rotation.x,C.ax+b*.1);a.rotation.z=P(a.rotation.z,sd*C.az);e.rotation.x=P(e.rotation.x,C.ex+b*.08);e.rotation.y=-C.ey;t.wrists[i].rotation.x=C.wx+Math.sin(ph*2+i)*.12;t.fingers[i].rotation.z=0;t.fingers[i].rotation.x=C.fx;}   // mains levées, index pointés, qui sautillent avec le pas
     else if(S==='lunge'){if(i===0){a.rotation.x=P(a.rotation.x,2.3+w*.12);a.rotation.z=P(a.rotation.z,sd*.3);e.rotation.x=P(e.rotation.x,-.08);}else{a.rotation.x=P(a.rotation.x,-.55+w*.45);a.rotation.z=P(a.rotation.z,sd*.12);e.rotation.x=P(e.rotation.x,-.35);}}   // un bras lancé loin derrière, l'autre qui pend devant
-    else if(S==='plane'){const bk=t._bank||0;a.rotation.x=P(a.rotation.x,.08+w*.05);a.rotation.z=P(a.rotation.z,sd*(1.48+sd*bk*.45));e.rotation.x=P(e.rotation.x,-.06);}   // bras tendus en ailes, qui suivent le roulis
+    else if(S==='plane'){const bk=t._bank||0,nw=planeNarrow(t,dt);if(nw){a.rotation.x=P(a.rotation.x,-.35+w*.4);a.rotation.z=P(a.rotation.z,sd*.25);e.rotation.x=P(e.rotation.x,-.5);}   // à l'étroit : ailes repliées
+      else{a.rotation.x=P(a.rotation.x,.08+w*.05);a.rotation.z=P(a.rotation.z,sd*(1.48+sd*bk*.45));e.rotation.x=P(e.rotation.x,-.06);}}   // bras tendus en ailes, qui suivent le roulis
     else if(S==='leap'){if(air){a.rotation.x=P(a.rotation.x,i?1:-2.7);a.rotation.z=P(a.rotation.z,i?sd*.5:-sd*.2);e.rotation.x=P(e.rotation.x,-.15);}else{a.rotation.x=P(a.rotation.x,-1+Math.sin(ph*2+i*Math.PI)*.8);a.rotation.z=P(a.rotation.z,sd*.9);e.rotation.x=P(e.rotation.x,-.3);}}   // un bras jeté au ciel, l'autre en arrière
     else if(S==='pump'){a.rotation.x=P(a.rotation.x,w*1.25-.25);a.rotation.z=P(a.rotation.z,sd*.15);e.rotation.x=P(e.rotation.x,-1.45);t.fingers[i].rotation.x=0;}}   // il pompe des bras, mains à plat
   if(S==='skyRun'){t.body.rotation.x=P(t.body.rotation.x,-.18);t.neck.rotation.x=P(t.neck.rotation.x,-.2);t.headG.rotation.x=P(t.headG.rotation.x,-.55+Math.sin(ph*2)*.05);t.headG.rotation.z=P(t.headG.rotation.z,Math.sin(ph)*.1);}   // la tête renversée vers le ciel, rire béat
   else if(S==='lunge'){t.body.rotation.x=P(t.body.rotation.x,1.05);t.neck.rotation.x=P(t.neck.rotation.x,-.55);t.headG.rotation.x=P(t.headG.rotation.x,-.45);}   // plié presque à l'horizontale, la tête relevée vers sa proie
   else if(S==='plane'){t._plT=(t._plT||Math.random()*6)+dt;const bk=Math.sin(t._plT*1.7)*.55+Math.sin(t._plT*.6)*.12;t._bank=bk;   // il « fait l'avion » comme un enfant : une aile monte, l'autre descend, en balancier (il court droit)
-    t.body.rotation.x=P(t.body.rotation.x,-.12);t.body.rotation.z=P(t.body.rotation.z,-bk);t.tilt.rotation.z=P(t.tilt.rotation.z,-bk*.3);t.headG.rotation.x=P(t.headG.rotation.x,-.3);t.headG.rotation.z=P(t.headG.rotation.z,bk*.4);{const ry=t.root.rotation.y,sw=Math.cos(t._plT*1.7)*1.3*t.s*m*dt;r.x+=Math.cos(ry)*sw;r.z-=Math.sin(ry)*sw;}}   /* léger zigzag, du côté de l'aile qui plonge */
+    t.body.rotation.x=P(t.body.rotation.x,-.12);t.body.rotation.z=P(t.body.rotation.z,-bk);t.tilt.rotation.z=P(t.tilt.rotation.z,-bk*.3);t.headG.rotation.x=P(t.headG.rotation.x,-.3);t.headG.rotation.z=P(t.headG.rotation.z,bk*.4);
+    if(!t._narrow){const ry=t.root.rotation.y,sw=Math.cos(t._plT*1.7)*1.3*t.s*m*dt,nx=r.x+Math.cos(ry)*sw,nz=r.z-Math.sin(ry)*sw;   /* léger zigzag, du côté de l'aile qui plonge... */
+      _pwP.set(nx,Math.max(0,r.y-groundY(nx,nz))+.01,nz);_pwV.set(0,0,0);collideBoxes(_pwP,_pwV,1.7*t.s,false);collideTrees(_pwP,_pwV,1.7*t.s);r.x=_pwP.x;r.z=_pwP.z;}}   /* ... sans jamais entrer dans un mur */
   else if(S==='pump'){t.body.rotation.x=P(t.body.rotation.x,.42);t.headG.rotation.x=P(t.headG.rotation.x,-.4);}   // tassé vers l'avant
   else if(S==='leap'){t.leapCd=(t.leapCd===undefined?1:t.leapCd)-dt;
     if(!air&&m>.6&&t.leapCd<=0&&t.state==='walk'&&!(t.legLoss)){t.vy=(13+Math.random()*5)*Math.sqrt(t.s);t.leapCd=1.4+Math.random()*1.8;}   // grands bonds

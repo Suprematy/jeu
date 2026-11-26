@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261125200932">
+<meta name="build" content="20261125201728">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -3786,6 +3786,10 @@ function stalkGoal(t,dist,dt){const S=t.stalk,r=t.root.position,p=player.pos;cam
   S.froze=false;return {x:p.x-_stF.x*16,z:p.z-_stF.z*16,hold:false};}   // il vise ton dos
 /* un titan voit-il le soldat ? dans son champ de vision (sauf couché : il voit tout autour) et sans mur ni bâtiment entre eux */
 const _tsR=new THREE.Raycaster(),_tsA=new V3(),_tsD=new V3();
+/* le soldat regarde-t-il ce titan dans les yeux ? (le centre de la vue sur son visage) */
+const _stE=new V3(),_stC=new V3();
+function stareAt(t){const E=t.eyePos(_stE),c=camera.position;camera.getWorldDirection(_stC);const tx=E.x-c.x,ty=E.y-c.y,tz=E.z-c.z,l=Math.hypot(tx,ty,tz)||1;
+  return (tx*_stC.x+ty*_stC.y+tz*_stC.z)/l>Math.cos(Math.max(.07,Math.atan(1.6*t.s*TITAN_VIS/l)));}
 function titanSees(t){const h=t.headG.getWorldPosition(_tsA),pc=player.center,ya=t.root.rotation.y+t.body.rotation.y+t.neck.rotation.y,fx=Math.sin(ya),fz=Math.cos(ya),dx=pc.x-h.x,dz=pc.z-h.z,l=Math.hypot(dx,dz)||1;
   if(!(t.idle&&t.idle.pose==='lying')&&(dx*fx+dz*fz)/l<Math.cos(1.25))return false;   // hors de son champ de vision (environ 140°)
   _tsD.subVectors(pc,h);const d=_tsD.length();if(d<1)return true;_tsR.set(h,_tsD.divideScalar(d));_tsR.far=d-1.2;
@@ -3793,6 +3797,11 @@ function titanSees(t){const h=t.headG.getWorldPosition(_tsA),pc=player.center,ya
 function idleGoal(t,dist,dt){const I=t.idle,r=t.root.position;
   if(t.hp<I.hp0||t.limbHit>0||t.blindT>0||t.stagger>.4){idleWake(t);return null;}   // touché : il réagit aussitôt
   if(dist<I.trig){I.seeT=(I.seeT||0)-dt;if(I.seeT<=0){I.seeT=.2;if(titanSees(t)){idleWake(t);return null;}}}   // proche : seulement s'il te voit (champ de vision, rien entre vous)
+  else if(I.mode!=='wander'&&dist<30){   /* déviant immobile : si tu le fixes dans les yeux (et qu'il te voit), il finit par s'activer ; plus tu es près, plus ça va vite */
+    I.lkT=(I.lkT||0)-dt;if(I.lkT<=0){I.lkT=.15;I.seen=titanSees(t)&&stareAt(t);}
+    const need=.5+3.5*clamp((dist-I.trig)/Math.max(1,30-I.trig),0,1);
+    if(I.seen){I.stare=(I.stare||0)+dt;if(I.stare>=need){idleWake(t);return null;}}else I.stare=Math.max(0,(I.stare||0)-dt*1.5);}
+  else I.stare=Math.max(0,(I.stare||0)-dt*1.5);
   I.t-=dt;
   if(I.mode!=='wander'){if(I.mode==='still'&&I.t<=0){I.t=3+Math.random()*5;I.face+=(Math.random()-.5)*2.2;}if(I.pose==='spin')I.face=t.root.rotation.y+.6;if(I.mode==='lying')I.face=t.root.rotation.y;return {x:r.x+Math.sin(I.face)*6,z:r.z+Math.cos(I.face)*6,hold:true};}   // planté là, il regarde ailleurs de temps en temps
   if(I.t<=0||!I.goal||Math.hypot(I.goal.x-r.x,I.goal.z-r.z)<5){I.t=4+Math.random()*7;const a=Math.random()*TAU,d=18+Math.random()*45;I.goal={x:clamp(r.x+Math.sin(a)*d,-450,450),z:clamp(r.z+Math.cos(a)*d,-450,450)};}

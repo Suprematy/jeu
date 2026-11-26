@@ -41,3 +41,4 @@ Ouvre **Tab → Graphismes** :
 - Textures : [Poly Haven](https://polyhaven.com/) (CC0).
 - Modèle de chèvre : « goat simulator - goat » par [eduardosouzabarbosadasilva](https://sketchfab.com/eduardosouzabarbosadasilva), [Sketchfab](https://sketchfab.com/3d-models/goat-simulator-goat-73a159c2eb0345dc8ef29aced453d360), licence [CC-BY-4.0](http://creativecommons.org/licenses/by/4.0/).
 - Musiques de la petite maison : thème principal de *Goat Simulator* et *Portal Radio Tune*, propriété de leurs ayants droit respectifs.
+- Effets sonores : extraits de montages sonores existants, nettoyés pour le jeu ; propriété de leurs ayants droit respectifs.

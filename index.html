@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261127053031">
+<meta name="build" content="20261127082310">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -937,6 +937,12 @@ const skinNrm=(()=>{const N=512,hgt=new Float32Array(N*N);
 /* ================= WORLD ================= */
 let seed=20131;const rnd=()=>(seed=(seed*16807)%2147483647,(seed-1)/2147483646);const rr=(a,b)=>a+(b-a)*rnd();
 const colliders=[],treesC=[],hookables=[];
+/* grille des bâtiments : chaque test de collision ne regarde que les bâtiments de la case (16 m) au lieu des ~2 000 de la carte */
+const CGRID={n:-1,last:null,m:new Map()},CG_S=16,CG_M=8,CG_E=[];
+function cGrid(){const G=CGRID,n=colliders.length,l=n?colliders[n-1]:null;if(G.n===n&&G.last===l)return G.m;G.n=n;G.last=l;const m=G.m=new Map();
+  for(const b of colliders){const ix0=Math.floor((b.x0-CG_M)/CG_S),ix1=Math.floor((b.x1+CG_M)/CG_S),iz0=Math.floor((b.z0-CG_M)/CG_S),iz1=Math.floor((b.z1+CG_M)/CG_S);
+    for(let i=ix0;i<=ix1;i++)for(let j=iz0;j<=iz1;j++){const k=(i+32768)*65536+(j+32768);let a=m.get(k);if(!a)m.set(k,a=[]);a.push(b);}}return m;}
+function cNear(x,z,r){if(r>CG_M)return colliders;return cGrid().get((Math.floor(x/CG_S)+32768)*65536+(Math.floor(z/CG_S)+32768))||CG_E;}
 const lam=(c,o={})=>{const m=new THREE.MeshStandardMaterial({color:lin(c),roughness:o.r!==undefined?o.r:.85,metalness:o.m||0});if(o.map)m.map=o.map;if(o.side)m.side=o.side;if(o.emissive!==undefined)m.emissive=lin(o.emissive);return m;};
 const sMat=(c,o={})=>lam(c,{r:o.roughness!==undefined?o.roughness:.65,m:o.metalness,side:o.side,emissive:o.emissive,map:o.map});
 const outM=new THREE.MeshBasicMaterial({color:0x0c0907,side:THREE.BackSide}),outT=new THREE.MeshBasicMaterial({color:0x200c08,side:THREE.BackSide});
@@ -1518,7 +1524,7 @@ function buildPremiere(){
 const WN=new V3();let wallHit=false;   // normale du dernier mur touché par le joueur
 function collideBoxes(p,v,r,isPlayer){
   let landed=false,hit=false;
-  for(const b of colliders){
+  for(const b of cNear(p.x,p.z,r)){
     if(b.small&&!isPlayer)continue;
     if(p.x<b.x0-r||p.x>b.x1+r||p.z<b.z0-r||p.z>b.z1+r||p.y>=b.h||p.y<-5)continue;
     if(b.y0!==undefined&&p.y+1.7<b.y0)continue;   // on passe dessous (balcon, cheminée, tablier de pont)
@@ -1541,7 +1547,7 @@ function collideBoxes(p,v,r,isPlayer){
   return{landed,hit};
 }
 /* sol sous un titan : la rue, ou le dessus d'un bâtiment s'il est arrivé par au-dessus (titan lancé, chute) ; il en tombe en marchant au bord */
-function titanFloor(x,z,y){let f=groundY(x,z);if(y<f+.5)return f;for(const b of colliders){if(b.small||x<b.x0||x>b.x1||z<b.z0||z>b.z1)continue;let top=b.h;const ry=roofY(b,x,z);if(ry>top)top=ry;if(top<=y+.8&&top>f)f=top;}return f;}
+function titanFloor(x,z,y){let f=groundY(x,z);if(y<f+.5)return f;for(const b of cNear(x,z,0)){if(b.small||x<b.x0||x>b.x1||z<b.z0||z>b.z1)continue;let top=b.h;const ry=roofY(b,x,z);if(ry>top)top=ry;if(top<=y+.8&&top>f)f=top;}return f;}
 function roofY(b,x,z){const R=b.roof;if(!R)return -1;const ax=Math.abs(x-R.cx)/R.hw,az=Math.abs(z-R.cz)/R.hd;if(ax>1||az>1)return -1;const u=R.axis==='x'?az:R.axis==='z'?ax:Math.max(ax,az);return u>=1?-1:R.y0+R.rh*(1-u);}
 function collideTrees(p,v,r,isPlayer){
   let hit=false;
@@ -1550,7 +1556,7 @@ function collideTrees(p,v,r,isPlayer){
   return hit;
 }
 function pointBlocked(x,y,z){if(y<groundY(x,z)+.3)return true;for(const s of segWalls){if(y>=s.h)continue;const ex=s.bx-s.ax,ez=s.bz-s.az,u=clamp(((x-s.ax)*ex+(z-s.az)*ez)/(ex*ex+ez*ez),0,1);if(Math.hypot(x-s.ax-ex*u,z-s.az-ez*u)<s.t/2)return true;}
-  for(const b of colliders){if(x>b.x0&&x<b.x1&&z>b.z0&&z<b.z1&&y<b.h&&!(b.y0!==undefined&&y<b.y0))return true;if(b.roof&&y>=b.h&&y<b.h+b.roof.rh){const ry=roofY(b,x,z);if(ry>0&&y<ry)return true;}}return false;}
+  for(const b of cNear(x,z,0)){if(x>b.x0&&x<b.x1&&z>b.z0&&z<b.z1&&y<b.h&&!(b.y0!==undefined&&y<b.y0))return true;if(b.roof&&y>=b.h&&y<b.h+b.roof.rh){const ry=roofY(b,x,z);if(ry>0&&y<ry)return true;}}return false;}
 function solidAt(x,y,z){if(y>.3&&pointBlocked(x,y,z))return true;for(const t of treesC)if(y<t.h&&Math.hypot(x-t.x,z-t.z)<t.r+.05)return true;return false;}
 
 /* ================= PARTICLES ================= */
@@ -2820,11 +2826,19 @@ const GUARD_BOSS={croc:1,bete:1,agile:1,forgeron:1,assaillant:1};   /* boss qui 
    vitesse de course normale entre deux assauts, escalade à vitesse humaine. */
 const _crF=new V3();
 function crocTop(x,z){return titanFloor(x,z,1e4);}
-function crocLeap(t,x,z,yT,arc){const r=t.root.position,g=24;let top=Math.max(r.y,yT);
+const CROC_GRAV=40;   /* le Croc bondit plus sec que les autres titans : mêmes trajectoires, plus rapides */
+function crocLeap(t,x,z,yT,arc){const r=t.root.position,g=CROC_GRAV;let top=Math.max(r.y,yT);
   for(let i=1;i<10;i++){const f=i/10;top=Math.max(top,crocTop(lerp(r.x,x,f),lerp(r.z,z,f))+1.5);}   // passe par-dessus ce qui est entre lui et la cible
   top+=arc||2;if(top-r.y>32)return 0;
   const vy=Math.sqrt(2*g*Math.max(.5,top-r.y)),T=vy/g+Math.sqrt(2*Math.max(.3,top-yT)/g);
   t.vy=vy;t.cjv={x:(x-r.x)/T,z:(z-r.z)/T};t.root.rotation.y=Math.atan2(x-r.x,z-r.z);t.clb=null;sndK('titan_bond',()=>sfx.woosh(),{at:t.root.position,R:160});return T;}
+/* un toit où atterrir : le point du toit le plus proche de (cx,cz), à 2,5 m du bord, entre minD et maxD du Croc et dans la bonne tranche de hauteur */
+function crocRoof(t,cx,cz,minD,maxD,yMin,yMax){const r=t.root.position;let best=null,bs=-1e9;
+  for(const b of colliders){if(b.small||b.y0!==undefined||b.h<5)continue;const w=b.x1-b.x0,d=b.z1-b.z0;if(w<3.2||d<3.2)continue;const mx=Math.min(2.5,w/2-.3),mz=Math.min(2.5,d/2-.3);
+    const x=clamp(cx,b.x0+mx,b.x1-mx),z=clamp(cz,b.z0+mz,b.z1-mz),dr=Math.hypot(x-r.x,z-r.z);
+    if(dr<minD||dr>maxD)continue;const dp=Math.hypot(x-cx,z-cz);if(dp>30)continue;const top=crocTop(x,z);if(top<yMin||top>yMax||top-groundY(x,z)<4)continue;if(insideDepth(x,z)<6)continue;
+    const s=-dp*.09-Math.abs(dr-15)*.03+Math.random()*.5;if(s>bs){bs=s;best={x,z,y:top,up:true};}}
+  return best;}
 function crocSpot(t,minD,maxD,roof){const p=player.pos,r=t.root.position,away=Math.atan2(r.x-p.x,r.z-p.z);let best=null,bs=-1e9;
   for(let k=0;k<20;k++){const a=away+(Math.random()-.5)*2.8,d=minD+Math.random()*(maxD-minD),x=p.x+Math.sin(a)*d,z=p.z+Math.cos(a)*d;
     if(insideDepth(x,z)<6)continue;const g=groundY(x,z),top=crocTop(x,z),up=top-g>3;if(!up&&pointBlocked(x,g+1,z))continue;
@@ -2832,14 +2846,14 @@ function crocSpot(t,minD,maxD,roof){const p=player.pos,r=t.root.position,away=Ma
     const s=-Math.abs(dc-24)*.06+(up&&roof?3:0)-(ch>13?2:0)+Math.random();if(s>bs){bs=s;best={x,z,y:top,up};}}
   return best;}
 function crocAI(t,dt,dist){const r=t.root.position,p=player,pc=p.center,R=t.enraged?.65:1;
-  let c=t.cr;if(!c)c=t.cr={st:'orbit',T:1+Math.random(),dir:Math.random()<.5?-1:1,rad:16+Math.random()*6,bias:Math.random()<.2,ls:'walk',cd:0,cd2:0,cd3:0,rec:0};
-  c.cd-=dt;c.cd2-=dt;c.cd3-=dt;c.T-=dt;if(c.rec>0)c.rec-=dt;
+  let c=t.cr;if(!c)c=t.cr={st:'orbit',T:.6+Math.random()*.6,dir:Math.random()<.5?-1:1,rad:15+Math.random()*6,bias:Math.random()<.2,ls:'walk',cd:0,cd2:0,cd3:0,cd4:.5,rec:0};
+  c.cd-=dt;c.cd2-=dt;c.cd3-=dt;c.cd4-=dt;c.T-=dt;if(c.rec>0)c.rec-=dt;
   if(t.stagger>0||t.blindT>0||t.legLoss||t.fallT>0){t.clb=null;c.st='orbit';c.T=1.5;t.cGoal=null;c.ls=t.state;return;}
-  if((c.ls==='attack'||c.ls==='bite')&&t.state==='walk'){if(Math.random()<.35&&dist<30){c.st='orbit';c.T=.35;c.cd=0;}else{c.st='retreat';c.spot=null;c.T=2.5;}}   // il a frappé : il repart (ou enchaîne aussitôt)
+  if((c.ls==='attack'||c.ls==='bite')&&t.state==='walk'){if(Math.random()<.2&&dist<32){c.st='orbit';c.T=.25;c.cd=0;}else{c.st='retreat';c.spot=null;c.T=2;}}   // il a frappé : il remonte sur un toit (ou enchaîne aussitôt)
   c.ls=t.state;if(t.state!=='walk'){t.cGoal={x:pc.x,z:pc.z,hold:true};return;}
   const rot=t.root.rotation.y,fx=Math.sin(rot),fz=Math.cos(rot),air=t.vy!==0||!!t.cjv,high=r.y-groundY(r.x,r.z)>3;
   /* escalade : il monte le long du mur, puis se hisse sur le toit */
-  if(t.clb){const b=t.clb;t.atkCd=Math.max(t.atkCd,.3);t.vy=0;r.y+=(10+3*(1-R))*dt;t.root.rotation.y=lerp(rot,b.a,.3);t.cGoal={x:r.x+Math.sin(b.a)*6,z:r.z+Math.cos(b.a)*6,hold:true};
+  if(t.clb){const b=t.clb;t.atkCd=Math.max(t.atkCd,.3);t.vy=0;r.y+=(13+3*(1-R))*dt;t.root.rotation.y=lerp(rot,b.a,.3);t.cGoal={x:r.x+Math.sin(b.a)*6,z:r.z+Math.cos(b.a)*6,hold:true};
     if(r.y>=b.top-.1){t.clb=null;r.y=b.top+.35;t.vy=5.5;t.cjv={x:Math.sin(b.a)*6,z:Math.cos(b.a)*6};}return;}
   /* en vol */
   if(air){if(c.st==='strike'&&t.atkCd<=.6){const cy=r.y+t.H*.55;
@@ -2848,30 +2862,37 @@ function crocAI(t,dt,dist){const r=t.root.position,p=player,pc=p.center,R=t.enra
   if(c.st==='strike'){   // il retombe sans t'avoir eu
     if(dist<8.4*t.s&&!c.hit){c.hit=true;t.atkCd=0;if(Math.random()<.5)t.startBite();else t.startAttack();return;}
     c.st='land';c.rec=(.25+Math.random()*.2)/Math.max(.75,R);}
-  if(c.st==='land'){t.cGoal={x:pc.x,z:pc.z,hold:true};if(c.rec<=0){if(Math.random()<.35&&dist<30){c.st='orbit';c.T=.3;c.cd=0;}else{c.st='retreat';c.spot=null;c.T=2.5;}}return;}
-  if(c.st==='hop'){c.st='orbit';c.T=(.8+Math.random()*1.1)*R;c.rad=15+Math.random()*7;c.bias=Math.random()<.2;}
-  /* repli : se replacer plus loin, souvent en hauteur */
-  if(c.st==='retreat'){if(!c.spot)c.spot=crocSpot(t,18,30,Math.random()<.5);const s=c.spot;
-    if(!s){c.st='orbit';c.T=2;}
+  if(c.st==='land'){t.cGoal={x:pc.x,z:pc.z,hold:true};if(c.rec<=0){if(Math.random()<.2&&dist<32){c.st='orbit';c.T=.25;c.cd=0;}else{c.st='retreat';c.spot=null;c.T=2;}}return;}
+  if(c.st==='hop'){c.st='orbit';c.T=(c.nh>0?.15+Math.random()*.3:.3+Math.random()*.4)*R;c.rad=14+Math.random()*7;c.bias=Math.random()<.2;c.cd4=(.55+Math.random()*.45)*R;}
+  /* repli : d'abord un toit (un bond précis au milieu du toit), sinon un coin plus loin */
+  if(c.st==='retreat'){if(!c.spot){const aw=Math.atan2(r.x-p.pos.x,r.z-p.pos.z)+(Math.random()-.5)*1.6,dd=16+Math.random()*8;c.spot=crocRoof(t,p.pos.x+Math.sin(aw)*dd,p.pos.z+Math.cos(aw)*dd,6,32,groundY(r.x,r.z)+4,r.y+26)||crocSpot(t,14,26,Math.random()<.85);}const s=c.spot;
+    if(!s){c.st='orbit';c.T=1.2;}
     else{const dc=Math.hypot(s.x-r.x,s.z-r.z);
-      if(dc<34&&s.y-r.y<13&&crocLeap(t,s.x,s.z,s.y,1.5+dc*.06)){c.st='hop';t.cGoal={x:s.x,z:s.z,hold:true};return;}
-      t.cGoal={x:s.x,z:s.z,hold:false,sp:1.6};if(dc<4||c.T<=0){c.st='orbit';c.T=(.8+Math.random())*R;c.rad=15+Math.random()*7;}}}
+      if(dc<36&&s.y-r.y<29&&crocLeap(t,s.x,s.z,s.y,.8+dc*.03)){c.st='hop';t.cGoal={x:s.x,z:s.z,hold:true};return;}
+      t.cGoal={x:s.x,z:s.z,hold:false,sp:2};if(dc<4||c.T<=0){c.st='orbit';c.T=(.5+Math.random()*.7)*R;c.rad=14+Math.random()*7;}}}
   /* rôde : tourne autour du soldat en glissant vers son dos */
   if(c.st==='orbit'){const cf=camera.getWorldDirection(_crF),tx=r.x-p.pos.x,tz=r.z-p.pos.z,l=Math.hypot(tx,tz)||1,cl=Math.hypot(cf.x,cf.z)||1;
     const seen=(cf.x*tx+cf.z*tz)/l/cl>.35,a=Math.atan2(tx,tz),df=wrapA(Math.atan2(-cf.x,-cf.z)-a);if(Math.abs(df)>.45)c.dir=Math.sign(df);
-    if(dist>60)t.cGoal={x:pc.x,z:pc.z,hold:false,sp:1.5};
-    else{const ga=a+c.dir*.6;t.cGoal={x:p.pos.x+Math.sin(ga)*c.rad,z:p.pos.z+Math.cos(ga)*c.rad,hold:false,sp:Math.abs(df)<.45?1:1.35};}
-    const above=r.y-p.pos.y>4,hy=pc.y-r.y,can=dist<48&&dist>3&&hy<24&&c.cd<=0&&!grab;
-    if(can&&(c.T<=0||(!seen&&dist<34)||(above&&dist<46&&c.T<1.6))){   // l'assaut : un bond vers où tu vas être (d'un toit, il plonge sur toi)
-      const tp=clamp(dist/24,.45,1.1),x=pc.x+p.vel.x*tp*.75,z=pc.z+p.vel.z*tp*.75,gy=titanFloor(x,z,pc.y),yT=Math.max(gy,pc.y-t.H*.55);
-      if(crocLeap(t,x,z,yT,.5+dist*.022)){c.st='strike';c.hit=false;c.cd=.6;t.atkCd=Math.min(t.atkCd,.2);t.roarT=0;return;}c.T=1;}}
+    const ga=a+c.dir*.6,gx=p.pos.x+Math.sin(ga)*c.rad,gz=p.pos.z+Math.cos(ga)*c.rad;
+    if(dist>60)t.cGoal={x:pc.x,z:pc.z,hold:false,sp:1.9};
+    else if(high&&dist<44)t.cGoal={x:pc.x,z:pc.z,hold:true};   /* sur un toit : il reste perché et te guette, il ne descend pas en marchant */
+    else t.cGoal={x:gx,z:gz,hold:false,sp:Math.abs(df)<.45?1.3:1.7};
+    const hy=pc.y-r.y,can=dist<52&&dist>3&&hy<26&&c.cd<=0&&!grab,nh=c.nh||0;
+    /* perché, il saute de toit en toit (0 à 2 fois) avant de plonger sur toi ; au sol, il cherche d'abord à remonter */
+    const go=high?(nh>=(c.nhN||0)&&c.T<=0)||(!seen&&dist<40)||(dist<28&&c.T<=0)||c.T<-1.5:(c.T<=0&&dist<40&&c.cd4>0)||(!seen&&dist<16)||c.T<-3;
+    if(can&&go){   // l'assaut : un bond vers où tu vas être (d'un toit, il plonge sur toi)
+      const tp=clamp(dist/26,.4,1),x=pc.x+p.vel.x*tp*.75,z=pc.z+p.vel.z*tp*.75,gy=titanFloor(x,z,pc.y),yT=Math.max(gy,pc.y-t.H*.55);
+      if(crocLeap(t,x,z,yT,.4+dist*.016)){t.cGoal={x,z,hold:true};c.st='strike';c.hit=false;c.cd=.4;c.nh=0;c.nhN=Math.random()<.45?0:Math.random()<.75?1:2;t.atkCd=Math.min(t.atkCd,.15);t.roarT=0;return;}c.T=.6;}
+    /* de toit en toit : il bondit avec précision au milieu d'un autre toit, autour de toi ; au sol, il saute sur le toit le plus proche */
+    if(c.cd4<=0&&!air&&!(high&&nh>=(c.nhN||0)&&dist<44)){c.cd4=high?(.35+Math.random()*.3)*R:.3;const s=high?crocRoof(t,gx,gz,7,32,r.y-9,r.y+7):crocRoof(t,r.x+(gx-r.x)*.4,r.z+(gz-r.z)*.4,4,26,groundY(r.x,r.z)+4,r.y+29);
+      if(s&&crocLeap(t,s.x,s.z,s.y,.9+Math.hypot(s.x-r.x,s.z-r.z)*.035)){if(high)c.nh=nh+1;c.st='hop';t.cGoal={x:s.x,z:s.z,hold:true};return;}}}
   /* au bord d'un toit : saute sur le toit suivant s'il y en a un, sinon se laisse tomber */
   if(high&&c.cd2<=0&&!t.cGoal.hold){const ax=r.x+fx*3,az=r.z+fz*3;
     if(titanFloor(ax,az,r.y)<r.y-3){c.cd2=.7;for(let d=6;d<=28;d+=2){const x=r.x+fx*d,z=r.z+fz*d,top=crocTop(x,z);
         if(top>groundY(x,z)+3&&top>r.y-7&&top<r.y+5){const lx=r.x+fx*(d+3),lz=r.z+fz*(d+3);if(crocLeap(t,lx,lz,crocTop(lx,lz),1.5+d*.05)){if(c.st==='retreat')c.st='hop';return;}break;}}}}
   /* bloqué par un bâtiment : il l'escalade s'il veut prendre de la hauteur */
   if(c.cd3<=0&&!t.cGoal.hold){const pr=1.7*t.s+1.4,ax=r.x+fx*pr,az=r.z+fz*pr;
-    for(const b of colliders){if(b.small||b.y0!==undefined||ax<b.x0||ax>b.x1||az<b.z0||az>b.z1)continue;const hh=b.h-r.y;if(hh<2.5||hh>32)continue;c.cd3=1;
+    for(const b of cNear(ax,az,0)){if(b.small||b.y0!==undefined||ax<b.x0||ax>b.x1||az<b.z0||az>b.z1)continue;const hh=b.h-r.y;if(hh<2.5||hh>32)continue;c.cd3=1;
       if((c.st==='retreat'&&c.spot&&c.spot.up&&c.spot.y-r.y>12)||pc.y>r.y+8||c.bias||Math.random()<.1){   /* il grimpe seulement quand ça sert (toit hors de portée d'un bond, ou toi bien plus haut) */const a=r.x<b.x0?Math.PI/2:r.x>b.x1?-Math.PI/2:r.z<b.z0?0:Math.PI;t.clb={top:b.h,a};t.vy=0;t.cjv=null;}break;}}}
 /* poses : escalade (mains et pieds qui alternent), vol (griffes en avant, jambes repliées), réception (accroupi) */
 function crocPose(t,dt){const k=1-Math.exp(-14*dt),c=t.cr,tm=performance.now()/1000;
@@ -3550,7 +3571,7 @@ class Titan{
     const pc=player.center,dx=pc.x-r.position.x,dz=pc.z-r.position.z,dist=Math.hypot(dx,dz),ab=this.type==='abnormal';
     this.atkCd-=dt;this.jumpCd-=dt;this.armOff[0]-=dt;this.armOff[1]-=dt;
     const tgy=titanFloor(r.position.x,r.position.z,r.position.y);if(!this.clb&&this.vy<0&&r.position.y<=tgy+.05){r.position.y=tgy;this.vy=0;this.cjv=null;}   /* posé à 5 cm près : il a atterri (sinon il restait « en vol » pour toujours) */
-    if(!this.clb&&(r.position.y>tgy+.05||this.vy>0)){this.vy-=24*dt;r.position.y+=this.vy*dt;
+    if(!this.clb&&(r.position.y>tgy+.05||this.vy>0)){this.vy-=(this.type==='croc'?CROC_GRAV:24)*dt;r.position.y+=this.vy*dt;
       if(this.cjv){r.position.x+=this.cjv.x*dt;r.position.z+=this.cjv.z*dt;}   /* bond du Croc : vitesse horizontale balistique */
       if(this.thrV){r.position.x+=this.thrV.x*dt;r.position.z+=this.thrV.z*dt;this.tilt.rotation.x+=dt*7;   /* titan lancé par le Cuirassé : il tourne sur lui-même en volant */
         if(!this.thrHit&&r.position.distanceTo(player.pos)<3.2*this.s+1.5&&player.inv<=0){this.thrHit=true;hurtPlayer(this,1.6);feed('Percuté par le titan lancé !','');}}
@@ -8374,12 +8395,14 @@ const SND_ACT=[
  ['trampoline','Trampoline','monde','Un rebond sur le trampoline.',[['synth',1]],0,'boing']];
 const SND_A={};for(const a of SND_ACT)SND_A[a[0]]=a;
 const SND_CATDEF={equip:1,lames:1,armes:1,joueur:1,titans:.85,boss:1,destr:.9,chevres:.9,monde:1,vent:1};
+/* réglages par défaut du mode réaliste : ceux choisis par l'auteur du jeu dans ce menu (« Tout réinitialiser » y revient) */
+const SND_DEF={"a":{"grappin_tir":{"L":[["g:tirs",0.7],["none",0.6],["none",0.6]],"vr":0,"v":0.25},"grappin_ancre":{"L":[["odm_wire",0.05],["odm_fire",0.2],["sl_clink",0.45]],"vr":1,"v":0.55},"grappin_rate":{"L":[["odm_wire",0.1],["c:attach",0.1],["none",0.6]],"v":0.5},"cable_retour":{"L":[["u_retract_var",0.1],["an_elan1",0.05],["odm_eclat_lame",0.1]],"vr":1,"v":1},"grappin_range":{"L":[["c:attach",1],["sl_clink",0.05],["none",0.6]],"v":0.65},"cable":{"L":[["u_vol",1],["none",0.6],["none",0.6]],"v":0.5},"vent":{"v":0.3,"L":[["synth",0.8],["p2_vent_vol",0.05],["none",0.6]]},"bonbonne":{"L":[["c:steam",0.5],["c:gasHiss",0.5],["none",0.6]]},"caisse":{"L":[["synth",1],["sl_clink",0.25],["c:swap",0.6]]},"atterrissage":{"L":[["synth",0.7],["odm_choc_toit",0.15],["odm_tumble",0.4]],"v":0.6},"roulade":{"L":[["synth",0.8],["odm_choc_toit",0.1],["odm_tumble",0.3]],"v":0.5},"ruee":{"v":0.5,"L":[["odm_gasburst",0.55],["odm_brake",0.4],["c:gasHiss",0.6]]},"lame_air":{"vr":1,"L":[["c:slashWoosh",0.15],["p2_coupe_seche",0.35],["sl_hit4",0.05]]},"lame_coupe":{"vr":1,"L":[["sl_hit1",0.4],["p2_coupe_seche",0.25],["g:coupes",0.25]]},"tendon":{"L":[["g:coupes",0.15],["g:coupes_bois",0.45],["sl_hit3",0.6]]},"yeux":{"v":0.35,"L":[["sl_hit4",0.8],["sl_clink",0.2],["sl_x",0.4]]},"nuque_coupe":{"L":[["sl_big",0.65],["g:coupes_bois",0.65],["c:kill",0.55]]},"coupe_charge":{"v":0.5,"L":[["synth",1],["odm_draw",0.15],["none",0.6]]},"coupe_pleine":{"v":0.8},"coupe_chargee":{"L":[["sl_hit3",0.7],["g:souffles",0.15],["sl_heavy",0.5]]},"tourbillon":{"L":[["sl_hit3",0.8],["p2_swish3",0.2],["p2_coupe_bois1",0.8]]},"lames_rangees":{"L":[["odm_draw",0.15],["c:latch",0.55],["none",0.6]]},"lames_sortie":{"L":[["sl_ring",0.15],["odm_draw",0.15],["none",0.6]],"vr":0},"lames_usees":{"v":0.7,"L":[["synth",0.9],["sl_clink",0.3],["none",0.6]]},"lames_remplacees":{"L":[["sl_ring",0.1],["sl_clink",0.55],["none",0.6]]},"evasion":{"L":[["sl_big",0.8],["odm_gasburst",0.5],["sl_whoosh2",0.3]]},"lance_tir":{"L":[["synth",1],["odm_gasburst",0.1],["none",0.6]]},"lance_plantee":{"L":[["synth",0.6],["p2_tok4",0.35],["p2_coupe_seche",0.2]]},"lance_cable":{"L":[["synth",1],["p2_jet1",0.05],["none",0.6]]},"lance_declenche":{"L":[["st1",0.4],["c:boom",0.4],["odm_crash",0.6]],"v":0},"pistolet":{"L":[["synth",1],["c:attach",0.2],["c:hit",0.35]]},"pistolet_impact":{"v":0},"pistolet_recharge":{"L":[["synth",1],["c:creak",0.6],["none",0.6]],"v":1.1},"touche":{"v":1,"L":[["c:metal",1],["none",0.6],["none",0.6]]},"touche_fatale":{"v":0.7,"L":[["c:kill",0.75],["none",0.6],["none",0.6]]},"blessure":{"L":[["synth",0.8],["none",0.45],["none",0.6]]},"titan_pas_lourd":{"L":[["g:pas_lourds",1],["stBig2",0.6],["none",0.6]]},"morsure":{"L":[["c:hurt",1],["none",0.6],["none",0.6]]},"morsure_alerte":{"v":0.05,"L":[["synth",0.45],["odm_saisie",0.3],["none",0.6]]},"titan_bond":{"L":[["synth",0.6],["c:stompL",0.5],["p2_tok1",0.6]]},"coup_pied":{"L":[["synth",0.7],["odm_crash",0.25],["st1",0.4]]},"coup_pied_impact":{"L":[["synth",0.6],["g:coups",0.8],["st1",0.6]]},"jet":{"vr":0},"rocher_impact":{"L":[["g:impacts",0.7],["odm_crash",0.15],["none",0.6]]},"titan_atterrit":{"L":[["g:impacts",0.8],["odm_tumble",0.25],["odm_choc_toit",0.3]],"v":0.7},"titan_chute":{"v":0.45,"L":[["g:impacts",0.9],["odm_debris",0.05],["none",0.6]]},"titan_tombe":{"L":[["g:pas_lourds",1],["odm_crash",0.1],["none",0.6]]},"membre_tombe":{"L":[["g:chocs",0.05],["c:stompL",0.3],["st2",0.05]]},"boss_cri":{"v":1,"L":[["synth",1],["g:gemissements",0.05],["none",0.6]]},"boss_grogne":{"v":0},"cristal":{"L":[["synth",0.9],["sl_ring",0.05],["p2_tok4",0.05]]},"vapeur":{"L":[["synth",0.9],["p2_gaz_vol",0.3],["c:steam",0.6]]},"vapeur_alerte":{"L":[["synth",0.1],["c:steam",0.6],["p2_gaz_vol",0.1]]},"pietinement_alerte":{"L":[["synth",0.95],["g:mouvements",0.1],["p2_tok3",0.05]]},"frappe_alerte":{"L":[["synth",0.8],["none",0.6],["none",0.6]]},"cri_coordonnee":{"L":[["synth",0.8],["c:trigger",0.5],["none",0.6]]},"salve_os":{"L":[["synth",1],["g:souffles",0.4],["odm_crash",0.15]]},"renforts":{"L":[["synth",0.7],["g:impacts",0.25],["sl_ring",0]],"v":0.6},"explosion":{"L":[["odm_crash",0.6],["c:slam",0.6],["st1",0.2]]},"frappe_sol":{"L":[["odm_crash",0.15],["g:pas_lourds",0.8],["odm_choc_toit",0.2]]},"pietinement":{"L":[["odm_crash",0.1],["g:pas_lourds",0.6],["g:coups",0.15]]},"onde_choc":{"L":[["synth",0.6],["odm_crash",0.25],["g:impacts",0.15]]},"explosion_geante":{"v":0.7},"chevre_prairie":{"v":0.5,"L":[["g:beles_doux",0.7],["none",0.6],["none",0.6]]},"tonnerre":{"L":[["synth",1],["odm_crash",0],["none",0.6]]},"tuto_ok":{"L":[["synth",1],["c:level",0],["none",0.6]]},"interrupteur":{"L":[["synth",1],["c:level",0.6],["none",0.6]]},"gaz":{"L":[["odm_gas",1],["c:gasHiss",0.6],["none",0.6]],"v":0.6},"mur":{"L":[["synth",0.8],["p2_tok4",0.05],["none",0.6]],"v":0.75},"coup_bloque":{"L":[["sl_clink",0.55],["g:chocs",0.5],["none",0.6]]},"figure":{"v":0.85}},"c":{"destr":1,"titans":0.85,"equip":1.25,"lames":0.8,"armes":1.1,"monde":1.1,"joueur":1.1,"vent":1.1,"boss":1.1}};
 const odmOn=()=>!!save.gfx&&save.gfx.sndStyle==='real';
 function sndMap(){const g=save.gfx||(save.gfx={});if(!g.sndMap)g.sndMap={a:{},c:{}};if(!g.sndMap.a)g.sndMap.a={};if(!g.sndMap.c)g.sndMap.c={};return g.sndMap;}
 /* réglage d'une action : volume, 3 sons [son, volume], variations (sons tirés au hasard et légère variation de hauteur) */
-function sndCfg(k){const d=SND_A[k];if(!d)return null;const m=sndMap().a[k]||{};let L;if(m.L)L=m.L.map(x=>x.slice());else{L=d[4].map(x=>x.slice());if(m.A)L[0]=m.A.slice();if(m.B)L[1]=m.B.slice();}
-  while(L.length<3)L.push(['none',.6]);return{k,cat:d[2],loop:!!d[5],v:m.v!==undefined?m.v:1,L:L.slice(0,3),vr:m.vr!==undefined?!!m.vr:true};}
-const sndCat=c=>{const m=sndMap().c;return m[c]!==undefined?m[c]:(SND_CATDEF[c]!==undefined?SND_CATDEF[c]:1);};
+function sndCfg(k){const d=SND_A[k];if(!d)return null;const m=sndMap().a[k]||{},D=SND_DEF.a[k]||{};let L;if(m.L)L=m.L.map(x=>x.slice());else{L=(D.L||d[4]).map(x=>x.slice());if(m.A)L[0]=m.A.slice();if(m.B)L[1]=m.B.slice();}
+  while(L.length<3)L.push(['none',.6]);return{k,cat:d[2],loop:!!d[5],v:m.v!==undefined?m.v:D.v!==undefined?D.v:1,L:L.slice(0,3),vr:m.vr!==undefined?!!m.vr:D.vr!==undefined?!!D.vr:true};}
+const sndCat=c=>{const m=sndMap().c;return m[c]!==undefined?m[c]:SND_DEF.c[c]!==undefined?SND_DEF.c[c]:(SND_CATDEF[c]!==undefined?SND_CATDEF[c]:1);};
 const sndNeed=()=>odmOn()||GT.on||EG.in;
 function sndLoad(){if(SND.ld||!sfx.ctx)return;SND.ld=true;const x=new XMLHttpRequest();x.open('GET','son/snd_lib.wav');x.responseType='arraybuffer';x.onload=()=>{try{sfx.ctx.decodeAudioData(x.response,b=>{SND.buf=b;sndApply();},()=>{});}catch(e){}};x.send();}
 function sndPick(id,vr=true){if(!id||id==='none'||id==='synth'||id==='auto'||id.startsWith('c:'))return null;if(id.startsWith('g:')){const L=SND.groups[id.slice(2)];if(!L||!L.length)return null;if(!vr)return L[0];

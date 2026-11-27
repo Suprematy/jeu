@@ -9,7 +9,7 @@
   document.addEventListener('DOMContentLoaded',()=>walk(document.documentElement));})();
 </script>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="build" content="20261126040630">
+<meta name="build" content="20261127011848">
 <script>/* site en ligne : si une version plus récente est publiée, la page se recharge une fois (le navigateur gardait l'ancienne jusqu'à 10 min) */
 (function(){try{if(!/github\.io$/.test(location.hostname))return;const cur=(document.querySelector('meta[name="build"]')||{}).content;
   fetch(location.pathname+'?b='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/<meta name="build" content="([^"]+)"/);
@@ -2832,14 +2832,14 @@ function crocSpot(t,minD,maxD,roof){const p=player.pos,r=t.root.position,away=Ma
     const s=-Math.abs(dc-24)*.06+(up&&roof?3:0)-(ch>13?2:0)+Math.random();if(s>bs){bs=s;best={x,z,y:top,up};}}
   return best;}
 function crocAI(t,dt,dist){const r=t.root.position,p=player,pc=p.center,R=t.enraged?.65:1;
-  let c=t.cr;if(!c)c=t.cr={st:'orbit',T:2+Math.random()*2,dir:Math.random()<.5?-1:1,rad:20+Math.random()*8,bias:Math.random()<.55,ls:'walk',cd:0,cd2:0,cd3:0,rec:0};
+  let c=t.cr;if(!c)c=t.cr={st:'orbit',T:1+Math.random(),dir:Math.random()<.5?-1:1,rad:16+Math.random()*6,bias:Math.random()<.2,ls:'walk',cd:0,cd2:0,cd3:0,rec:0};
   c.cd-=dt;c.cd2-=dt;c.cd3-=dt;c.T-=dt;if(c.rec>0)c.rec-=dt;
   if(t.stagger>0||t.blindT>0||t.legLoss||t.fallT>0){t.clb=null;c.st='orbit';c.T=1.5;t.cGoal=null;c.ls=t.state;return;}
-  if((c.ls==='attack'||c.ls==='bite')&&t.state==='walk'){c.st='retreat';c.spot=null;c.T=4;}   // il a frappé : il repart
+  if((c.ls==='attack'||c.ls==='bite')&&t.state==='walk'){if(Math.random()<.35&&dist<30){c.st='orbit';c.T=.35;c.cd=0;}else{c.st='retreat';c.spot=null;c.T=2.5;}}   // il a frappé : il repart (ou enchaîne aussitôt)
   c.ls=t.state;if(t.state!=='walk'){t.cGoal={x:pc.x,z:pc.z,hold:true};return;}
   const rot=t.root.rotation.y,fx=Math.sin(rot),fz=Math.cos(rot),air=t.vy!==0||!!t.cjv,high=r.y-groundY(r.x,r.z)>3;
   /* escalade : il monte le long du mur, puis se hisse sur le toit */
-  if(t.clb){const b=t.clb;t.atkCd=Math.max(t.atkCd,.3);t.vy=0;r.y+=(6.2+2.5*(1-R))*dt;t.root.rotation.y=lerp(rot,b.a,.3);t.cGoal={x:r.x+Math.sin(b.a)*6,z:r.z+Math.cos(b.a)*6,hold:true};
+  if(t.clb){const b=t.clb;t.atkCd=Math.max(t.atkCd,.3);t.vy=0;r.y+=(10+3*(1-R))*dt;t.root.rotation.y=lerp(rot,b.a,.3);t.cGoal={x:r.x+Math.sin(b.a)*6,z:r.z+Math.cos(b.a)*6,hold:true};
     if(r.y>=b.top-.1){t.clb=null;r.y=b.top+.35;t.vy=5.5;t.cjv={x:Math.sin(b.a)*6,z:Math.cos(b.a)*6};}return;}
   /* en vol */
   if(air){if(c.st==='strike'&&t.atkCd<=.6){const cy=r.y+t.H*.55;
@@ -2847,24 +2847,24 @@ function crocAI(t,dt,dist){const r=t.root.position,p=player,pc=p.center,R=t.enra
     t.cGoal={x:r.x+(t.cjv?t.cjv.x:fx),z:r.z+(t.cjv?t.cjv.z:fz),hold:true};return;}
   if(c.st==='strike'){   // il retombe sans t'avoir eu
     if(dist<8.4*t.s&&!c.hit){c.hit=true;t.atkCd=0;if(Math.random()<.5)t.startBite();else t.startAttack();return;}
-    c.st='land';c.rec=(.45+Math.random()*.35)/Math.max(.75,R);}
-  if(c.st==='land'){t.cGoal={x:pc.x,z:pc.z,hold:true};if(c.rec<=0){c.st='retreat';c.spot=null;c.T=4;}return;}
-  if(c.st==='hop'){c.st='orbit';c.T=(1.8+Math.random()*2.2)*R;c.rad=18+Math.random()*10;c.bias=Math.random()<.55;}
+    c.st='land';c.rec=(.25+Math.random()*.2)/Math.max(.75,R);}
+  if(c.st==='land'){t.cGoal={x:pc.x,z:pc.z,hold:true};if(c.rec<=0){if(Math.random()<.35&&dist<30){c.st='orbit';c.T=.3;c.cd=0;}else{c.st='retreat';c.spot=null;c.T=2.5;}}return;}
+  if(c.st==='hop'){c.st='orbit';c.T=(.8+Math.random()*1.1)*R;c.rad=15+Math.random()*7;c.bias=Math.random()<.2;}
   /* repli : se replacer plus loin, souvent en hauteur */
-  if(c.st==='retreat'){if(!c.spot)c.spot=crocSpot(t,26,40,Math.random()<.65);const s=c.spot;
+  if(c.st==='retreat'){if(!c.spot)c.spot=crocSpot(t,18,30,Math.random()<.5);const s=c.spot;
     if(!s){c.st='orbit';c.T=2;}
     else{const dc=Math.hypot(s.x-r.x,s.z-r.z);
       if(dc<34&&s.y-r.y<13&&crocLeap(t,s.x,s.z,s.y,1.5+dc*.06)){c.st='hop';t.cGoal={x:s.x,z:s.z,hold:true};return;}
-      t.cGoal={x:s.x,z:s.z,hold:false,sp:1.3};if(dc<4||c.T<=0){c.st='orbit';c.T=(1.8+Math.random()*2)*R;c.rad=18+Math.random()*10;}}}
+      t.cGoal={x:s.x,z:s.z,hold:false,sp:1.6};if(dc<4||c.T<=0){c.st='orbit';c.T=(.8+Math.random())*R;c.rad=15+Math.random()*7;}}}
   /* rôde : tourne autour du soldat en glissant vers son dos */
   if(c.st==='orbit'){const cf=camera.getWorldDirection(_crF),tx=r.x-p.pos.x,tz=r.z-p.pos.z,l=Math.hypot(tx,tz)||1,cl=Math.hypot(cf.x,cf.z)||1;
     const seen=(cf.x*tx+cf.z*tz)/l/cl>.35,a=Math.atan2(tx,tz),df=wrapA(Math.atan2(-cf.x,-cf.z)-a);if(Math.abs(df)>.45)c.dir=Math.sign(df);
-    if(dist>60)t.cGoal={x:pc.x,z:pc.z,hold:false,sp:1.15};
-    else{const ga=a+c.dir*.6;t.cGoal={x:p.pos.x+Math.sin(ga)*c.rad,z:p.pos.z+Math.cos(ga)*c.rad,hold:false,sp:Math.abs(df)<.45?.7:1.05};}
-    const above=r.y-p.pos.y>4,hy=pc.y-r.y,can=dist<38&&dist>4&&hy<20&&c.cd<=0&&!grab;
-    if(can&&((c.T<=0&&(!seen||above))||c.T<-3.5*R||(!seen&&c.T<1.4&&dist<26))){   // l'assaut : un bond vers où tu vas être
+    if(dist>60)t.cGoal={x:pc.x,z:pc.z,hold:false,sp:1.5};
+    else{const ga=a+c.dir*.6;t.cGoal={x:p.pos.x+Math.sin(ga)*c.rad,z:p.pos.z+Math.cos(ga)*c.rad,hold:false,sp:Math.abs(df)<.45?1:1.35};}
+    const above=r.y-p.pos.y>4,hy=pc.y-r.y,can=dist<48&&dist>3&&hy<24&&c.cd<=0&&!grab;
+    if(can&&(c.T<=0||(!seen&&dist<34)||(above&&dist<46&&c.T<1.6))){   // l'assaut : un bond vers où tu vas être (d'un toit, il plonge sur toi)
       const tp=clamp(dist/24,.45,1.1),x=pc.x+p.vel.x*tp*.75,z=pc.z+p.vel.z*tp*.75,gy=titanFloor(x,z,pc.y),yT=Math.max(gy,pc.y-t.H*.55);
-      if(crocLeap(t,x,z,yT,1+dist*.04)){c.st='strike';c.hit=false;c.cd=1.2;t.atkCd=Math.min(t.atkCd,.2);t.roarT=0;return;}c.T=1;}}
+      if(crocLeap(t,x,z,yT,.5+dist*.022)){c.st='strike';c.hit=false;c.cd=.6;t.atkCd=Math.min(t.atkCd,.2);t.roarT=0;return;}c.T=1;}}
   /* au bord d'un toit : saute sur le toit suivant s'il y en a un, sinon se laisse tomber */
   if(high&&c.cd2<=0&&!t.cGoal.hold){const ax=r.x+fx*3,az=r.z+fz*3;
     if(titanFloor(ax,az,r.y)<r.y-3){c.cd2=.7;for(let d=6;d<=28;d+=2){const x=r.x+fx*d,z=r.z+fz*d,top=crocTop(x,z);
@@ -2872,7 +2872,7 @@ function crocAI(t,dt,dist){const r=t.root.position,p=player,pc=p.center,R=t.enra
   /* bloqué par un bâtiment : il l'escalade s'il veut prendre de la hauteur */
   if(c.cd3<=0&&!t.cGoal.hold){const pr=1.7*t.s+1.4,ax=r.x+fx*pr,az=r.z+fz*pr;
     for(const b of colliders){if(b.small||b.y0!==undefined||ax<b.x0||ax>b.x1||az<b.z0||az>b.z1)continue;const hh=b.h-r.y;if(hh<2.5||hh>32)continue;c.cd3=1;
-      if((c.st==='retreat'&&c.spot&&c.spot.up)||pc.y>r.y+5||c.bias||Math.random()<.35){const a=r.x<b.x0?Math.PI/2:r.x>b.x1?-Math.PI/2:r.z<b.z0?0:Math.PI;t.clb={top:b.h,a};t.vy=0;t.cjv=null;}break;}}}
+      if((c.st==='retreat'&&c.spot&&c.spot.up&&c.spot.y-r.y>12)||pc.y>r.y+8||c.bias||Math.random()<.1){   /* il grimpe seulement quand ça sert (toit hors de portée d'un bond, ou toi bien plus haut) */const a=r.x<b.x0?Math.PI/2:r.x>b.x1?-Math.PI/2:r.z<b.z0?0:Math.PI;t.clb={top:b.h,a};t.vy=0;t.cjv=null;}break;}}}
 /* poses : escalade (mains et pieds qui alternent), vol (griffes en avant, jambes repliées), réception (accroupi) */
 function crocPose(t,dt){const k=1-Math.exp(-14*dt),c=t.cr,tm=performance.now()/1000;
   if(t.clb){const ph=tm*6.5;for(let i=0;i<2;i++){const sd=i?1:-1,w=Math.sin(ph+i*Math.PI);
@@ -3536,7 +3536,7 @@ class Titan{
       for(const a of this.arms)a.rotation.x=lerp(a.rotation.x,-2.6,.03);
       updWounds(this,dt);
       if(this.deadT<1.3&&!this.silent&&Math.random()<dt*28){const np=this.nape.getWorldPosition(new V3());spray(np,tD.set((Math.random()-.5)*.7,1,(Math.random()-.5)*.7).normalize().clone(),4,9+Math.random()*9,.3,Math.min(1.4,.35+this.s*.2));}
-      if(this.deadT>1.4&&!this.thud){this.thud=true;sfx.stomp();if(r.position.distanceTo(player.pos)<60)shake=Math.max(shake,.6);steamBurst(r.position,10,this.s*1.5);}
+      if(this.deadT>1.4&&!this.thud){this.thud=true;if(!sndAt('titan_tombe',r.position,{R:220}))sfx.stomp();if(r.position.distanceTo(player.pos)<60)shake=Math.max(shake,.6);steamBurst(r.position,10,this.s*1.5);}
       if(this.deadT>2)r.position.y-=dt*.35*this.s;
       if(Math.random()<dt*30){const p=this.parts[Math.floor(Math.random()*this.parts.length)].getWorldPosition(tC);emit(p,tD.set((Math.random()-.5)*2,3+Math.random()*3,(Math.random()-.5)*2).clone(),3,2*this.s,6*this.s,0xf4f4f2,.5,-1,.5);}
       this.extremities(dt);this.lookEyes(dt);
@@ -3614,7 +3614,7 @@ class Titan{
           const sp=this.speed*fw*(ab&&dist>40?1.25:1)*(this.legLoss===1?.35:this.legLoss===2?.14:1)*(1-.1*((this.sev.arm[0]>0||(this.armT&&this.armT[0]>0)?1:0)+(this.sev.arm[1]>0||(this.armT&&this.armT[1]>0)?1:0))*(this.legLoss?2.2:1))*(this.fallT>0?0:1)*(this.prepT>0||this.recoverT>0||this.hopT>0?0:1)*armySpeed(this)*(this.blindT>0?.45:1);
           r.position.x+=Math.sin(r.rotation.y)*sp*dt;r.position.z+=Math.cos(r.rotation.y)*sp*dt;
           this.phase+=dt*sp/(this.s*1.5)*(this.abCad||1);moving=sp>.05;const sg=Math.sin(this.phase)>0;
-          if(sg!==this.lastSg){this.lastSg=sg;if(moving&&dist<140){sfx.stomp(clamp(1-dist/140,0,1)*.22*Math.min(2.5,this.s));
+          if(sg!==this.lastSg){this.lastSg=sg;if(moving&&dist<170){if(!sndStep(this,dist)&&dist<140)sfx.stomp(clamp(1-dist/140,0,1)*.22*Math.min(2.5,this.s));
             if(this.H>9){const f=this.knees[sg?0:1].localToWorld(tC.set(0,-2.3,.3));f.y=Math.max(groundY(f.x,f.z),this.root.position.y)+.3;
               if((this.type==='rumble'||this.type==='colosse')&&Math.hypot(player.pos.x-f.x,player.pos.z-f.z)<1.7*this.s&&player.pos.y-f.y<2.6*this.s&&player.inv<=0){hurtPlayer(fakeHit(f.clone(),2.6));feed('Écrasé sous le pied d\'un titan colossal !','');shake=Math.max(shake,1.2);}   /* ne reste pas sous ses pieds */
               for(let q=0;q<3;q++)emit(f,rv(3).clone().add(tD.set(0,2,0)),1,this.s*.6,this.s*2.2,0x9a8f80,.35,-1,.6);}}}   // poussière sous le pied
@@ -4046,7 +4046,7 @@ var CHG_L=0;const _chR=new THREE.Raycaster();
 function chargeRelease(){const p=player,l=CHG.lv,full=CHG.full;chgCancel();if(!canChg())return;
   const cost=l;   // pleine charge : une paire ; usée seulement si le coup touche
   p.slashCd=.45;p.chgA=.001;p.slashSide=-p.slashSide;p.chgSd=p.slashSide;p.slashT=.001;p.slashA=0;
-  sfx.slash();sfx.woosh();   /* mêmes sons que la coupe et le tourbillon */
+  if(!sndAct('tourbillon')){sfx.slash();sfx.woosh();}   /* mêmes sons que la coupe et le tourbillon */
   // élan : ruée vers la nuque la plus proche (plus loin si l'attaque est bien chargée)
   let best=null,bd=1e9;const R=ST.range*(2.4+2.2*l);CHG_L=l;
   {const ad=aimDir(0,0,new V3());_chR.set(camera.position,ad);_chR.far=R+40;const h=_chR.intersectObjects(hookables,false).find(x=>shown(x.object));   /* la coupe chargée file vers ce que tu vises sur un titan (derrière un genou, une main…) */
@@ -4081,7 +4081,7 @@ function trick(k){const p=player;if(p.grounded||p.spinT>0||p.gas<=0)return;if(!H
 function dash(){const p=player;if(p.grounded)return;if(p.dashCd>0||p.gas<=0)return;if(!HAS('ruee')){lockedMsg('ruee');return;}p.dashCd=.5;p.gas=Math.max(0,p.gas-2*ST.gasEff);TUTO.dsh=true;drawIfAway();
   const f=aimDir(0,0,tA);const ix=(keys.KeyD?1:0)-(keys.KeyA?1:0),iz=(keys.KeyW?1:0)-(keys.KeyS?1:0);
   if(ix||iz){tB.set(-Math.sin(yaw)*iz+Math.cos(yaw)*ix,0,-Math.cos(yaw)*iz-Math.sin(yaw)*ix).normalize();if(iz>0)tB.y=f.y;tB.normalize();}else tB.copy(f);
-  p.vel.addScaledVector(tB,ST.boost*.85);if(!odmPlay('launch',.75,.95+Math.random()*.1))sfx.woosh();for(let i=0;i<8;i++)emit(p.center,rv(6).clone(),.5,.4,1.6,0xffffff,.6);}
+  p.vel.addScaledVector(tB,ST.boost*.85);if(!sndAct('ruee'))sfx.woosh();for(let i=0;i<8;i++)emit(p.center,rv(6).clone(),.5,.4,1.6,0xffffff,.6);}
 /* ----- G : ranger / sortir les lames. Même geste en 1re et en 3e personne : pour les ranger, les deux lames montent se croiser devant la poitrine,
    puis descendent glisser dans les fourreaux des hanches ; pour les sortir, les mains vont aux fourreaux et les ramènent croisées devant soi ----- */
 const SHD={inn:.62,out:.55};
@@ -4097,7 +4097,7 @@ function toggleSheath(){const p=player;if(state!=='play'||grab||p.shT>0)return;i
 function updSheath(dt){const p=player;if(grab&&bladesAway())sheathNow(false);   // saisi par un titan : lames en main
   if(p.shT>0){p.shT+=dt;const dr=p.shDir<0,u=p.shT/(dr?SHD.out:SHD.inn);
     if(!dr){if(u>=.3&&p.shSnd<1){p.shSnd=1;sfx.burst(5200,.24,.12,'bandpass',2.2,0,2400);}if(u>=.6&&p.shSnd<2){p.shSnd=2;sfx.burst(1500,.05,.3,'bandpass',3);sfx.burst(700,.09,.22,'lowpass',1);}}   // glissement dans le fourreau, puis déclic
-    else if(u>=.3&&p.shSnd<1){p.shSnd=1;sfx.burst(2600,.32,.2,'bandpass',1.8,0,7400);sfx.burst(6400,.12,.12,'highpass',.8);}   // lames tirées des fourreaux
+    else if(u>=.3&&p.shSnd<1){p.shSnd=1;if(!sndAct('lames_sortie')){sfx.burst(2600,.32,.2,'bandpass',1.8,0,7400);sfx.burst(6400,.12,.12,'highpass',.8);}}   // lames tirées des fourreaux
     if(u>=1)p.shT=0;}
   setBladeVis(bladesShown());}
 function hurtPlayer(t,mult){
@@ -4674,7 +4674,7 @@ function renderMenu(){
       h+=rng('fov','Champ de vision',60,110,1,O.fov,'°');
       h+='</div><p class="note">Pour la caméra « 1re personne » (touche 4). La coupe choisie vaut aussi en 3e personne.</p>';}
     h+=grp('Son');
-    {const fv=Math.round(fxVolK()*100),mv=Math.round(musVolK()*100);h+=sub('Volume')+`<label for="g_fxVol">Effets sonores <input id="g_fxVol" type="range" min="0" max="100" step="5" value="${fv}"> <b id="g_fxVolV">${fv} %</b></label>`+`<label for="g_musVol">Musique <input id="g_musVol" type="range" min="0" max="100" step="5" value="${mv}"> <b id="g_musVolV">${mv} %</b></label>`+`<label for="g_sndStyle">Bruitages de l'équipement <select id="g_sndStyle"><option value="classic"${odmOn()?'':' selected'}>Classiques</option><option value="real"${odmOn()?' selected':''}>Réalistes (expérimental)</option></select></label></div>`;}
+    {const fv=Math.round(fxVolK()*100),mv=Math.round(musVolK()*100);h+=sub('Volume')+`<label for="g_fxVol">Effets sonores <input id="g_fxVol" type="range" min="0" max="100" step="5" value="${fv}"> <b id="g_fxVolV">${fv} %</b></label>`+`<label for="g_musVol">Musique <input id="g_musVol" type="range" min="0" max="100" step="5" value="${mv}"> <b id="g_musVolV">${mv} %</b></label>`+`<label for="g_sndStyle">Bruitages de l'équipement <select id="g_sndStyle"><option value="classic"${odmOn()?'':' selected'}>Classiques</option><option value="real"${odmOn()?' selected':''}>Réalistes (expérimental)</option></select></label> <button type="button" id="g_sndAdm" style="margin-left:6px">Réglages des bruitages…</button></div>`;}
     {const rv=Math.round(rainVolK()*100);const tv=Math.round(thunderVolK()*100);h+=sub('Ambiance')+`<label for="g_rainVol">Volume de la pluie <input id="g_rainVol" type="range" min="0" max="100" step="5" value="${rv}"> <b id="g_rainVolV">${rv} %</b></label>`+`<label for="g_thunderVol">Volume du tonnerre <input id="g_thunderVol" type="range" min="0" max="100" step="5" value="${tv}"> <b id="g_thunderVolV">${tv} %</b></label></div>`;}
   }else{
     h+='<div class="sect">Commandes</div><div class="ctltab">'+CONTROLS.map(([k,v])=>`<div><kbd>${k}</kbd><span>${v}</span></div>`).join('')+'</div>';
@@ -5377,7 +5377,7 @@ function wearBlades(a){const p=player;a*=BWEAR();p.blade=Math.max(0,p.blade-a);i
 const bladeStock=()=>{const p=player;return Math.max(0,p.blade)/CFG.bladeDurability+p.spareBlades;};
 function spendBlades(c){const p=player,D=CFG.bladeDurability;let need=c*D;while(need>1e-6){if(p.blade>=need){p.blade-=need;need=0;}else{need-=Math.max(0,p.blade);p.blade=0;if(p.spareBlades>0){p.spareBlades--;p.blade=D;}else break;}}}
 const fmtPairs=c=>{const r=Math.round(c*2)/2;return (r%1?String(r).replace('.',','):String(r))+(r>1?' paires':' paire');};
-function ensureBlades(){const p=player;if(p.blade>0||p.spareBlades<=0)return;p.spareBlades--;p.blade=CFG.bladeDurability;if(!odmPlay('clack',.8)){sfx.burst(6200,.14,.3,'highpass',.8);sfx.burst(1800,.08,.2,'bandpass',1.5);}feed('Lames remplacées · '+p.spareBlades+' paire'+(p.spareBlades>1?'s':'')+' en réserve');}
+function ensureBlades(){const p=player;if(p.blade>0||p.spareBlades<=0)return;p.spareBlades--;p.blade=CFG.bladeDurability;if(!sndAct('lames_remplacees')){sfx.burst(6200,.14,.3,'highpass',.8);sfx.burst(1800,.08,.2,'bandpass',1.5);}feed('Lames remplacées · '+p.spareBlades+' paire'+(p.spareBlades>1?'s':'')+' en réserve');}
 function resupply(){const p=player;p.blade=CFG.bladeDurability;p.spareBlades=CFG.bladeSpares;p.spears=spearMax();p.gunMag=GUN.mag;p.gunSpare=GUN.spare;p.gunRl=0;applyEquipVisual();}
 
 /* ----- changement d'équipement et d'arme ----- */
@@ -5663,7 +5663,7 @@ function canGrab(t){const p=player;if(t.army)return !grab&&p.inv<=0&&p.spinT<=0&
 function startGrab(t){if(NET&&NET.poss){NET.pGrab(t);return;}const p=player,i=t.atkSide>0?1:0;
   grab={t,i,T:0,a0:t.arms[i].rotation.x,e0:t.elbows[i].rotation.x,z0:t.arms[i].rotation.z};Object.assign(grab,grabPose(t,i));t.state='grab';cancelAim();
   releaseAll();if(p.wall)exitWall(.5);p.vel.set(0,0,0);p.flipT=p.rollT=p.landRoll=0;pTrick.rotation.set(0,0,0);pTrick.position.y=0;
-  shake=Math.max(shake,1);sfx.hurt();sfx.stomp(.4);bloodBurst(p.center,4,.3);
+  shake=Math.max(shake,1);sfx.hurt();if(!sndAct('morsure',{gain:.8}))sfx.stomp(.4);bloodBurst(p.center,4,.3);
   $('grabP').hidden=false;feed('Le titan t\'a attrapé : F pour te libérer !','');achGrab();
 }
 // pose finale du bras calculée pour CE titan (proportions variables) : la main arrive devant la bouche
@@ -5942,7 +5942,7 @@ Titan.prototype.updateBite=function(dt){this.bT+=dt;const u=this.bT/1.05;
   this.body.rotation.x=lerp(this.bBase,.25+(.6+.55*this.bLow),e);this.neck.rotation.x=.55*e*(.6+.4*this.bLow);this.headG.rotation.x=-.3*e;
   if(!this.legLoss&&u<.45){const f=this.s*3.4*dt;this.root.position.x+=Math.sin(this.root.rotation.y)*f;this.root.position.z+=Math.cos(this.root.rotation.y)*f;}
   if(!this.bHit&&u>=.38&&u<=.66){const m=grabMouth(this,tC),pc=player.center;
-    if(Math.hypot(m.x-pc.x,m.z-pc.z)<2.6*this.s&&pc.y<m.y+1.5*this.s&&m.y-pc.y<3.2*this.s){this.bHit=true;hurtPlayer(this);if(!odmPlay('bite',.9,.78+Math.random()*.08))sfx.stomp(.4);bloodBurst(pc,10,.5);feed('Mordu ! Sans bras, il attaque avec ses dents','');}}
+    if(Math.hypot(m.x-pc.x,m.z-pc.z)<2.6*this.s&&pc.y<m.y+1.5*this.s&&m.y-pc.y<3.2*this.s){this.bHit=true;hurtPlayer(this);if(!sndAct('morsure'))sfx.stomp(.4);bloodBurst(pc,10,.5);feed('Mordu ! Sans bras, il attaque avec ses dents','');}}
   if(u>=1){this.state='walk';this.biteE=0;this.atkCd=(1.6+Math.random()*1.4)/this.aggr;}};
 /* ================= MORSURE AU VOL : certains titans (les « mordeurs ») tentent de croquer un soldat qui passe trop près de leur visage =================
    Rare (probabilité et temps de recharge), annoncée (marqueur rouge « ! » au-dessus de la tête, grognement, tête qui recule),
@@ -8233,27 +8233,109 @@ function ptlRender(rdt){if(!PTL.list.length)return;const now=performance.now()/1
 /* dans la poche, la ville (sol, quartiers fusionnés, forêts, remparts) n'est pas dessinée : on ne la voit qu'au travers de la porte */
 function egWorld(on){if(!EG.wl){if(on)return;EG.wl=scene.children.filter(o=>{if(o===EG.pk||(EGH&&o===EGH.g)||o.isLight||o.isCamera||o===skyDome||!o.visible)return false;if(o.isInstancedMesh)return true;if(o.isMesh&&o.geometry){if(!o.geometry.boundingSphere)o.geometry.computeBoundingSphere();return o.geometry.boundingSphere.radius*Math.max(o.scale.x,o.scale.y,o.scale.z)>25;}return false;});}
   if(EG.wOn===on)return;EG.wOn=on;for(const o of EG.wl)o.visible=on;}
-/* ----- sons de l'équipement tridimensionnel : découpés dans le fichier fourni puis nettoyés (filtrés) pour qu'une action = un seul son net :
-   tir du grappin, ancre qui se plante, cliquetis du câble qui s'enroule, souffle de gaz (boucle), jet de gaz (ruée), lame qui fend l'air,
-   lame dans la chair, morsure, chute du titan abattu, lames remplacées ----- */
-const ODS={buf:null,ld:false,ok:false,idx:{fire:[0,.58],attach:[.63,.44],clack:[1.12,.38],launch:[1.55,.77],gas:[2.37,1],reel:[3.42,.36],slash:[3.8301,.4],hit:[4.2801,.32],bite:[4.6501,.32],kill:[5.0201,1.12]},
-  /* mixage : chaque son est normalisé à la même intensité perçue (puis limité en douceur) ; ici, son niveau dans le jeu et sa part de réverbération */
-  mix:{fire:[.55,.15],attach:[.45,.12],clack:[.32,.05],launch:[.42,.08],slash:[.5,.06],hit:[.68,.1],bite:[.62,.1],kill:[.8,.35]}};
-function odmLoad(){if(ODS.ld||!sfx.ctx)return;ODS.ld=true;const x=new XMLHttpRequest();x.open('GET','son/odm_sfx.wav');x.responseType='arraybuffer';x.onload=()=>{try{sfx.ctx.decodeAudioData(x.response,b=>{ODS.buf=b;odmLoops();},()=>{});}catch(e){}};x.send();}
-/* Options > Son : bruitages « classiques » (synthétiques, par défaut) ou « réalistes » (enregistrés, expérimental) */
+/* ===================== BRUITAGES RÉALISTES (v105, expérimental) =====================
+   Une bibliothèque de 57 sons découpés et nettoyés (son/snd_lib.wav) : scène de l'équipement (calée sur la vidéo), coupes de sabre,
+   pas et course de titans, grognements, bêlements. Chaque action du jeu joue jusqu'à 2 sons superposés, chacun avec son volume,
+   choisis librement dans le menu « Réglages des bruitages » (Options > Son). « Son classique » = le bruitage synthétique d'origine. */
+const SND={buf:null,ld:false,last:{},stepT:0,stepN:0,loops:{},syn:{},
+  idx:{odm_fire:[0,0.58],odm_draw:[0.62,0.45],odm_gas:[1.11,0.96],odm_brake:[2.11,0.83],odm_gasburst:[2.9801,0.73],odm_spin:[3.7501,0.53],odm_cut1:[4.3201,0.48],odm_cut2:[4.8401,0.43],odm_cut3:[5.3101,0.48],odm_bite:[5.8301,0.58],odm_tumble:[6.4501,0.38],odm_crash:[6.8701,1.33],odm_wire:[8.2401,0.53],sl_hit1:[8.8101,0.65],sl_ring:[9.5001,1.03],sl_clink:[10.5701,0.48],sl_hit2:[11.0901,0.73],sl_hit3:[11.8601,0.73],sl_hit4:[12.6301,0.44],sl_big:[13.1101,1.03],sl_heavy:[14.1801,0.93],sl_whoosh1:[15.1501,0.68],sl_whoosh2:[15.8701,0.93],st1:[16.8401,0.93],st2:[17.8101,0.93],st3:[18.7801,0.93],st4:[19.7501,0.93],stBig1:[20.7201,1.43],stBig2:[22.1901,1.43],rn1:[23.6601,0.51],rn2:[24.2101,0.48],rn3:[24.7301,0.48],rn4:[25.2501,0.48],gr1:[25.7701,0.88],gr2:[26.6901,1.68],gr3:[28.4101,3.83],gr4:[32.2801,4.03],gr5:[36.3502,3.03],gr6:[39.4202,3.03],gr7:[42.4902,1.65],im1:[44.1802,1.43],im2:[45.6502,1.03],im3:[46.7202,1.13],b_m1:[47.8902,0.28],b_m2:[48.2102,0.29],b_m3:[48.5403,0.35],b_m4:[48.9303,0.37],b_n1:[49.3402,0.39],b_n2:[49.7702,0.61],b_n3:[50.4203,0.81],b_n4:[51.2702,0.66],b_n5:[51.9703,0.65],b_a1:[52.6602,0.85],b_a2:[53.5502,1.65],b_a3:[55.2403,1.83]},
+  groups:{coupes:['sl_hit1','sl_hit2','sl_hit3','sl_hit4'],coupes_scene:['odm_cut1','odm_cut2','odm_cut3'],souffles:['sl_whoosh1','sl_whoosh2'],pas:['st1','st2','st3','st4'],course:['rn1','rn2','rn3','rn4'],
+    pas_lourds:['stBig1','stBig2','im1','im2','im3'],grognements:['gr1','gr2','gr7'],gemissements:['gr3','gr4','gr5','gr6'],beles_doux:['b_m1','b_m2','b_m3','b_m4'],beles:['b_n1','b_n2','b_n3','b_n4','b_n5'],beles_furieux:['b_a1','b_a2','b_a3']},
+  gname:{coupes:'coupes de sabre',coupes_scene:'coupes (scène)',souffles:'souffles de lame',pas:'pas de titan',course:'course de titan',pas_lourds:'pas lourds / impacts',grognements:'grognements',gemissements:'gémissements de titan',beles_doux:'bêlements doux',beles:'bêlements',beles_furieux:'bêlements furieux'},
+  cname:{odm_fire:'tir d\'ancre (scène)',odm_draw:'lame dégainée (scène)',odm_gas:'gaz continu (scène)',odm_brake:'freinage au gaz',odm_gasburst:'jet de gaz',odm_spin:'vrille de lames',odm_cut1:'coupe (scène) 1',odm_cut2:'coupe (scène) 2',odm_cut3:'coupe (scène) 3',
+    odm_bite:'morsure de titan',odm_tumble:'chute sur des tuiles',odm_crash:'bâtiment détruit',odm_wire:'câble tendu',sl_hit1:'coupe de sabre 1',sl_ring:'tintement de lame',sl_clink:'déclic métallique',sl_hit2:'coupe sanglante 2',sl_hit3:'coupe de sabre 3',sl_hit4:'coupe sèche 4',
+    sl_big:'grande coupe sanglante',sl_heavy:'coupe lourde',sl_whoosh1:'souffle de lame 1',sl_whoosh2:'souffle de lame 2',st1:'pas 1',st2:'pas 2',st3:'pas 3',st4:'pas 4',stBig1:'pas lourd 1',stBig2:'pas lourd 2',rn1:'course 1',rn2:'course 2',rn3:'course 3',rn4:'course 4',
+    gr1:'grognement court',gr2:'grognement',gr3:'gémissement 1',gr4:'gémissement 2',gr5:'gémissement 3',gr6:'gémissement 4',gr7:'râle',im1:'impact lourd 1',im2:'impact lourd 2',im3:'impact lourd 3',
+    b_m1:'bêlement doux 1',b_m2:'bêlement doux 2',b_m3:'bêlement doux 3',b_m4:'bêlement doux 4',b_n1:'bêlement 1',b_n2:'bêlement 2',b_n3:'bêlement 3',b_n4:'bêlement 4',b_n5:'bêlement 5',b_a1:'bêlement furieux 1',b_a2:'bêlement furieux 2',b_a3:'cri de chèvre'}};
+const SND_CAT=[['equip','Équipement (grappins, gaz, ruée)'],['lames','Lames'],['titans','Titans (pas, cris, morsures)'],['destr','Destruction et explosions'],['chevres','Chèvres'],['vent','Vent de vitesse']];
+/* [clé, nom, catégorie, son A par défaut, son B par défaut, boucle] */
+const SND_ACT=[['grappin_tir','Tir du grappin','equip',['odm_fire',1],null],['grappin_ancre','Ancre qui se plante','equip',['sl_clink',.55],['odm_wire',.35]],['cable','Câble qui s\'enroule (boucle)','equip',['synth',1],null,1],
+  ['gaz','Souffle de gaz (boucle)','equip',['odm_gas',1],null,1],['ruee','Jet de gaz (ruée)','equip',['odm_gasburst',.9],['odm_brake',.4]],
+  ['lame_air','Lame qui fend l\'air','lames',['g:souffles',.7],null],['lame_coupe','Lame dans la chair','lames',['g:coupes',.85],null],['nuque_coupe','Nuque tranchée','lames',['sl_big',1],['g:coupes_scene',.45]],
+  ['lames_sortie','Lames dégainées','lames',['odm_draw',.8],null],['lames_remplacees','Lames remplacées','lames',['sl_ring',.45],['sl_clink',.4]],['tourbillon','Tourbillon','lames',['odm_spin',.8],['sl_heavy',.45]],
+  ['titan_pas','Pas de titan','titans',['g:pas',1],null],['titan_course','Course de titan (déviant)','titans',['g:course',1],null],['titan_pas_lourd','Pas de géant ou de boss','titans',['g:pas_lourds',1],null],
+  ['titan_grogne','Grognement de titan','titans',['g:grognements',.75],null],['boss_grogne','Cri de boss','titans',['g:gemissements',1],['g:grognements',.45]],['morsure','Morsure','titans',['odm_bite',1],null],
+  ['titan_tombe','Titan qui s\'effondre','titans',['g:pas_lourds',1],['odm_crash',.3]],['explosion','Explosion de lance foudroyante','destr',['odm_crash',1],null],
+  ['frappe_sol','Frappe au sol (Originel, Forgeron)','destr',['odm_crash',1],['g:pas_lourds',.5]],['pietinement','Piétinement de boss','destr',['odm_crash',.8],['g:pas_lourds',.6]],
+  ['chevre_bele','Bêlement (selon la fureur de la chèvre)','chevres',['auto',1],null]];
+const SND_CATDEF={equip:1,lames:1,titans:.85,destr:.9,chevres:.9,vent:1};
 const odmOn=()=>!!save.gfx&&save.gfx.sndStyle==='real';
-function odmPlay(k,v,rate){const c=sfx.ctx,s=ODS.idx[k];if(!odmOn()||!c||!ODS.buf||!s)return false;try{const m=ODS.mix[k]||[.5,.08],src=c.createBufferSource(),g=c.createGain();src.buffer=ODS.buf;if(rate)src.playbackRate.value=rate;g.gain.value=m[0];src.connect(g);sfx.out(g,m[1]);src.start(0,s[0],s[1]);}catch(e){return false;}return true;}
-/* les boucles continues (gaz, treuil) prennent les sons enregistrés à la place du bruit synthétique, sur les mêmes réglages de volume */
-/* les deux versions des boucles (gaz, treuil) restent branchées sur les mêmes réglages de volume ; l'option choisit laquelle on entend */
-function odmLoops(){const c=sfx.ctx;if(!c||!ODS.buf||ODS.ok)return;ODS.ok=true;ODS.syn={};ODS.smp={};ODS.lv={};
-  for(const [k,gn,S,F,lv] of [['gas',sfx.gasG,'gasS','gasF',2.2],['reel',sfx.reelG,'reelS','reelF',.65]]){try{if(!gn)continue;   /* niveaux alignés sur les anciens bruits synthétiques (mesurés) */
-    if(sfx[S]&&sfx[F]){sfx[S].disconnect();const sg=c.createGain();sfx[S].connect(sg);sg.connect(sfx[F]);ODS.syn[k]=sg;}
-    const s=ODS.idx[k],src=c.createBufferSource(),g=c.createGain();g.gain.value=0;src.buffer=ODS.buf;src.loop=true;src.loopStart=s[0];src.loopEnd=s[0]+s[1];src.connect(g);g.connect(gn);src.start(0,s[0]);ODS.smp[k]=g;ODS.lv[k]=lv;}catch(e){}}
-  odmApplyStyle();}
-function odmApplyStyle(){const r=odmOn();if(r&&!ODS.buf){odmLoad();return;}if(!ODS.ok||!sfx.ctx)return;const T=sfx.ctx.currentTime;
-  for(const k in ODS.smp){ODS.smp[k].gain.setTargetAtTime(r?ODS.lv[k]:0,T,.05);if(ODS.syn[k])ODS.syn[k].gain.setTargetAtTime(r?0:1,T,.05);}}
-{const W=(n,k,v,r)=>{const f=sfx[n];sfx[n]=function(...a){if(odmPlay(k,v,r?r():0))return;return f.apply(this,a);};};
-  W('fire','fire',.85,()=>.96+Math.random()*.08);W('attach','attach',.8,()=>.95+Math.random()*.1);W('slash','slash',.75,()=>.9+Math.random()*.2);W('hit','hit',.9,()=>.9+Math.random()*.15);W('kill','kill',1,()=>.95+Math.random()*.08);}
+function sndMap(){const g=save.gfx||(save.gfx={});if(!g.sndMap)g.sndMap={a:{},c:{}};if(!g.sndMap.a)g.sndMap.a={};if(!g.sndMap.c)g.sndMap.c={};return g.sndMap;}
+function sndCfg(k){const d=SND_ACT.find(x=>x[0]===k);if(!d)return null;const m=sndMap().a[k]||{};return{k,cat:d[2],loop:!!d[5],v:m.v!==undefined?m.v:1,A:m.A||d[3]||['none',0],B:m.B!==undefined?m.B:(d[4]||['none',0])};}
+const sndCat=c=>{const m=sndMap().c;return m[c]!==undefined?m[c]:(SND_CATDEF[c]!==undefined?SND_CATDEF[c]:1);};
+const sndNeed=()=>odmOn()||GT.on||EG.in;
+function sndLoad(){if(SND.ld||!sfx.ctx)return;SND.ld=true;const x=new XMLHttpRequest();x.open('GET','son/snd_lib.wav');x.responseType='arraybuffer';x.onload=()=>{try{sfx.ctx.decodeAudioData(x.response,b=>{SND.buf=b;sndApply();},()=>{});}catch(e){}};x.send();}
+function sndPick(id){if(!id||id==='none'||id==='synth'||id==='auto')return null;if(id.startsWith('g:')){const L=SND.groups[id.slice(2)];if(!L||!L.length)return null;let c=L[Math.floor(Math.random()*L.length)];if(L.length>1&&c===SND.last[id])c=L[(L.indexOf(c)+1)%L.length];SND.last[id]=c;return c;}return SND.idx[id]?id:null;}
+function sndClip(id,vol,o){const c=sfx.ctx,s=SND.idx[id];if(!c||!SND.buf||!s||vol<=.001)return false;try{const src=c.createBufferSource(),g=c.createGain();src.buffer=SND.buf;src.playbackRate.value=(o.rate||1)*(o.norand?1:.97+Math.random()*.06);g.gain.value=vol;let n=src;
+    if(o.lp&&o.lp<16000){const f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=o.lp;f.Q.value=.5;n.connect(f);n=f;}n.connect(g);sfx.out(g,o.rev!==undefined?o.rev:.08);src.start(0,s[0],s[1]);}catch(e){return false;}return true;}
+/* joue une action ; renvoie vrai si le bruitage d'origine ne doit pas jouer (rien n'est « Son classique ») */
+function sndAct(k,o={}){if(!odmOn()&&!o.force)return false;const C=sndCfg(k);if(!C)return false;if(!SND.buf){sndLoad();return false;}
+  const base=C.v*sndCat(C.cat)*(o.gain!==undefined?o.gain:1);let syn=false,any=false;
+  for(const L of [C.A,C.B]){if(!L)continue;if(L[0]==='synth'){syn=true;continue;}const id=sndPick(L[0]);if(id&&sndClip(id,base*L[1]*.75,o))any=true;}
+  return any&&!syn;}
+function sndAt(k,pos,o={}){const d=pos.distanceTo(player.center),R=o.R||200;if(d>R)return odmOn();const a=Math.pow(1-d/R,1.5);return sndAct(k,Object.assign({},o,{gain:(o.gain||1)*a,lp:o.lp||Math.round(500+11000*a*a),rev:.08+.25*(1-a)}));}
+/* boucles (gaz, câble) et vent : les sons enregistrés passent par les mêmes réglages de volume que les bruits synthétiques */
+function sndApply(){const c=sfx.ctx;if(!c)return;const T=c.currentTime;
+  if(!SND.wired){SND.wired=true;try{for(const [k,S,F] of [['gaz','gasS','gasF'],['cable','reelS','reelF']]){if(sfx[S]&&sfx[F]){sfx[S].disconnect();const g=c.createGain();sfx[S].connect(g);g.connect(sfx[F]);SND.syn[k]=g;}}
+    if(sfx.windG){sfx.windG.disconnect();SND.wind=c.createGain();sfx.windG.connect(SND.wind);SND.wind.connect(sfx.master);}}catch(e){}}
+  if(SND.wind)SND.wind.gain.setTargetAtTime(sndCat('vent'),T,.1);
+  const real=odmOn();if(real&&!SND.buf){sndLoad();}
+  for(const [k,gn] of [['gaz',sfx.gasG],['cable',sfx.reelG]]){const C=sndCfg(k);for(const s of (SND.loops[k]||[]))try{s.stop();s.disconnect();}catch(e){}SND.loops[k]=[];let synV=1;
+    if(real){synV=0;const lv=k==='gaz'?2.2:.7;for(const L of [C.A,C.B]){if(!L)continue;if(L[0]==='synth'){synV=L[1]*C.v;continue;}const id=L[0].startsWith('g:')?(SND.groups[L[0].slice(2)]||[])[0]:L[0];const s=SND.idx[id];if(!SND.buf||!s||!gn)continue;
+      const src=c.createBufferSource(),g=c.createGain();g.gain.value=lv*L[1]*C.v*sndCat('equip');src.buffer=SND.buf;src.loop=true;src.loopStart=s[0];src.loopEnd=s[0]+s[1];src.connect(g);g.connect(gn);src.start(0,s[0]);SND.loops[k].push(src);}}
+    if(SND.syn[k])SND.syn[k].gain.setTargetAtTime(synV*(real?sndCat('equip'):1),T,.05);}}
+const odmApplyStyle=sndApply;
+{const W=(n,k)=>{const f=sfx[n];sfx[n]=function(...a){if(sndAct(k))return;return f.apply(this,a);};};
+  W('fire','grappin_tir');W('attach','grappin_ancre');W('slash','lame_air');W('hit','lame_coupe');W('kill','nuque_coupe');W('boom','explosion');
+  const bh=sfx.bossHorn;sfx.bossHorn=function(...a){if(odmOn())sndAct('boss_grogne',{gain:.8,rev:.3});return bh.apply(this,a);};}
+/* pas de titan : selon la distance (plus loin = plus doux et plus sourd) et la taille (plus grand = plus grave et plus lourd), jamais plus de 3 à la fois */
+function sndStep(t,dist){if(!odmOn())return false;const now=performance.now();if(now-SND.stepT>110){SND.stepT=now;SND.stepN=0;}if(SND.stepN>=3)return true;
+  const R=170;if(dist>R)return true;const a=Math.pow(1-dist/R,1.7),s=Math.min(3.2,t.s||1),k=(t.cfg.boss||t.H>15||t.type==='rumble')?'titan_pas_lourd':t.type==='abnormal'&&(t.crazyT>0||dist<60)?'titan_course':'titan_pas';
+  SND.stepN++;sndAct(k,{gain:Math.min(.85,a*(.3+.22*s)),lp:Math.round(350+9000*a*a),rate:clamp(1.14-.1*s,.68,1.15),rev:.1+.3*(1-a)});return true;}
+/* cris : les titans grognent de temps en temps en chassant ; les boss (Originel et Assaillant compris) poussent des cris graves plus souvent */
+function sndTitanTick(t,dt){if(!odmOn()||t.state==='dead'||t.gone||t.introT>0||GT.on)return;t.grT=(t.grT===undefined?4+Math.random()*12:t.grT)-dt;if(t.grT>0)return;
+  const boss=!!t.cfg.boss;t.grT=boss?6+Math.random()*7:12+Math.random()*20;const hp=t.headG?t.headG.getWorldPosition(_pv[5]):t.root.position;
+  const rate=boss?(t.type==='assaillant'?.78:t.type==='colosse'?.66:.86):clamp(1.16-.07*(t.s||1),.8,1.2);sndAt(boss?'boss_grogne':'titan_grogne',hp,{R:boss?240:110,rate,gain:boss?1:.8});}
+function sndOrigTick(dt){if(!odmOn()||!ORIG||ORIG.dead)return;SND.oT=(SND.oT===undefined?3:SND.oT)-dt;if(SND.oT>0)return;SND.oT=5+Math.random()*6;const p=ORIG.root?ORIG.root.position:ORIG.pos;if(p)sndAt('boss_grogne',p,{R:600,rate:.62,gain:1.2});}
+/* mode chèvre : chaque titan-chèvre bêle ; plus il est grand ou féroce, plus le cri est furieux et grave (les boss : cris de rage) */
+function sndBaa(t,force){const C=sndCfg('chevre_bele');if(!C||!SND.buf){sndLoad();return;}const nw=performance.now();if(nw-(SND.baaT||0)<350)return;SND.baaT=nw;   /* jamais plus d'un bêlement toutes les 0,35 s */const boss=!!t.cfg.boss,big=t.H>14||t.type==='abnormal',d=t.root.position.distanceTo(player.center),R=boss?260:140;if(d>R)return;
+  const a=Math.pow(1-d/R,1.4);let grp=boss?'beles_furieux':big?(Math.random()<.6?'beles_furieux':'beles'):(Math.random()<.45?'beles_doux':'beles');
+  const rate=boss?.62+Math.random()*.12:big?.78+Math.random()*.12:clamp(1.25-.1*(t.s||1),.92,1.3)+Math.random()*.08;
+  const o={gain:a*(boss?1.25:big?1:.8),lp:Math.round(800+11000*a*a),rate,rev:.12+.25*(1-a),force:true};
+  if(C.A&&C.A[0]==='auto'){const id=sndPick('g:'+grp);if(id)sndClip(id,C.v*sndCat('chevres')*C.A[1]*.75*o.gain,o);if(C.B&&C.B[0]!=='none'&&C.B[0]!=='auto'){const id2=sndPick(C.B[0]);if(id2)sndClip(id2,C.v*sndCat('chevres')*C.B[1]*.75*o.gain,o);}}
+  else sndAct('chevre_bele',o);}
+function sndGoatTick(t,dt){const g=t.gt;if(!g||t.state==='dead')return;g.bT=(g.bT===undefined?1+Math.random()*6:g.bT)-dt;if(g.bT>0)return;const boss=!!t.cfg.boss;g.bT=boss?2.5+Math.random()*3.5:t.state==='attack'||t.state==='bite'?1.5:4+Math.random()*9;sndBaa(t);}
+/* les chèvres de la prairie bêlent aussi, de temps en temps */
+function sndMeadowTick(dt){if(!EG.in||EG.zone!=='m'||!EG.goats.length)return;SND.mT=(SND.mT===undefined?2:SND.mT)-dt;if(SND.mT>0)return;SND.mT=2+Math.random()*4;if(!SND.buf){sndLoad();return;}
+  const G=EG.goats[Math.floor(Math.random()*EG.goats.length)],d=G.hold.position.distanceTo(player.center);if(d>45)return;const a=Math.pow(1-d/45,1.3),big=(G.s.sc||1)>2,C=sndCfg('chevre_bele');
+  const id=sndPick(big?'g:beles_furieux':Math.random()<.5?'g:beles_doux':'g:beles');if(id)sndClip(id,C.v*sndCat('chevres')*.6*a,{rate:big?.55:1+Math.random()*.15,lp:Math.round(900+11000*a*a),rev:.1});}
+{const _tu2=Titan.prototype.update;Titan.prototype.update=function(dt){_tu2.call(this,dt);try{if(this.gt)sndGoatTick(this,dt);else sndTitanTick(this,dt);}catch(e){}};
+  const _us=Titan.prototype.updateStomp;Titan.prototype.updateStomp=function(dt){const was=this.stHit;_us.call(this,dt);if(!was&&this.stHit)sndAt('pietinement',this.root.position,{R:220});};}
+{const _si=slamImpact;slamImpact=function(t){_si(t);try{sndAt('frappe_sol',t.root.position,{R:260});}catch(e){}};const _os=origSlam;origSlam=function(a){const r=_os(a);try{if(ORIG&&ORIG.root)sndAt('frappe_sol',ORIG.root.position,{R:600,gain:1.2});else sndAct('frappe_sol',{gain:.9});}catch(e){}return r;};}
+/* ----- menu « Réglages des bruitages » : chaque action, ses deux sons, leurs volumes ; volumes par catégorie ----- */
+function sndOptHtml(sel){let h=`<option value="synth"${sel==='synth'?' selected':''}>Son classique (synthétique)</option><option value="none"${sel==='none'?' selected':''}>Aucun</option><optgroup label="Variantes (au hasard)">`;
+  for(const g in SND.groups)h+=`<option value="g:${g}"${sel==='g:'+g?' selected':''}>${SND.gname[g]} (${SND.groups[g].length})</option>`;h+='</optgroup><optgroup label="Sons">';
+  for(const k in SND.idx)h+=`<option value="${k}"${sel===k?' selected':''}>${SND.cname[k]||k}</option>`;return h+'</optgroup>';}
+function sndAdmin(){let el=document.getElementById('sndAdm');if(el){el.remove();}el=document.createElement('div');el.id='sndAdm';
+  el.style.cssText='position:fixed;inset:0;z-index:200;background:rgba(8,9,11,.94);color:#eee;font:13px/1.35 Arial;overflow:auto;padding:16px;box-sizing:border-box';
+  const m=sndMap(),sl=(id,v)=>`<input type="range" min="0" max="150" step="5" value="${Math.round(v*100)}" data-k="${id}" style="width:110px;vertical-align:middle"> <b>${Math.round(v*100)} %</b>`;
+  let h='<style>#sndAdm button{all:unset;cursor:pointer;background:#2b3138;border:1px solid #5a6470;border-radius:4px;padding:3px 9px;color:#fff;font:600 12px Arial;display:inline-block}#sndAdm button:hover{background:#3d4652}#sndAdm button[data-act]{padding:6px 14px;font-size:13px}#sndAdm select{font:12px Arial}</style><div style="max-width:1100px;margin:0 auto"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h2 style="margin:0;color:var(--gold,#d6aa5a);font-size:20px">Réglages des bruitages (mode réaliste)</h2><div><button data-act="reset" style="margin-right:8px">Tout réinitialiser</button><button data-act="close">Fermer</button></div></div>';
+  h+='<p style="opacity:.75;margin:6px 0 12px">Pour chaque action : un ou deux sons joués ensemble, chacun avec son volume. « Variantes » tire un son différent à chaque fois. « Son classique » garde le bruitage synthétique (on peut le mélanger avec un son enregistré). Les réglages sont enregistrés aussitôt.'+(odmOn()?'':' <b style="color:#ff9a6a">Les bruitages réalistes sont désactivés : choisis « Réalistes » dans Options > Son pour les entendre en jeu (le bouton ▶ marche quand même).</b>')+'</p>';
+  h+='<div style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:14px;padding:10px;border:1px solid rgba(255,255,255,.12);border-radius:6px"><b style="width:100%">Volumes par catégorie</b>';for(const [c,n] of SND_CAT)h+=`<label style="white-space:nowrap">${n} ${sl('c:'+c,sndCat(c))}</label>`;h+='</div>';
+  for(const [c,n] of SND_CAT){const acts=SND_ACT.filter(a=>a[2]===c);if(!acts.length)continue;h+=`<h3 style="margin:14px 0 6px;font-size:15px;color:#9fd0ff">${n}</h3><div style="display:grid;grid-template-columns:minmax(150px,1.2fr) auto minmax(220px,2fr) minmax(220px,2fr);gap:6px 12px;align-items:center">`;
+    for(const a of acts){const C=sndCfg(a[0]),optA=a[0]==='chevre_bele'?`<option value="auto"${C.A[0]==='auto'?' selected':''}>Automatique (selon la fureur)</option>`:'';
+      h+=`<div><button data-test="${a[0]}" title="Écouter">▶</button> ${a[1]}</div><div>${sl('v:'+a[0],C.v)}</div>`;
+      h+=`<div><select data-k="A:${a[0]}" style="max-width:190px">${optA}${sndOptHtml(C.A[0])}</select> ${sl('Av:'+a[0],C.A[1])}</div><div><select data-k="B:${a[0]}" style="max-width:190px">${sndOptHtml(C.B?C.B[0]:'none')}</select> ${sl('Bv:'+a[0],C.B?C.B[1]:0)}</div>`;}
+    h+='</div>';}
+  el.innerHTML=h+'</div>';document.body.appendChild(el);if(!SND.buf)sndLoad();
+  const set=(k,val)=>{const [t,a]=k.split(':');const M=sndMap();if(t==='c'){M.c[a]=val;}else{const C=sndCfg(a);const r=M.a[a]||(M.a[a]={});if(t==='v')r.v=val;if(t==='A')r.A=[val,C.A[1]];if(t==='B')r.B=[val,C.B?C.B[1]:.6];if(t==='Av')r.A=[C.A[0],val];if(t==='Bv')r.B=[C.B?C.B[0]:'none',val];}persist();sndApply();};
+  el.addEventListener('input',e=>{const k=e.target.dataset.k;if(!k)return;if(e.target.type==='range'){const v=+e.target.value/100;e.target.nextElementSibling.textContent=e.target.value+' %';set(k,v);}});
+  el.addEventListener('change',e=>{const k=e.target.dataset.k;if(k&&e.target.tagName==='SELECT')set(k,e.target.value);});
+  el.addEventListener('click',e=>{e.stopPropagation();const b=e.target.closest('button');if(!b)return;if(b.dataset.act==='close'){el.remove();return;}if(b.dataset.act==='reset'){save.gfx.sndMap={a:{},c:{}};persist();sndApply();sndAdmin();return;}
+    if(b.dataset.test){sfx.init();const k=b.dataset.test;if(k==='chevre_bele'){sndBaa({cfg:{boss:Math.random()<.4},H:10,s:1,type:'medium',root:{position:player.center.clone()}});}else sndAct(k,{force:true,gain:1});}});
+  for(const ev of ['mousedown','mouseup','keydown'])el.addEventListener(ev,e=>e.stopPropagation());}
+
+document.addEventListener('click',e=>{if(e.target&&e.target.id==='g_sndAdm'){e.preventDefault();sndAdmin();}});
 /* ----- sons du portal gun : découpés dans le fichier fourni (ramassage, tirs bleus et orange, ouverture, surface refusée, fermeture, passage, bourdonnement) ----- */
 const PGS={buf:null,ld:false,hum:null,humG:null,idx:{pickup:[0,1.78],fb1:[1.83,.78],fb2:[2.66,.95],fb3:[3.66,.84],fo1:[4.5501,1.1],fo2:[5.7001,1.03],fo3:[6.7801,.84],op1:[7.6701,.86],op2:[8.5801,1.02],op3:[9.6502,.83],op4:[10.5302,.85],inv:[11.4302,.42],close:[11.9002,1.84],enter:[13.7902,.93],exit:[14.7702,.98],hum:[15.8003,8.29]}};
 function pgSndLoad(){if(PGS.ld||!sfx.ctx)return;PGS.ld=true;const x=new XMLHttpRequest();x.open('GET','son/pg_sfx.wav');x.responseType='arraybuffer';x.onload=()=>{try{sfx.ctx.decodeAudioData(x.response,b=>{PGS.buf=b;},()=>{});}catch(e){}};x.send();}
@@ -8646,7 +8728,7 @@ function egFrame(dt,rdt){const p=player;EG.t+=dt;if(PTL.cd>0)PTL.cd-=rdt;
   if(EG.ready&&(EG.in||EGH&&p.pos.distanceTo(EGH.door)<25))egGoatsTick(dt);
   if(EG.in&&EG.room===3&&EG.zone==='c'&&p.vel.y<-6&&p.pos.y<CO.y+8.5&&p.pos.y>CO.y+.5){const dx=EG.F1.P.x-p.pos.x,dz=EG.F1.P.z-p.pos.z;if(Math.abs(dx)<4.5&&Math.abs(dz)<3){const k=1-Math.exp(-6*dt);p.vel.x=lerp(p.vel.x,dx*3,k);p.vel.z=lerp(p.vel.z,dz*3,k);}}   // plongeon : on est guidé vers le portail du sol
   if(EG.in&&EG.zone==='c'&&EG.room<4)for(const e of EG.exits)if(Math.abs(p.center.x-e.x)<.8&&Math.abs(p.center.z-e.z)<.65&&Math.abs(p.center.y-e.y)<1.2){p.pos.set(EG.D2.P.x,PO.y+.05,EG.D2.P.z-1.1);p.vel.set(0,0,0);p.center.set(p.pos.x,p.pos.y+1,p.pos.z);yaw=0;pitch=0;camTgt.copy(p.pos);releaseAll();sfx.burst(900,.35,.22,'bandpass',.9,.1,2400);break;}
-  egMarker();egSwitchTick(rdt);egGlitchTick(rdt);egAudioTick();if(odmOn())odmLoad();if(pgOK()||EG.in||PTL.list.some(P=>P.gun))pgSndLoad();pgHumTick();
+  egMarker();egSwitchTick(rdt);egGlitchTick(rdt);egAudioTick();if(sndNeed())sndLoad();sndMeadowTick(dt);sndOrigTick(dt);if(pgOK()||EG.in||PTL.list.some(P=>P.gun))pgSndLoad();pgHumTick();
   if(EG.subT>0){EG.subT-=rdt;if(EG.subT<=0&&EG.subEl)EG.subEl.style.opacity=0;}
   for(let i=EG.tr.length-1;i>=0;i--){const T=EG.tr[i];T.t-=rdt;T.l.material.opacity=Math.max(0,T.t/.16);if(T.t<=0){scene.remove(T.l);T.l.geometry.dispose();T.l.material.dispose();EG.tr.splice(i,1);}}
   if(PG.down&&!PG.closed&&performance.now()-PG.down>=1000){PG.closed=true;pgClose();}
